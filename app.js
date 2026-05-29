@@ -10,7 +10,7 @@ var TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjg
 var PIN = "9999"; 
 var REFRESH_INTERVAL = 15000;
 
-// ─── Default paragraph config ─────────────────────────────────────────────── 
+// Default paragraph config
 var DEFAULT_SENTENCES = [ 
   "First, gather all your ingredients before you start cooking.", 
   "Next, preheat the oven to the correct temperature.", 
@@ -19,7 +19,7 @@ var DEFAULT_SENTENCES = [
   "Finally, pour the mixture into a baking tin and place it in the oven."
 ];
 
-// ─── Utilities ─────────────────────────────────────────────────────────────── 
+// Utilities
 function parseCSVRow(row) { 
   var result = []; 
   var insideQuote = false; 
@@ -95,10 +95,10 @@ function sendTrackingData(name, gameId, attempt, status, details) {
     .catch(function() {}); 
 }
 
-// ─── React App ─────────────────────────────────────────────────────────────── 
+// React App
 var e = React.createElement;
 
-// ─── Name Modal ────────────────────────────────────────────────────────────── 
+// Name Modal
 function NameModal(props) { 
   var _s = React.useState(""); 
   var name = _s[0]; 
@@ -132,7 +132,7 @@ function NameModal(props) {
   ); 
 }
 
-// ─── PIN Modal ────────────────────────────────────────────────────────────────
+// PIN Modal
 function PinModal(props) { 
   var _s = React.useState(""); 
   var pin = _s[0];
@@ -175,7 +175,7 @@ function PinModal(props) {
   ); 
 }
 
-// ─── Teacher Panel ──────────────────────────────────────────────────────────── 
+// Teacher Panel
 function TeacherPanel(props) { 
   var sessionStart = props.sessionStart; 
   var _rows = React.useState([]); 
@@ -313,7 +313,7 @@ function TeacherPanel(props) {
   ); 
 }
 
-// ─── Sentence Card ──────────────────────────────────────────────────────────── 
+// Sentence Card
 function SentenceCard(props) { 
   var sentence = props.sentence; 
   var index = props.index; 
@@ -331,7 +331,7 @@ function SentenceCard(props) {
     onDrop: function() { onDrop(index); }, 
     onDragEnd: onDragEnd, 
     onKeyDown: function(ev) { onKeyDown(ev, index); }, 
-    tabIndex: 0, role: "listitem", "aria-label": "Sentence" + (index + 1) + ":" + sentence + ". Use arrow keys to reorder.", 
+    tabIndex: 0, role: "listitem", "aria-label": "Sentence " + (index + 1) + ": " + sentence + ". Use arrow keys to reorder.", 
     style: { background: isDragging ? "#e9e6ff" : "#fff", border: isDragging ? "2px solid #6c63ff" : "2px solid #e2e8f0", borderRadius: 10, padding: "14px 16px", marginBottom: 10, cursor: "grab", display: "flex", alignItems: "center", gap: 14, boxShadow: isDragging ? "0 4px 16px rgba(108,99,255,0.15)" : "0 1px 4px rgba(0,0,0,0.06)", transition: "box-shadow 0.15s, border-color 0.15s", userSelect: "none", outline: "none" } 
   }, 
     e("span", { "aria-hidden": "true", style: { fontSize: 20, color: "#aaa", flexShrink: 0 } }, "⠿"), 
@@ -339,7 +339,7 @@ function SentenceCard(props) {
   ); 
 }
 
-// ─── Student Activity ───────────────────────────────────────────────────────── 
+// Student Activity
 function StudentActivity(props) { 
   var config = props.config; 
   var studentName = props.studentName;
@@ -496,7 +496,7 @@ function StudentActivity(props) {
   ); 
 }
 
-// ─── No Config Message ──────────────────────────────────────────────────────── 
+// No Config Message
 function NoConfigMessage() { 
   return e("div", { style: { maxWidth: 480, margin: "60px auto", padding: 40, background: "#fff", borderRadius: 16, textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" } },
     e("div", { style: { fontSize: 48, marginBottom: 16 } }, "🔗"), 
@@ -505,7 +505,7 @@ function NoConfigMessage() {
   ); 
 }
 
-// ─── Teacher Setup ──────────────────────────────────────────────────────────── 
+// Teacher Setup
 function TeacherSetup() { 
   var _sentences = React.useState(["","","","",""]); 
   var sentences = _sentences[0]; 
@@ -614,7 +614,7 @@ function TeacherSetup() {
   ); 
 }
 
-// ─── App Root ─────────────────────────────────────────────────────────────────
+// App Root
 function App() { 
   var params = new URLSearchParams(window.location.search); 
   var configParam = params.get("config"); 
@@ -728,7 +728,7 @@ function App() {
   ); 
 }
 
-// ─── Teacher Tab Content ────────────────────────────────────────────────────── 
+// Teacher Tab Content
 function TeacherTabContent(props) { 
   var _sub = React.useState("session"); 
   var sub = _sub[0]; 
@@ -743,6 +743,6 @@ function TeacherTabContent(props) {
   ); 
 }
 
-// ─── Mount ──────────────────────────────────────────────────────────────────── 
+// Mount
 var root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(e(App, null));
