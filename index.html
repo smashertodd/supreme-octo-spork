@@ -4,13 +4,17 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Fix the Paragraph</title>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f0f4f8; color: #1a202c; min-height: 100vh; }
+    #root { min-height: 100vh; }
+  </style>
 </head>
 <body>
   <div id="root"></div>
-  <script type="text/babel" src="app.js" data-type="module"></script>
+  <script type="text/babel" src="app.js"></script>
 </body>
 </html>
