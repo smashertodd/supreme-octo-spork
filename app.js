@@ -6,7 +6,7 @@ TRACKING_URL =
 
 // Paste your TRACKING sheet published-as-CSV URL here. // See setup
 instructions below for how to get this. const TRACKING_CSV_URL =
-“PASTE_TRACKING_CSV_URL_HERE”;
+“https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=tsv”;
 
 const TEACHER_PIN = “9999”; const SESSION_RESET_KEY =
 “ftp_session_reset_ts”; const POLL_INTERVAL_MS = 30000; // 30 seconds
