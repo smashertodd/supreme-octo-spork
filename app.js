@@ -1,561 +1,615 @@
-const TRACKING_URL =
-const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRKIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
-const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv;";
+// app.js - Fix the Paragraph Mini App // CONFIG - update these two
+values: var TRACKING_URL = [ "{https://script.google.com/macros/s/",
+"AKfycbyL4Ws4DK4UH_VbTE_4ENW9vmy7WRKly71NfPLDm2CF3oeBf91jUOTkXuSJJWiWMEHQ",
+"/exec"].join("");
 
+var TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv"; var PIN = "9999"; var
+REFRESH_INTERVAL = 15000;
 
-const PIN = “9999”; const REFRESH_INTERVAL = 15000;
+// ─── Default paragraph config
+─────────────────────────────────────────────── var DEFAULT_SENTENCES =
+[ “First, gather all your ingredients before you start cooking.”, “Next,
+preheat the oven to the correct temperature.”, “Then, mix the dry
+ingredients together in a large bowl.”, “After that, add the wet
+ingredients and stir until combined.”, “Finally, pour the mixture into a
+baking tin and place it in the oven.”];
 
-const { useState, useEffect, useRef, useCallback } = React;
+// ─── Utilities
+─────────────────────────────────────────────────────────────── function
+parseCSVRow(row) { var result = []; var insideQuote = false; var current
+= ““; for (var i = 0; i < row.length; i++) { var ch = row[i]; if (ch ===
+‘“’ && !insideQuote) { insideQuote = true; continue; } if (ch === ’”’ &&
+insideQuote) { insideQuote = false; continue; } if (ch === ‘,’ &&
+!insideQuote) { result.push(current.trim()); current =”“; continue; }
+current += ch; } result.push(current.trim()); return result; }
 
-function shuffle(arr) { const a = […arr]; for (let i = a.length - 1; i >
-0; i–) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] =
-[a[j], a[i]]; } return a; }
+function parseConfig(csv) { var lines = csv.trim().split(“”); if
+(lines.length < 2) return null; var headers =
+parseCSVRow(lines[0]).map(function(h) { return h.toLowerCase(); }); var
+idIdx = headers.indexOf(“id”); var sentenceIdx =
+headers.indexOf(“sentence”); var distractorIdx =
+headers.indexOf(“distractor”); var clueIdx = headers.indexOf(“clue”); if
+(idIdx < 0 || sentenceIdx < 0) return null; var sentences = []; var
+distractors = []; var clues = []; var gameId = ““; for (var i = 1; i <
+lines.length; i++) { if (!lines[i].trim()) continue; var cols =
+parseCSVRow(lines[i]); if (i === 1) gameId = cols[idIdx] ||”unknown”;
+sentences.push(cols[sentenceIdx] || ““); if (distractorIdx >= 0)
+distractors.push(cols[distractorIdx] ||”“); if (clueIdx >= 0)
+clues.push(cols[clueIdx] ||”“); } return { gameId: gameId, sentences:
+sentences, distractors: distractors, clues: clues }; }
 
-function sendTrackingData(name, gameId, attempt, status, details) {
-const params = new URLSearchParams({ name: name, gameId: gameId,
-attempt: String(attempt), status: status, details: details });
-fetch(TRACKING_URL + “?” + params.toString()).catch(function() {}); }
+function shuffle(arr) { var a = arr.slice(); for (var i = a.length - 1;
+i > 0; i–) { var j = Math.floor(Math.random() * (i + 1)); var tmp =
+a[i]; a[i] = a[j]; a[j] = tmp; } return a; }
 
-function parseCSV(text) { const lines = text.trim().split(“”); if
-(lines.length < 2) return []; const headers =
-lines[0].split(“,”).map(function(h) { return
-h.trim().replace(/^“|”$/g, ""); });  return lines.slice(1).map(function(line) {  const cols = line.split(",").map(function(c) { return c.trim().replace(/^"|"$/g,
-““); }); const obj = {}; headers.forEach(function(h, i) { obj[h] =
-cols[i] ||”“; }); return obj; }); }
+function sendTrackingData(name, gameId, attempt, status, details) { var
+params = new URLSearchParams(); params.append(“name”, name ||
+“anonymous”); params.append(“gameId”, gameId || “unknown”);
+params.append(“attempt”, String(attempt)); params.append(“status”,
+status); params.append(“details”, details || ““); fetch(TRACKING_URL
++”?” + params.toString(), { method: “GET”, mode: “no-cors” })
+.catch(function() {}); }
 
-function useConfig() { const [config, setConfig] = useState(null); const
-[error, setError] = useState(null);
+// ─── React App
+─────────────────────────────────────────────────────────────── var e =
+React.createElement;
 
-useEffect(function() { const params = new
-URLSearchParams(window.location.search); const url =
-params.get(“config”); if (!url) { setError(“no-config”); return; }
-fetch(url) .then(function(r) { return r.text(); }) .then(function(text)
-{ const rows = parseCSV(text); if (!rows.length) { setError(“empty”);
-return; } const title = rows[0][“title”] || “Fix the Paragraph”; const
-gameId = rows[0][“game_id”] || “fix-paragraph”; const sentences =
-rows.filter(function(r) { return r[“sentence”]; }).map(function(r) {
-return { correct: r[“sentence”].trim(), distractors: [r[“d1”], r[“d2”],
-r[“d3”]].filter(Boolean).map(function(d) { return d.trim(); }) }; }); if
-(!sentences.length) { setError(“empty”); return; } setConfig({ title:
-title, gameId: gameId, sentences: sentences }); }) .catch(function() {
-setError(“fetch-failed”); }); }, []);
+// ─── Name Modal
+────────────────────────────────────────────────────────────── function
+NameModal(props) { var _s = React.useState(““); var name = _s[0]; var
+setName = _s[1];
 
-return { config: config, error: error }; }
+function submit(ev) { ev.preventDefault(); if (name.trim())
+props.onSubmit(name.trim()); }
 
-function NameModal(props) { const [value, setValue] = useState(““);
-const inputRef = useRef(null);
+return e(“div”, { role: “dialog”, “aria-modal”: “true”,
+“aria-labelledby”: “name-modal-title”, style: { position: “fixed”,
+inset: 0, background: “rgba(0,0,0,0.5)”, display: “flex”, alignItems:
+“center”, justifyContent: “center”, zIndex: 1000 } }, e(“div”, { style:
+{ background: “#fff”, borderRadius: 12, padding: 32, maxWidth: 400,
+width: “90%”, boxShadow: “0 8px 32px rgba(0,0,0,0.2)” } }, e(“h2”, { id:
+“name-modal-title”, style: { marginTop: 0, fontSize: 20 } }, “What’s
+your name?”), e(“p”, { style: { color: “#555”, marginBottom: 16 } },
+“Your teacher will use this to see how you’re going.”), e(“form”, {
+onSubmit: submit }, e(“input”, { type: “text”, value: name, onChange:
+function(ev) { setName(ev.target.value); }, placeholder: “Type your name
+here…”, autoFocus: true, “aria-label”: “Your name”, style: { width:
+“100%”, padding: “10px 14px”, fontSize: 16, border: “2px solid #6c63ff”,
+borderRadius: 8, boxSizing: “border-box”, marginBottom: 16, outline:
+“none” } }), e(“button”, { type: “submit”, disabled: !name.trim(),
+style: { width: “100%”, padding: “12px”, fontSize: 16, fontWeight: 700,
+background: name.trim() ? “#6c63ff” : “#ccc”, color: “#fff”, border:
+“none”, borderRadius: 8, cursor: name.trim() ? “pointer” : “not-allowed”
+} }, “Let’s go!”) ) ) ); }
 
-useEffect(function() { if (inputRef.current) inputRef.current.focus();
-}, []);
+// ─── PIN Modal
+────────────────────────────────────────────────────────────────
+function PinModal(props) { var _s = React.useState(““); var pin = _s[0];
+var setPin = _s[1]; var _e = React.useState(false); var error = _e[0];
+var setError = _e[1];
 
-function handleSubmit(e) { e.preventDefault(); const name =
-value.trim(); if (name) props.onSubmit(name); }
+function submit(ev) { ev.preventDefault(); if (pin === PIN) {
+props.onSuccess(); } else { setError(true); setPin(““); } }
 
-return ( React.createElement(“div”, { role: “dialog”, “aria-modal”:
-“true”, “aria-labelledby”: “name-modal-title”, style: { position:
-“fixed”, inset: 0, background: “rgba(0,0,0,0.5)”, display: “flex”,
-alignItems: “center”, justifyContent: “center”, zIndex: 1000 } },
-React.createElement(“div”, { style: { background: “#fff”, borderRadius:
-“12px”, padding: “32px”, maxWidth: “400px”, width: “90%”, boxShadow: “0
-8px 32px rgba(0,0,0,0.2)” } }, React.createElement(“h2”, { id:
-“name-modal-title”, style: { marginBottom: “16px”, fontSize: “1.3rem” }
-}, “Welcome! What is your name?” ), React.createElement(“form”, {
-onSubmit: handleSubmit }, React.createElement(“input”, { ref: inputRef,
-type: “text”, value: value, onChange: function(e) {
-setValue(e.target.value); }, placeholder: “Enter your name”,
-“aria-label”: “Your name”, style: { width: “100%”, padding: “10px 14px”,
-fontSize: “1rem”, border: “2px solid #cbd5e1”, borderRadius: “8px”,
-boxSizing: “border-box”, marginBottom: “16px” } }),
-React.createElement(“button”, { type: “submit”, disabled: !value.trim(),
-style: { width: “100%”, padding: “12px”, fontSize: “1rem”, fontWeight:
-“700”, background: value.trim() ? “#2563eb” : “#94a3b8”, color: “#fff”,
-border: “none”, borderRadius: “8px”, cursor: value.trim() ? “pointer” :
-“not-allowed” } }, “Start Activity”) ) ) ) ); }
+return e(“div”, { role: “dialog”, “aria-modal”: “true”,
+“aria-labelledby”: “pin-modal-title”, style: { position: “fixed”, inset:
+0, background: “rgba(0,0,0,0.6)”, display: “flex”, alignItems: “center”,
+justifyContent: “center”, zIndex: 1000 } }, e(“div”, { style: {
+background: “#fff”, borderRadius: 12, padding: 32, maxWidth: 360, width:
+“90%”, boxShadow: “0 8px 32px rgba(0,0,0,0.2)” } }, e(“h2”, { id:
+“pin-modal-title”, style: { marginTop: 0, fontSize: 20 } }, “Teacher
+Access”), e(“p”, { style: { color: “#555” } }, “Enter your PIN to view
+the session summary.”), e(“form”, { onSubmit: submit }, e(“input”, {
+type: “password”, value: pin, onChange: function(ev) {
+setPin(ev.target.value); setError(false); }, placeholder: “PIN”,
+autoFocus: true, “aria-label”: “Teacher PIN”, style: { width: “100%”,
+padding: “10px 14px”, fontSize: 18, letterSpacing: 4, border: error ?
+“2px solid #e53e3e” : “2px solid #6c63ff”, borderRadius: 8, boxSizing:
+“border-box”, marginBottom: 8, outline: “none” } }), error && e(“p”, {
+role: “alert”, style: { color: “#e53e3e”, margin: “0 0 12px” } },
+“Incorrect PIN. Try again.”), e(“div”, { style: { display: “flex”, gap:
+10, marginTop: 8 } }, e(“button”, { type: “submit”, style: { flex: 1,
+padding: “12px”, fontSize: 15, fontWeight: 700, background: “#6c63ff”,
+color: “#fff”, border: “none”, borderRadius: 8, cursor: “pointer” } },
+“Unlock”), e(“button”, { type: “button”, onClick: props.onCancel, style:
+{ flex: 1, padding: “12px”, fontSize: 15, background: “#f0f0f0”, color:
+“#333”, border: “none”, borderRadius: 8, cursor: “pointer” } },
+“Cancel”) ) ) ) ); }
 
-function PINModal(props) { const [value, setValue] = useState(““); const
-[error, setError] = useState(false); const inputRef = useRef(null);
+// ─── Teacher Panel
+──────────────────────────────────────────────────────────── function
+TeacherPanel(props) { var sessionStart = props.sessionStart; var _rows =
+React.useState([]); var rows = _rows[0]; var setRows = _rows[1]; var
+_loading = React.useState(true); var loading = _loading[0]; var
+setLoading = _loading[1]; var _lastRefresh = React.useState(null); var
+lastRefresh = _lastRefresh[0]; var setLastRefresh = _lastRefresh[1];
 
-useEffect(function() { if (inputRef.current) inputRef.current.focus();
-}, []);
-
-function handleSubmit(e) { e.preventDefault(); if (value === PIN) {
-props.onSuccess(); } else { setError(true); setValue(““); } }
-
-return ( React.createElement(“div”, { role: “dialog”, “aria-modal”:
-“true”, “aria-labelledby”: “pin-modal-title”, style: { position:
-“fixed”, inset: 0, background: “rgba(0,0,0,0.5)”, display: “flex”,
-alignItems: “center”, justifyContent: “center”, zIndex: 1000 } },
-React.createElement(“div”, { style: { background: “#fff”, borderRadius:
-“12px”, padding: “32px”, maxWidth: “360px”, width: “90%”, boxShadow: “0
-8px 32px rgba(0,0,0,0.2)” } }, React.createElement(“h2”, { id:
-“pin-modal-title”, style: { marginBottom: “8px”, fontSize: “1.2rem” } },
-“Teacher Access” ), React.createElement(“p”, { style: { color:
-“#64748b”, marginBottom: “16px” } }, “Enter your PIN to continue.”),
-error && React.createElement(“p”, { role: “alert”, style: { color:
-“#dc2626”, marginBottom: “12px” } }, “Incorrect PIN. Try again.”),
-React.createElement(“form”, { onSubmit: handleSubmit },
-React.createElement(“input”, { ref: inputRef, type: “password”, value:
-value, onChange: function(e) { setValue(e.target.value); }, placeholder:
-“PIN”, “aria-label”: “Teacher PIN”, style: { width: “100%”, padding:
-“10px 14px”, fontSize: “1rem”, border: “2px solid #cbd5e1”,
-borderRadius: “8px”, boxSizing: “border-box”, marginBottom: “16px” } }),
-React.createElement(“div”, { style: { display: “flex”, gap: “8px” } },
-React.createElement(“button”, { type: “button”, onClick: props.onCancel,
-style: { flex: 1, padding: “10px”, fontSize: “1rem”, background:
-“#f1f5f9”, color: “#334155”, border: “none”, borderRadius: “8px”,
-cursor: “pointer” } }, “Cancel”), React.createElement(“button”, { type:
-“submit”, style: { flex: 1, padding: “10px”, fontSize: “1rem”,
-fontWeight: “700”, background: “#2563eb”, color: “#fff”, border: “none”,
-borderRadius: “8px”, cursor: “pointer” } }, “Enter”) ) ) ) ) ); }
-
-function TeacherSetup(props) { const [title, setTitle] = useState(““);
-const [gameId, setGameId] = useState(”“); const [rows, setRows] =
-useState([{ sentence: ““, d1:”“, d2:”“, d3:”” }]);
-
-function addRow() { setRows(function(r) { return […r, { sentence: ““,
-d1:”“, d2:”“, d3:”” }]; }); }
-
-function updateRow(i, field, val) { setRows(function(r) { const next =
-[…r]; next[i] = Object.assign({}, next[i], { [field]: val }); return
-next; }); }
-
-function removeRow(i) { setRows(function(r) { return
-r.filter(function(_, idx) { return idx !== i; }); }); }
-
-function exportCSV() { const header = “title,game_id,sentence,d1,d2,d3”;
-const lines = rows.map(function(r, i) { return [i === 0 ? title : ““, i
-=== 0 ? gameId :”“, r.sentence, r.d1, r.d2, r.d3] .map(function(v) {
-return ‘“’ + (v ||”“).replace(/”/g,’““‘) +’”’; }) .join(“,”); }); const
-csv = [header, …lines].join(“”); const blob = new Blob([csv], { type:
-“text/csv” }); const url = URL.createObjectURL(blob); const a =
-document.createElement(“a”); a.href = url; a.download = (gameId ||
-“activity”) + “.csv”; a.click(); URL.revokeObjectURL(url); }
-
-const inputStyle = { width: “100%”, padding: “8px 10px”, fontSize:
-“0.9rem”, border: “1px solid #cbd5e1”, borderRadius: “6px”, boxSizing:
-“border-box” };
-
-return ( React.createElement(“div”, { style: { maxWidth: “800px”,
-margin: “0 auto”, padding: “24px 16px” } }, React.createElement(“h2”, {
-style: { fontSize: “1.4rem”, marginBottom: “20px” } }, “Activity
-Setup”), React.createElement(“div”, { style: { display: “grid”,
-gridTemplateColumns: “1fr 1fr”, gap: “16px”, marginBottom: “24px” } },
-React.createElement(“label”, null, React.createElement(“span”, { style:
-{ display: “block”, fontWeight: “600”, marginBottom: “4px” } },
-“Activity Title”), React.createElement(“input”, { type: “text”, value:
-title, onChange: function(e) { setTitle(e.target.value); }, style:
-inputStyle, placeholder: “e.g. Capital Letters” }) ),
-React.createElement(“label”, null, React.createElement(“span”, { style:
-{ display: “block”, fontWeight: “600”, marginBottom: “4px” } }, “Game
-ID”), React.createElement(“input”, { type: “text”, value: gameId,
-onChange: function(e) { setGameId(e.target.value); }, style: inputStyle,
-placeholder: “e.g. capital-letters-y3” }) ) ),
-React.createElement(“table”, { style: { width: “100%”, borderCollapse:
-“collapse”, marginBottom: “16px” } }, React.createElement(“thead”, null,
-React.createElement(“tr”, null, [“Correct Sentence”, “Distractor 1”,
-“Distractor 2”, “Distractor 3”, “”].map(function(h) { return
-React.createElement(“th”, { key: h, style: { textAlign: “left”, padding:
-“8px”, background: “#f1f5f9”, fontSize: “0.85rem”, fontWeight: “600” }
-}, h); }) ) ), React.createElement(“tbody”, null, rows.map(function(row,
-i) { return React.createElement(“tr”, { key: i }, [“sentence”, “d1”,
-“d2”, “d3”].map(function(field) { return React.createElement(“td”, {
-key: field, style: { padding: “4px” } }, React.createElement(“input”, {
-type: “text”, value: row[field], onChange: function(e) { updateRow(i,
-field, e.target.value); }, style: inputStyle, “aria-label”: field + ”
-row ” + (i + 1) }) ); }), React.createElement(“td”, { style: { padding:
-“4px” } }, React.createElement(“button”, { onClick: function() {
-removeRow(i); }, “aria-label”: “Remove row” + (i + 1), style: {
-background: “#fee2e2”, color: “#dc2626”, border: “none”, borderRadius:
-“6px”, padding: “6px 10px”, cursor: “pointer” } }, “X”) ) ); }) ) ),
-React.createElement(“div”, { style: { display: “flex”, gap: “12px”,
-flexWrap: “wrap” } }, React.createElement(“button”, { onClick: addRow,
-style: { padding: “10px 20px”, background: “#f1f5f9”, color: “#334155”,
-border: “none”, borderRadius: “8px”, cursor: “pointer”, fontWeight:
-“600” } }, “+ Add Row”), React.createElement(“button”, { onClick:
-exportCSV, style: { padding: “10px 20px”, background: “#2563eb”, color:
-“#fff”, border: “none”, borderRadius: “8px”, cursor: “pointer”,
-fontWeight: “600” } }, “Export CSV”) ) ) ); }
-
-function SessionSummary(props) { const [rows, setRows] = useState([]);
-const [sessionStart, setSessionStart] = useState(null); const
-[lastRefresh, setLastRefresh] = useState(null); const timerRef =
-useRef(null);
-
-const fetchData = useCallback(function() { if (!TRACKING_CSV_URL ||
-TRACKING_CSV_URL === “PASTE_YOUR_CSV_URL_HERE”) return;
+function fetchRows() { if (!TRACKING_CSV_URL || TRACKING_CSV_URL ===
+“PASTE_YOUR_CSV_URL_HERE”) { setLoading(false); return; }
 fetch(TRACKING_CSV_URL + “&t=” + Date.now()) .then(function(r) { return
-r.text(); }) .then(function(text) { const parsed = parseCSV(text);
-setRows(parsed); setLastRefresh(new Date()); }) .catch(function() {});
-}, []);
+r.text(); }) .then(function(csv) { var lines = csv.trim().split(“”); if
+(lines.length < 2) { setRows([]); setLoading(false); return; } var
+headers = parseCSVRow(lines[0]).map(function(h) { return
+h.toLowerCase().trim(); }); var tsIdx = headers.indexOf(“timestamp”);
+var nameIdx = headers.indexOf(“name”); var statusIdx =
+headers.indexOf(“status”); var parsed = []; for (var i = 1; i <
+lines.length; i++) { if (!lines[i].trim()) continue; var cols =
+parseCSVRow(lines[i]); var ts = tsIdx >= 0 ? new
+Date(cols[tsIdx]).getTime() : 0; if (ts >= sessionStart) { parsed.push({
+name: nameIdx >= 0 ? cols[nameIdx] : “?”, status: statusIdx >= 0 ?
+cols[statusIdx] : “?” }); } } setRows(parsed); setLoading(false);
+setLastRefresh(new Date()); }) .catch(function() { setLoading(false);
+}); }
 
-useEffect(function() { fetchData(); timerRef.current =
-setInterval(fetchData, REFRESH_INTERVAL); return function() {
-clearInterval(timerRef.current); }; }, [fetchData]);
+React.useEffect(function() { fetchRows(); var interval =
+setInterval(fetchRows, REFRESH_INTERVAL); return function() {
+clearInterval(interval); }; }, [sessionStart]);
 
-function resetSession() { setSessionStart(new Date()); }
+// Compute stats var studentMap = {}; rows.forEach(function(r) { if
+(!studentMap[r.name]) studentMap[r.name] = [];
+studentMap[r.name].push(r.status); }); var students =
+Object.keys(studentMap); var totalStudents = students.length; var
+completed = students.filter(function(n) { return
+studentMap[n].some(function(s) { return s === “completed”; });
+}).length; var firstTryMasters = students.filter(function(n) { var
+statuses = studentMap[n]; return statuses[0] === “completed”; }).length;
+var successRate = totalStudents > 0 ? Math.round((firstTryMasters /
+totalStudents) * 100) : 0;
 
-const filtered = sessionStart ? rows.filter(function(r) { const t = new
-Date(r[“Timestamp”]); return t >= sessionStart; }) : rows;
-
-const gameRows = props.gameId ? filtered.filter(function(r) { return
-r[“Game_ID”] === props.gameId; }) : filtered;
-
-const students = {}; gameRows.forEach(function(r) { const name =
-r[“Name”]; if (!name) return; if (!students[name]) { students[name] = {
-attempts: 0, completed: false, firstTrySuccess: false, clues: 0,
-distractors: 0 }; } const s = students[name]; if (r[“Status”] ===
-“attempt”) s.attempts++; if (r[“Status”] === “completed”) { s.completed
-= true; if (s.attempts <= 1) s.firstTrySuccess = true; } if (r[“Status”]
-=== “clue_used”) s.clues++; if (r[“Status”] === “distractor_used”)
-s.distractors++; });
-
-const studentList = Object.keys(students).map(function(name) { return
-Object.assign({ name: name }, students[name]); });
-
-const total = studentList.length; const completions =
-studentList.filter(function(s) { return s.completed; }).length; const
-firstTryMasters = studentList.filter(function(s) { return
-s.firstTrySuccess; }).length; const successRate = total > 0 ?
-Math.round((firstTryMasters / total) * 100) : 0;
-
-const trafficColor = successRate >= 80 ? “#16a34a” : successRate >= 50 ?
-“#d97706” : “#dc2626”; const trafficLabel = successRate >= 80 ? “Ready
-to move on” : successRate >= 50 ? “Some students struggling” : “Re-model
+var trafficLight = successRate >= 80 ? “#38a169” : successRate >= 50 ?
+“#dd6b20” : “#e53e3e”; var trafficLabel = successRate >= 80 ? “Ready to
+move on” : successRate >= 50 ? “Some students need support” : “Re-model
 recommended”;
 
-const panelStyle = { background: “#f8fafc”, border: “1px solid #e2e8f0”,
-borderRadius: “10px”, padding: “16px”, marginBottom: “16px” };
+var csvNotSet = !TRACKING_CSV_URL || TRACKING_CSV_URL ===
+“PASTE_YOUR_CSV_URL_HERE”;
 
-return ( React.createElement(“div”, { style: { maxWidth: “800px”,
-margin: “0 auto”, padding: “24px 16px” } }, React.createElement(“div”, {
-style: { display: “flex”, alignItems: “center”, justifyContent:
-“space-between”, marginBottom: “20px”, flexWrap: “wrap”, gap: “12px” }
-}, React.createElement(“h2”, { style: { fontSize: “1.4rem”, margin: 0 }
-}, “Session Summary”), React.createElement(“div”, { style: { display:
-“flex”, gap: “8px” } }, React.createElement(“button”, { onClick:
-fetchData, style: { padding: “8px 16px”, background: “#f1f5f9”, color:
-“#334155”, border: “none”, borderRadius: “8px”, cursor: “pointer”,
-fontWeight: “600” } }, “Refresh”), React.createElement(“button”, {
-onClick: resetSession, style: { padding: “8px 16px”, background:
-“#fee2e2”, color: “#dc2626”, border: “none”, borderRadius: “8px”,
-cursor: “pointer”, fontWeight: “600” } }, “Reset Session”) ) ),
+return e(“div”, { style: { padding: 24, maxWidth: 700, margin: “0 auto”
+} }, e(“div”, { style: { display: “flex”, justifyContent:
+“space-between”, alignItems: “center”, marginBottom: 20 } }, e(“h2”, {
+style: { margin: 0, fontSize: 22, color: “#2d3748” } }, “Session
+Summary”), e(“button”, { onClick: props.onReset, style: { padding: “8px
+18px”, fontSize: 14, fontWeight: 600, background: “#fff”, color:
+“#e53e3e”, border: “2px solid #e53e3e”, borderRadius: 8, cursor:
+“pointer” } }, “Reset Session”) ),
 
-      TRACKING_CSV_URL === "PASTE_YOUR_CSV_URL_HERE" && React.createElement("div", {
-        style: { background: "#fef9c3", border: "1px solid #fde047", borderRadius: "8px", padding: "12px", marginBottom: "16px" }
-      }, "Set TRACKING_CSV_URL in app.js to enable live data."),
+    csvNotSet && e("div", {
+      style: {
+        background: "#fff3cd", border: "1px solid #ffc107", borderRadius: 8,
+        padding: 16, marginBottom: 20, color: "#856404"
+      }
+    },
+      e("strong", null, "Setup needed: "),
+      "Update TRACKING_CSV_URL in app.js with your published Google Sheets CSV URL."
+    ),
 
-      React.createElement("div", { style: Object.assign({}, panelStyle, { borderLeft: "6px solid " + trafficColor }) },
-        React.createElement("div", { style: { fontSize: "2.5rem", fontWeight: "800", color: trafficColor } }, successRate + "%"),
-        React.createElement("div", { style: { fontWeight: "600", color: trafficColor, marginBottom: "8px" } }, trafficLabel),
-        React.createElement("div", { style: { display: "flex", gap: "24px", flexWrap: "wrap", color: "#475569", fontSize: "0.95rem" } },
-          React.createElement("span", null, "Students: " + total),
-          React.createElement("span", null, "Completed: " + completions),
-          React.createElement("span", null, "First-try success: " + firstTryMasters)
+    e("div", {
+      style: {
+        background: trafficLight, borderRadius: 12, padding: "18px 24px",
+        marginBottom: 20, color: "#fff", display: "flex", alignItems: "center", gap: 16
+      }
+    },
+      e("span", { style: { fontSize: 36 } }, successRate >= 80 ? "✅" : successRate >= 50 ? "⚠️" : "❌"),
+      e("div", null,
+        e("div", { style: { fontSize: 28, fontWeight: 800 } }, successRate + "% first-try success"),
+        e("div", { style: { fontSize: 15, opacity: 0.9 } }, trafficLabel)
+      )
+    ),
+
+    e("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 } },
+      e("div", { style: { background: "#f7f7f7", borderRadius: 10, padding: 16, textAlign: "center" } },
+        e("div", { style: { fontSize: 28, fontWeight: 800, color: "#6c63ff" } }, totalStudents),
+        e("div", { style: { fontSize: 13, color: "#555" } }, "Students active")
+      ),
+      e("div", { style: { background: "#f7f7f7", borderRadius: 10, padding: 16, textAlign: "center" } },
+        e("div", { style: { fontSize: 28, fontWeight: 800, color: "#38a169" } }, completed),
+        e("div", { style: { fontSize: 13, color: "#555" } }, "Completed")
+      ),
+      e("div", { style: { background: "#f7f7f7", borderRadius: 10, padding: 16, textAlign: "center" } },
+        e("div", { style: { fontSize: 28, fontWeight: 800, color: "#dd6b20" } }, firstTryMasters),
+        e("div", { style: { fontSize: 13, color: "#555" } }, "First-try masters")
+      )
+    ),
+
+    students.length > 0 && e("div", null,
+      e("h3", { style: { fontSize: 16, marginBottom: 10, color: "#4a5568" } }, "Students"),
+      e("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
+        students.map(function(name) {
+          var statuses = studentMap[name];
+          var done = statuses.some(function(s) { return s === "completed"; });
+          var firstTry = statuses[0] === "completed";
+          return e("div", {
+            key: name,
+            style: {
+              background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8,
+              padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center"
+            }
+          },
+            e("span", { style: { fontWeight: 600 } }, name),
+            e("span", {
+              style: {
+                fontSize: 13, fontWeight: 600, padding: "3px 10px", borderRadius: 20,
+                background: firstTry ? "#c6f6d5" : done ? "#bee3f8" : "#fed7d7",
+                color: firstTry ? "#276749" : done ? "#2b6cb0" : "#9b2c2c"
+              }
+            }, firstTry ? "First try!" : done ? "Completed" : "In progress")
+          );
+        })
+      )
+    ),
+
+    loading && e("p", { style: { color: "#888", textAlign: "center" } }, "Loading..."),
+
+    lastRefresh && e("p", { style: { color: "#aaa", fontSize: 12, textAlign: "right", marginTop: 16 } },
+      "Last refreshed: " + lastRefresh.toLocaleTimeString()
+    )
+
+); }
+
+// ─── Sentence Card
+──────────────────────────────────────────────────────────── function
+SentenceCard(props) { var sentence = props.sentence; var index =
+props.index; var isDragging = props.isDragging; var onDragStart =
+props.onDragStart; var onDragOver = props.onDragOver; var onDrop =
+props.onDrop; var onDragEnd = props.onDragEnd; var onKeyDown =
+props.onKeyDown;
+
+return e(“div”, { draggable: true, onDragStart: function() {
+onDragStart(index); }, onDragOver: function(ev) { ev.preventDefault();
+onDragOver(index); }, onDrop: function() { onDrop(index); }, onDragEnd:
+onDragEnd, onKeyDown: function(ev) { onKeyDown(ev, index); }, tabIndex:
+0, role: “listitem”, “aria-label”: “Sentence” + (index + 1) + “:” +
+sentence + “. Use arrow keys to reorder.”, style: { background:
+isDragging ? “#e9e6ff” : “#fff”, border: isDragging ? “2px solid
+#6c63ff” : “2px solid #e2e8f0”, borderRadius: 10, padding: “14px 16px”,
+marginBottom: 10, cursor: “grab”, display: “flex”, alignItems: “center”,
+gap: 14, boxShadow: isDragging ? “0 4px 16px rgba(108,99,255,0.15)” : “0
+1px 4px rgba(0,0,0,0.06)”, transition: “box-shadow 0.15s, border-color
+0.15s”, userSelect: “none”, outline: “none” } }, e(“span”, {
+“aria-hidden”: “true”, style: { fontSize: 20, color: “#aaa”, flexShrink:
+0 } }, “⠿”), e(“span”, { style: { fontSize: 16, lineHeight: 1.5, color:
+“#2d3748” } }, sentence) ); }
+
+// ─── Student Activity
+───────────────────────────────────────────────────────── function
+StudentActivity(props) { var config = props.config; var studentName =
+props.studentName;
+
+var correctOrder = config.sentences; var _order =
+React.useState(function() { return shuffle(correctOrder); }); var order
+= _order[0]; var setOrder = _order[1]; var _dragging =
+React.useState(null); var dragging = _dragging[0]; var setDragging =
+_dragging[1]; var _over = React.useState(null); var over = _over[0]; var
+setOver = _over[1]; var _attempts = React.useState(0); var attempts =
+_attempts[0]; var setAttempts = _attempts[1]; var _clueIdx =
+React.useState(null); var clueIdx = _clueIdx[0]; var setClueIdx =
+_clueIdx[1]; var _status = React.useState(“idle”); var status =
+_status[0]; var setStatus = _status[1]; var _feedback =
+React.useState(null); var feedback = _feedback[0]; var setFeedback =
+_feedback[1]; var _shakeKey = React.useState(0); var shakeKey =
+_shakeKey[0]; var setShakeKey = _shakeKey[1];
+
+function isCorrect(ord) { return ord.every(function(s, i) { return s ===
+correctOrder[i]; }); }
+
+function handleCheck() { var newAttempts = attempts + 1;
+setAttempts(newAttempts); if (isCorrect(order)) { setStatus(“success”);
+setFeedback(null); var firstTry = newAttempts === 1;
+sendTrackingData(studentName, config.gameId, newAttempts, “completed”,
+firstTry ? “first_try” : “multi_attempt”); if (firstTry && typeof
+InteractivesTelemetry !== “undefined”) {
+InteractivesTelemetry.track(“first_try_mastered”, { gameId:
+config.gameId }); } if (typeof InteractivesTelemetry !== “undefined”) {
+InteractivesTelemetry.track(“paragraph_completed”, { gameId:
+config.gameId, attempts: newAttempts }); } } else { setStatus(“error”);
+setShakeKey(function(k) { return k + 1; });
+sendTrackingData(studentName, config.gameId, newAttempts, “incorrect”,
+““); if (typeof InteractivesTelemetry !==”undefined”) {
+InteractivesTelemetry.track(“paragraph_attempt”, { gameId:
+config.gameId, attempt: newAttempts, correct: false }); } if
+(config.distractors && config.distractors[0]) { var wrong =
+order.findIndex(function(s, i) { return s !== correctOrder[i]; }); if
+(wrong >= 0 && config.distractors[wrong]) {
+setFeedback(config.distractors[wrong]); if (typeof InteractivesTelemetry
+!== “undefined”) { InteractivesTelemetry.track(“distractor_used”, {
+gameId: config.gameId, index: wrong }); } } } } }
+
+function handleClue(idx) { setClueIdx(idx); if (typeof
+InteractivesTelemetry !== “undefined”) {
+InteractivesTelemetry.track(“clue_used”, { gameId: config.gameId, index:
+idx }); } }
+
+function handleReset() { setOrder(shuffle(correctOrder));
+setAttempts(0); setStatus(“idle”); setFeedback(null); setClueIdx(null);
+setDragging(null); setOver(null); }
+
+function handleDragStart(idx) { setDragging(idx); } function
+handleDragOver(idx) { setOver(idx); } function handleDragEnd() {
+setDragging(null); setOver(null); } function handleDrop(idx) { if
+(dragging === null || dragging === idx) return; var newOrder =
+order.slice(); var item = newOrder.splice(dragging, 1)[0];
+newOrder.splice(idx, 0, item); setOrder(newOrder); setDragging(null);
+setOver(null); setStatus(“idle”); setFeedback(null); }
+
+function handleKeyDown(ev, idx) { if (ev.key === “ArrowUp” && idx > 0) {
+ev.preventDefault(); var newOrder = order.slice(); var tmp =
+newOrder[idx]; newOrder[idx] = newOrder[idx - 1]; newOrder[idx - 1] =
+tmp; setOrder(newOrder); setStatus(“idle”); } if (ev.key === “ArrowDown”
+&& idx < order.length - 1) { ev.preventDefault(); var newOrder =
+order.slice(); var tmp = newOrder[idx]; newOrder[idx] = newOrder[idx +
+1]; newOrder[idx + 1] = tmp; setOrder(newOrder); setStatus(“idle”); } }
+
+if (status === “success”) { return e(“div”, { style: { textAlign:
+“center”, padding: 40, maxWidth: 600, margin: “0 auto” } }, e(“div”, {
+style: { fontSize: 64, marginBottom: 16 } }, “🎉”), e(“h2”, { style: {
+color: “#38a169”, fontSize: 28, marginBottom: 8 } }, attempts === 1 ?
+“First try! Amazing!” : “Well done!” ), e(“p”, { style: { color: “#555”,
+fontSize: 16, marginBottom: 24 } }, “You got it” + (attempts === 1 ? “on
+your first try!” : “in” + attempts + ” attempts.”) ), e(“button”, {
+onClick: handleReset, style: { padding: “12px 32px”, fontSize: 16,
+fontWeight: 700, background: “#6c63ff”, color: “#fff”, border: “none”,
+borderRadius: 10, cursor: “pointer” } }, “Try again”) ); }
+
+return e(“div”, { style: { maxWidth: 680, margin: “0 auto”, padding: “0
+16px 40px” } }, e(“p”, { style: { color: “#555”, fontSize: 15,
+marginBottom: 20, textAlign: “center” } }, “Drag the sentences into the
+correct order to form a well-structured paragraph.” ), e(“div”, { role:
+“list”, “aria-label”: “Sentences to reorder”, key: shakeKey },
+order.map(function(sentence, idx) { return e(SentenceCard, { key:
+sentence, sentence: sentence, index: idx, isDragging: dragging === idx
+|| over === idx, onDragStart: handleDragStart, onDragOver:
+handleDragOver, onDrop: handleDrop, onDragEnd: handleDragEnd, onKeyDown:
+handleKeyDown }); }) ), status === “error” && e(“div”, { role: “alert”,
+style: { background: “#fff5f5”, border: “1px solid #fc8181”,
+borderRadius: 8, padding: “12px 16px”, marginBottom: 16, color:
+“#c53030”, fontSize: 14 } }, feedback ? e(“span”, null, feedback) :
+e(“span”, null, “Not quite right. Try rearranging the sentences.”) ),
+clueIdx !== null && config.clues && config.clues[clueIdx] && e(“div”, {
+style: { background: “#ebf8ff”, border: “1px solid #90cdf4”,
+borderRadius: 8, padding: “12px 16px”, marginBottom: 16, color:
+“#2b6cb0”, fontSize: 14 } }, e(“strong”, null, “Clue:”),
+config.clues[clueIdx]), e(“div”, { style: { display: “flex”, gap: 12,
+justifyContent: “center”, flexWrap: “wrap” } }, e(“button”, { onClick:
+handleCheck, style: { padding: “12px 32px”, fontSize: 16, fontWeight:
+700, background: “#6c63ff”, color: “#fff”, border: “none”, borderRadius:
+10, cursor: “pointer”, minWidth: 140 } }, “Check my answer”),
+config.clues && config.clues.some(function(c) { return c; }) &&
+e(“button”, { onClick: function() { handleClue(0); }, style: { padding:
+“12px 24px”, fontSize: 15, background: “#fff”, color: “#6c63ff”, border:
+“2px solid #6c63ff”, borderRadius: 10, cursor: “pointer” } }, “Show
+clue”) ), attempts > 0 && e(“p”, { style: { textAlign: “center”, color:
+“#888”, marginTop: 12, fontSize: 14 } }, “Attempts:” + attempts ) ); }
+
+// ─── No Config Message
+──────────────────────────────────────────────────────── function
+NoConfigMessage() { return e(“div”, { style: { maxWidth: 480, margin:
+“60px auto”, padding: 40, background: “#fff”, borderRadius: 16,
+textAlign: “center”, boxShadow: “0 4px 24px rgba(0,0,0,0.08)” } },
+e(“div”, { style: { fontSize: 48, marginBottom: 16 } }, “🔗”), e(“h2”, {
+style: { color: “#2d3748”, marginBottom: 12, fontSize: 22 } }, “You need
+a teacher-generated link” ), e(“p”, { style: { color: “#555”, fontSize:
+16, lineHeight: 1.6 } }, “To use this activity, ask your teacher to
+share their activity link with you.” ) ); }
+
+// ─── Teacher Setup
+──────────────────────────────────────────────────────────── function
+TeacherSetup() { var _sentences = React.useState([““,”“,”“,”“,””]); var
+sentences = _sentences[0]; var setSentences = _sentences[1]; var
+_distractors = React.useState([““,”“,”“,”“,””]); var distractors =
+_distractors[0]; var setDistractors = _distractors[1]; var _clues =
+React.useState([““,”“,”“,”“,””]); var clues = _clues[0]; var setClues =
+_clues[1]; var _gameId = React.useState(“game-” + Date.now()); var
+gameId = _gameId[0]; var _link = React.useState(null); var link =
+_link[0]; var setLink = _link[1]; var _copied = React.useState(false);
+var copied = _copied[0]; var setCopied = _copied[1];
+
+function updateSentence(idx, val) { var a = sentences.slice(); a[idx] =
+val; setSentences(a); } function updateDistractor(idx, val) { var a =
+distractors.slice(); a[idx] = val; setDistractors(a); } function
+updateClue(idx, val) { var a = clues.slice(); a[idx] = val; setClues(a);
+} function addRow() { setSentences(sentences.concat([“”]));
+setDistractors(distractors.concat([“”])); setClues(clues.concat([“”]));
+} function removeRow(idx) { setSentences(sentences.filter(function(, i)
+{ return i !== idx; })); setDistractors(distractors.filter(function(, i)
+{ return i !== idx; })); setClues(clues.filter(function(_, i) { return i
+!== idx; })); }
+
+function generateLink() { var valid = sentences.filter(function(s) {
+return s.trim(); }); if (valid.length < 2) { alert(“Please enter at
+least 2 sentences.”); return; } var csv =
+“id,sentence,distractor,clue” + sentences.map(function(s, i) { return
+[gameId, s, distractors[i] || ““, clues[i] ||””].map(function(v) {
+return ‘“’ + v.replace(/”/g,’““‘) +’”’; }).join(“,”); }).join(“”); var
+encoded = btoa(unescape(encodeURIComponent(csv))); var url =
+window.location.origin + window.location.pathname + “?config=” +
+encoded; setLink(url); }
+
+function copyLink() { if (!link) return;
+navigator.clipboard.writeText(link).then(function() { setCopied(true);
+setTimeout(function() { setCopied(false); }, 2000); }); }
+
+var numRows = sentences.length;
+
+return e(“div”, { style: { maxWidth: 800, margin: “0 auto”, padding: “0
+16px 60px” } }, e(“p”, { style: { color: “#555”, marginBottom: 24,
+fontSize: 15 } }, “Enter sentences in the correct order. Add optional
+distractors (hints for wrong answers) and clues.” ), e(“div”, { style: {
+overflowX: “auto” } }, e(“table”, { style: { width: “100%”,
+borderCollapse: “collapse”, fontSize: 14 } }, e(“thead”, null, e(“tr”,
+null, e(“th”, { style: { textAlign: “left”, padding: “8px 10px”, color:
+“#6c63ff”, width: 30 } }, “#”), e(“th”, { style: { textAlign: “left”,
+padding: “8px 10px”, color: “#6c63ff” } }, “Sentence (correct order)
+*“), e(”th”, { style: { textAlign: “left”, padding: “8px 10px”, color:
+“#6c63ff” } }, “Distractor (optional)”), e(“th”, { style: { textAlign:
+“left”, padding: “8px 10px”, color: “#6c63ff” } }, “Clue (optional)”),
+e(“th”, { style: { width: 40 } }) ) ), e(“tbody”, null,
+sentences.map(function(s, idx) { return e(“tr”, { key: idx, style: {
+borderTop: “1px solid #eee” } }, e(“td”, { style: { padding: “8px 10px”,
+color: “#888”, fontWeight: 700 } }, idx + 1), e(“td”, { style: {
+padding: “6px 8px” } }, e(“input”, { type: “text”, value: s, onChange:
+function(ev) { updateSentence(idx, ev.target.value); }, placeholder:
+“Sentence” + (idx + 1), “aria-label”: “Sentence” + (idx + 1), style: {
+width: “100%”, padding: “8px 10px”, border: “1px solid #d1d5db”,
+borderRadius: 6, fontSize: 14, boxSizing: “border-box” } }) ), e(“td”, {
+style: { padding: “6px 8px” } }, e(“input”, { type: “text”, value:
+distractors[idx] || ““, onChange: function(ev) { updateDistractor(idx,
+ev.target.value); }, placeholder:”Optional hint…“,”aria-label”:
+“Distractor for sentence” + (idx + 1), style: { width: “100%”, padding:
+“8px 10px”, border: “1px solid #d1d5db”, borderRadius: 6, fontSize: 14,
+boxSizing: “border-box” } }) ), e(“td”, { style: { padding: “6px 8px” }
+}, e(“input”, { type: “text”, value: clues[idx] || ““, onChange:
+function(ev) { updateClue(idx, ev.target.value); },
+placeholder:”Optional clue…“,”aria-label”: “Clue for sentence” + (idx +
+1), style: { width: “100%”, padding: “8px 10px”, border: “1px solid
+#d1d5db”, borderRadius: 6, fontSize: 14, boxSizing: “border-box” } }) ),
+e(“td”, { style: { padding: “6px 8px”, textAlign: “center” } },
+numRows > 2 && e(“button”, { onClick: function() { removeRow(idx); },
+“aria-label”: “Remove row” + (idx + 1), style: { background: “none”,
+border: “none”, color: “#e53e3e”, cursor: “pointer”, fontSize: 18,
+padding: 4 } }, “×”) ) ); }) ) ) ), e(“button”, { onClick: addRow,
+style: { marginTop: 12, padding: “8px 20px”, fontSize: 14, background:
+“#fff”, color: “#6c63ff”, border: “2px solid #6c63ff”, borderRadius: 8,
+cursor: “pointer” } }, “+ Add sentence”), e(“div”, { style: { marginTop:
+28, display: “flex”, gap: 12, flexWrap: “wrap” } }, e(“button”, {
+onClick: generateLink, style: { padding: “12px 28px”, fontSize: 15,
+fontWeight: 700, background: “#6c63ff”, color: “#fff”, border: “none”,
+borderRadius: 10, cursor: “pointer” } }, “Generate activity link”) ),
+link && e(“div”, { style: { marginTop: 24, background: “#f0f4ff”,
+border: “1px solid #c3d0ff”, borderRadius: 10, padding: 20 } }, e(“p”, {
+style: { fontSize: 13, color: “#555”, marginBottom: 8 } }, “Share this
+link with your students:”), e(“div”, { style: { display: “flex”, gap:
+10, alignItems: “center”, flexWrap: “wrap” } }, e(“input”, { type:
+“text”, readOnly: true, value: link, “aria-label”: “Generated activity
+link”, style: { flex: 1, minWidth: 200, padding: “10px 12px”, fontSize:
+13, border: “1px solid #c3d0ff”, borderRadius: 8, background: “#fff” }
+}), e(“button”, { onClick: copyLink, style: { padding: “10px 20px”,
+fontSize: 14, fontWeight: 600, background: copied ? “#38a169” :
+“#6c63ff”, color: “#fff”, border: “none”, borderRadius: 8, cursor:
+“pointer”, whiteSpace: “nowrap” } }, copied ? “Copied!” : “Copy link”) )
+) ); }
+
+// ─── App Root
+─────────────────────────────────────────────────────────────────
+function App() { var params = new
+URLSearchParams(window.location.search); var configParam =
+params.get(“config”); var isTeacherPage = params.get(“teacher”) === “1”;
+
+var _tab = React.useState(isTeacherPage ? “teacher” : “student”); var
+tab = _tab[0]; var setTab = _tab[1]; var _pinUnlocked =
+React.useState(false); var pinUnlocked = _pinUnlocked[0]; var
+setPinUnlocked = _pinUnlocked[1]; var _showPinModal =
+React.useState(false); var showPinModal = _showPinModal[0]; var
+setShowPinModal = _showPinModal[1]; var _studentName =
+React.useState(null); var studentName = _studentName[0]; var
+setStudentName = _studentName[1]; var _sessionStart =
+React.useState(Date.now()); var sessionStart = _sessionStart[0]; var
+setSessionStart = _sessionStart[1];
+
+var _config = React.useState(null); var config = _config[0]; var
+setConfig = _config[1]; var _configError = React.useState(false); var
+configError = _configError[0]; var setConfigError = _configError[1];
+
+React.useEffect(function() { if (!configParam) return; try { var decoded
+= decodeURIComponent(escape(atob(configParam))); var parsed =
+parseConfig(decoded); if (parsed) setConfig(parsed); else
+setConfigError(true); } catch (err) { setConfigError(true); } }, []);
+
+function handleTabClick(newTab) { if (newTab === “teacher” &&
+!pinUnlocked) { setShowPinModal(true); } else { setTab(newTab); } }
+
+function handlePinSuccess() { setPinUnlocked(true);
+setShowPinModal(false); setTab(“teacher”); }
+
+function handleReset() { if (window.confirm(“Reset the session? This
+will clear current stats and start fresh.”)) {
+setSessionStart(Date.now()); } }
+
+var showStudentContent = tab === “student”;
+
+return e(“div”, { style: { minHeight: “100vh”, background: “#f4f3ff”,
+fontFamily: “‘Segoe UI’, system-ui, sans-serif” } }, showPinModal &&
+e(PinModal, { onSuccess: handlePinSuccess, onCancel: function() {
+setShowPinModal(false); } }),
+
+    // Header
+    e("header", { style: { background: "#6c63ff", color: "#fff", padding: "0 24px" } },
+      e("div", { style: { maxWidth: 800, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 } },
+        e("h1", { style: { margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px" } }, "Fix the Paragraph"),
+        e("nav", { role: "tablist", "aria-label": "App sections", style: { display: "flex", gap: 4 } },
+          e("button", {
+            role: "tab",
+            "aria-selected": tab === "student",
+            onClick: function() { setTab("student"); },
+            style: {
+              padding: "8px 18px", fontSize: 14, fontWeight: 600, border: "none",
+              borderRadius: 8, cursor: "pointer",
+              background: tab === "student" ? "rgba(255,255,255,0.25)" : "transparent",
+              color: "#fff"
+            }
+          }, "Activity"),
+          e("button", {
+            role: "tab",
+            "aria-selected": tab === "teacher",
+            onClick: function() { handleTabClick("teacher"); },
+            style: {
+              padding: "8px 18px", fontSize: 14, fontWeight: 600, border: "none",
+              borderRadius: 8, cursor: "pointer",
+              background: tab === "teacher" ? "rgba(255,255,255,0.25)" : "transparent",
+              color: "#fff"
+            }
+          }, "Teacher")
         )
-      ),
+      )
+    ),
 
-      lastRefresh && React.createElement("p", { style: { color: "#94a3b8", fontSize: "0.8rem", marginBottom: "16px" } },
-        "Last refreshed: " + lastRefresh.toLocaleTimeString() + " (auto-refreshes every 15s)"
-      ),
+    // Name modal for students
+    tab === "student" && config && !studentName && e(NameModal, { onSubmit: setStudentName }),
 
-      studentList.length > 0 && React.createElement("table", { style: { width: "100%", borderCollapse: "collapse" } },
-        React.createElement("thead", null,
-          React.createElement("tr", null,
-            ["Student", "Completed", "First Try", "Attempts", "Clues", "Distractors"].map(function(h) {
-              return React.createElement("th", {
-                key: h,
-                style: { textAlign: "left", padding: "8px", background: "#f1f5f9", fontSize: "0.85rem", fontWeight: "600" }
-              }, h);
+    // Tab panels
+    e("main", { style: { maxWidth: 800, margin: "0 auto", paddingTop: 32 } },
+      tab === "student" && e("div", { role: "tabpanel" },
+        configError
+          ? e("div", { style: { textAlign: "center", padding: 40, color: "#e53e3e" } }, "Could not load the activity. The link may be invalid.")
+          : config
+            ? e(StudentActivity, { config: config, studentName: studentName || "anonymous" })
+            : e(NoConfigMessage, null)
+      ),
+      tab === "teacher" && pinUnlocked && e("div", { role: "tabpanel" },
+        e("div", { style: { padding: "0 24px" } },
+          e("div", { style: { borderBottom: "2px solid #e2e8f0", marginBottom: 28, display: "flex", gap: 0 } },
+            ["setup", "session"].map(function(t) {
+              var _subTab = React.useState("setup");
+              return null;
             })
           )
         ),
-        React.createElement("tbody", null,
-          studentList.map(function(s) {
-            return React.createElement("tr", { key: s.name, style: { borderBottom: "1px solid #e2e8f0" } },
-              React.createElement("td", { style: { padding: "8px", fontWeight: "600" } }, s.name),
-              React.createElement("td", { style: { padding: "8px", color: s.completed ? "#16a34a" : "#94a3b8" } }, s.completed ? "Yes" : "No"),
-              React.createElement("td", { style: { padding: "8px", color: s.firstTrySuccess ? "#16a34a" : "#94a3b8" } }, s.firstTrySuccess ? "Yes" : "No"),
-              React.createElement("td", { style: { padding: "8px" } }, s.attempts),
-              React.createElement("td", { style: { padding: "8px" } }, s.clues),
-              React.createElement("td", { style: { padding: "8px" } }, s.distractors)
-            );
-          })
-        )
-      ),
-
-      studentList.length === 0 && React.createElement("p", { style: { color: "#94a3b8", textAlign: "center", padding: "32px" } },
-        "No student data yet for this session."
+        e(TeacherTabContent, { sessionStart: sessionStart, onReset: handleReset, configParam: configParam })
       )
     )
 
 ); }
 
-function ActivityCard(props) { const { item, index, studentName, gameId
-} = props; const [words, setWords] = useState([]); const [answered,
-setAnswered] = useState(false); const [correct, setCorrect] =
-useState(false); const [attempts, setAttempts] = useState(0); const
-[clueUsed, setClueUsed] = useState(false); const [dragOver, setDragOver]
-= useState(null); const [selectedWord, setSelectedWord] =
-useState(null);
+// ─── Teacher Tab Content
+────────────────────────────────────────────────────── function
+TeacherTabContent(props) { var _sub = React.useState(“session”); var sub
+= _sub[0]; var setSub = _sub[1];
 
-useEffect(function() { const correctWords = item.correct.split(” “);
-const allWords = shuffle([…correctWords, …item.distractors]);
-setWords(allWords.map(function(w, i) { return { id: i, text: w, placed:
-false }; })); }, [item]);
+return e(“div”, null, e(“div”, { style: { padding: “0 24px”,
+borderBottom: “2px solid #e2e8f0”, display: “flex”, gap: 4,
+marginBottom: 0 } }, e(“button”, { onClick: function() {
+setSub(“session”); }, style: { padding: “10px 20px”, fontWeight: 600,
+fontSize: 14, border: “none”, borderBottom: sub === “session” ? “3px
+solid #6c63ff” : “3px solid transparent”, background: “transparent”,
+color: sub === “session” ? “#6c63ff” : “#555”, cursor: “pointer” } },
+“Session Summary”), e(“button”, { onClick: function() { setSub(“setup”);
+}, style: { padding: “10px 20px”, fontWeight: 600, fontSize: 14, border:
+“none”, borderBottom: sub === “setup” ? “3px solid #6c63ff” : “3px solid
+transparent”, background: “transparent”, color: sub === “setup” ?
+“#6c63ff” : “#555”, cursor: “pointer” } }, “Create Activity”) ), sub ===
+“session” ? e(TeacherPanel, { sessionStart: props.sessionStart, onReset:
+props.onReset }) : e(TeacherSetup, null) ); }
 
-const [answer, setAnswer] = useState([]);
-
-function handleDragStart(e, wordId) { e.dataTransfer.setData(“wordId”,
-String(wordId)); }
-
-function handleDropOnAnswer(e, position) { e.preventDefault(); const
-wordId = parseInt(e.dataTransfer.getData(“wordId”)); placeWord(wordId,
-position); setDragOver(null); }
-
-function handleDropOnBank(e) { e.preventDefault(); const wordId =
-parseInt(e.dataTransfer.getData(“wordId”)); returnWord(wordId);
-setDragOver(null); }
-
-function placeWord(wordId, position) { const word =
-words.find(function(w) { return w.id === wordId; }); if (!word ||
-word.placed) return; const newAnswer = […answer]; if
-(newAnswer[position] !== undefined && newAnswer[position] !== null) {
-const displaced = newAnswer[position]; setWords(function(ws) { return
-ws.map(function(w) { if (w.id === displaced) return Object.assign({}, w,
-{ placed: false }); if (w.id === wordId) return Object.assign({}, w, {
-placed: true }); return w; }); }); } else { setWords(function(ws) {
-return ws.map(function(w) { return w.id === wordId ? Object.assign({},
-w, { placed: true }) : w; }); }); } newAnswer[position] = wordId;
-setAnswer(newAnswer); }
-
-function returnWord(wordId) { setAnswer(function(a) { return
-a.map(function(id) { return id === wordId ? null : id; }); });
-setWords(function(ws) { return ws.map(function(w) { return w.id ===
-wordId ? Object.assign({}, w, { placed: false }) : w; }); }); }
-
-function handleCheck() { const correctWords = item.correct.split(” “);
-const answerWords = answer.map(function(id) { if (id === null || id ===
-undefined) return”“; const w = words.find(function(w) { return w.id ===
-id; }); return w ? w.text :”“; }); const isCorrect = answerWords.join(”
-“) === correctWords.join(” “); const newAttempts = attempts + 1;
-setAttempts(newAttempts);
-
-    sendTrackingData(studentName, gameId, newAttempts, "attempt", isCorrect ? "correct" : "incorrect");
-
-    if (isCorrect) {
-      setAnswered(true);
-      setCorrect(true);
-      sendTrackingData(studentName, gameId, newAttempts, "completed", "sentence-" + (index + 1));
-      if (newAttempts === 1) {
-        sendTrackingData(studentName, gameId, newAttempts, "first_try_mastered", "sentence-" + (index + 1));
-      }
-      if (window.InteractivesTelemetry) {
-        window.InteractivesTelemetry.track("paragraph_completed", { gameId: gameId, sentence: index + 1, attempts: newAttempts });
-        if (newAttempts === 1) {
-          window.InteractivesTelemetry.track("first_try_mastered", { gameId: gameId, sentence: index + 1 });
-        }
-      }
-    }
-
-}
-
-function handleClue() { setClueUsed(true); sendTrackingData(studentName,
-gameId, attempts, “clue_used”, “sentence-” + (index + 1)); if
-(window.InteractivesTelemetry) {
-window.InteractivesTelemetry.track(“clue_used”, { gameId: gameId,
-sentence: index + 1 }); } }
-
-const correctWords = item.correct.split(” “); const answerSlots =
-Array.from({ length: correctWords.length }); const unplacedWords =
-words.filter(function(w) { return !w.placed; });
-
-return ( React.createElement(“div”, { style: { background: “#fff”,
-borderRadius: “12px”, padding: “24px”, boxShadow: “0 2px 8px
-rgba(0,0,0,0.08)”, marginBottom: “20px”, border: answered ? “2px solid
-#16a34a” : “2px solid #e2e8f0” } }, React.createElement(“div”, { style:
-{ display: “flex”, alignItems: “center”, marginBottom: “16px” } },
-React.createElement(“span”, { style: { background: answered ? “#dcfce7”
-: “#eff6ff”, color: answered ? “#16a34a” : “#2563eb”, fontWeight: “800”,
-fontSize: “0.85rem”, padding: “4px 12px”, borderRadius: “20px”,
-marginRight: “12px” } }, “Sentence” + (index + 1)), answered &&
-React.createElement(“span”, { style: { color: “#16a34a”, fontWeight:
-“700” } }, “Correct!”) ),
-
-      clueUsed && React.createElement("div", {
-        style: { background: "#fef9c3", border: "1px solid #fde047", borderRadius: "8px", padding: "10px 14px", marginBottom: "14px", fontSize: "0.9rem" }
-      }, "Clue: " + item.correct),
-
-      React.createElement("div", {
-        onDragOver: function(e) { e.preventDefault(); },
-        onDrop: handleDropOnAnswer,
-        style: {
-          minHeight: "52px", background: "#f8fafc", border: "2px dashed #cbd5e1",
-          borderRadius: "8px", padding: "10px", display: "flex", flexWrap: "wrap",
-          gap: "8px", marginBottom: "14px"
-        },
-        "aria-label": "Answer area"
-      },
-        answerSlots.map(function(_, i) {
-          const wordId = answer[i];
-          const word = wordId !== undefined && wordId !== null ? words.find(function(w) { return w.id === wordId; }) : null;
-          return React.createElement("div", {
-            key: i,
-            onDragOver: function(e) { e.preventDefault(); setDragOver(i); },
-            onDrop: function(e) { handleDropOnAnswer(e, i); },
-            onClick: function() { if (word) returnWord(word.id); },
-            style: {
-              minWidth: "60px", minHeight: "36px", background: word ? "#dbeafe" : "#e2e8f0",
-              borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center",
-              padding: "4px 10px", cursor: word ? "pointer" : "default",
-              border: dragOver === i ? "2px solid #2563eb" : "2px solid transparent",
-              fontWeight: word ? "600" : "400", color: "#1e293b"
-            }
-          }, word ? word.text : "");
-        })
-      ),
-
-      React.createElement("div", {
-        onDragOver: function(e) { e.preventDefault(); },
-        onDrop: handleDropOnBank,
-        style: { display: "flex", flexWrap: "wrap", gap: "8px", marginBottom: "16px" }
-      },
-        unplacedWords.map(function(word) {
-          return React.createElement("div", {
-            key: word.id,
-            draggable: true,
-            onDragStart: function(e) { handleDragStart(e, word.id); },
-            role: "button",
-            tabIndex: 0,
-            "aria-label": word.text,
-            onKeyDown: function(e) {
-              if (e.key === "Enter" || e.key === " ") {
-                if (selectedWord === word.id) {
-                  setSelectedWord(null);
-                } else {
-                  setSelectedWord(word.id);
-                }
-              }
-            },
-            style: {
-              background: selectedWord === word.id ? "#2563eb" : "#fff",
-              color: selectedWord === word.id ? "#fff" : "#1e293b",
-              border: "2px solid " + (selectedWord === word.id ? "#2563eb" : "#cbd5e1"),
-              borderRadius: "8px", padding: "6px 14px",
-              cursor: "grab", fontWeight: "600", fontSize: "0.95rem",
-              boxShadow: "0 1px 3px rgba(0,0,0,0.1)"
-            }
-          }, word.text);
-        })
-      ),
-
-      !answered && React.createElement("div", { style: { display: "flex", gap: "10px" } },
-        React.createElement("button", {
-          onClick: handleCheck,
-          style: {
-            padding: "10px 24px", background: "#2563eb", color: "#fff",
-            border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "700"
-          }
-        }, "Check"),
-        !clueUsed && React.createElement("button", {
-          onClick: handleClue,
-          style: {
-            padding: "10px 24px", background: "#f1f5f9", color: "#475569",
-            border: "none", borderRadius: "8px", cursor: "pointer", fontWeight: "600"
-          }
-        }, "Show Clue")
-      )
-    )
-
-); }
-
-function StudentActivity(props) { const { config, studentName } = props;
-const completed = config.sentences.filter(function(_, i) { return
-props.completedSet.has(i); }).length;
-
-return ( React.createElement(“div”, { style: { maxWidth: “700px”,
-margin: “0 auto”, padding: “24px 16px” } }, React.createElement(“div”, {
-style: { marginBottom: “20px” } }, React.createElement(“h1”, { style: {
-fontSize: “1.6rem”, fontWeight: “800”, marginBottom: “4px” } },
-config.title), React.createElement(“p”, { style: { color: “#64748b” } },
-“Hi” + studentName + “! Arrange each sentence correctly.”),
-React.createElement(“div”, { style: { background: “#eff6ff”,
-borderRadius: “8px”, padding: “10px 16px”, marginTop: “12px”, display:
-“flex”, alignItems: “center”, gap: “12px” } },
-React.createElement(“span”, { style: { fontWeight: “700”, color:
-“#2563eb” } }, completed + ” / ” + config.sentences.length + ”
-complete”), React.createElement(“div”, { style: { flex: 1, height:
-“8px”, background: “#bfdbfe”, borderRadius: “4px” } },
-React.createElement(“div”, { style: { width: (config.sentences.length >
-0 ? (completed / config.sentences.length * 100) : 0) + “%”, height:
-“100%”, background: “#2563eb”, borderRadius: “4px”, transition: “width
-0.3s” } }) ) ) ), config.sentences.map(function(item, i) { return
-React.createElement(ActivityCard, { key: i, index: i, item: item,
-studentName: studentName, gameId: config.gameId, onComplete: function()
-{ props.onComplete(i); } }); }) ) ); }
-
-function App() { const { config, error } = useConfig(); const
-[activeTab, setActiveTab] = useState(“student”); const [studentName,
-setStudentName] = useState(null); const [showPIN, setShowPIN] =
-useState(false); const [teacherUnlocked, setTeacherUnlocked] =
-useState(false); const [completedSet, setCompletedSet] = useState(new
-Set());
-
-function handleTabClick(tab) { if (tab === “teacher” &&
-!teacherUnlocked) { setShowPIN(true); } else { setActiveTab(tab); } }
-
-function handlePINSuccess() { setTeacherUnlocked(true);
-setShowPIN(false); setActiveTab(“teacher”); }
-
-function handleComplete(index) { setCompletedSet(function(s) { const
-next = new Set(s); next.add(index); return next; }); }
-
-const tabStyle = function(tab) { return { padding: “10px 24px”,
-fontWeight: “700”, fontSize: “0.95rem”, border: “none”, cursor:
-“pointer”, borderBottom: activeTab === tab ? “3px solid #2563eb” : “3px
-solid transparent”, background: “transparent”, color: activeTab === tab
-? “#2563eb” : “#64748b” }; };
-
-if (error === “no-config” && activeTab === “student”) { return (
-React.createElement(“div”, { style: { minHeight: “100vh”, display:
-“flex”, alignItems: “center”, justifyContent: “center”, background:
-“#f8fafc” } }, React.createElement(“div”, { style: { maxWidth: “480px”,
-textAlign: “center”, padding: “40px 24px” } },
-React.createElement(“div”, { style: { fontSize: “3rem”, marginBottom:
-“16px” } }, “🔗”), React.createElement(“h1”, { style: { fontSize:
-“1.5rem”, fontWeight: “800”, marginBottom: “12px” } }, “You need a link
-to start”), React.createElement(“p”, { style: { color: “#64748b”,
-lineHeight: “1.6” } }, “This activity requires a teacher-generated link.
-Ask your teacher to share their link with you.” ),
-React.createElement(“button”, { onClick: function() {
-handleTabClick(“teacher”); }, style: { marginTop: “24px”, padding: “10px
-24px”, background: “#2563eb”, color: “#fff”, border: “none”,
-borderRadius: “8px”, cursor: “pointer”, fontWeight: “700” } }, “I’m a
-teacher”) ), showPIN && React.createElement(PINModal, { onSuccess:
-handlePINSuccess, onCancel: function() { setShowPIN(false); } }) ) ); }
-
-return ( React.createElement(“div”, { style: { minHeight: “100vh”,
-background: “#f8fafc” } }, showPIN && React.createElement(PINModal, {
-onSuccess: handlePINSuccess, onCancel: function() { setShowPIN(false); }
-}), studentName === null && activeTab === “student” && config &&
-React.createElement(NameModal, { onSubmit: setStudentName }),
-React.createElement(“nav”, { style: { background: “#fff”, borderBottom:
-“1px solid #e2e8f0”, display: “flex”, paddingLeft: “16px” } },
-React.createElement(“button”, { style: tabStyle(“student”), onClick:
-function() { handleTabClick(“student”); } }, “Student Activity”),
-React.createElement(“button”, { style: tabStyle(“setup”), onClick:
-function() { handleTabClick(“setup”); } }, “Teacher Setup”),
-React.createElement(“button”, { style: tabStyle(“teacher”), onClick:
-function() { handleTabClick(“teacher”); } }, “Session Summary”) ),
-activeTab === “student” && ( error ? ( React.createElement(“div”, {
-style: { padding: “40px”, textAlign: “center”, color: “#dc2626” } },
-“Could not load activity config. Please check the link.” ) ) : config ?
-( React.createElement(StudentActivity, { config: config, studentName:
-studentName || “Student”, completedSet: completedSet, onComplete:
-handleComplete }) ) : ( React.createElement(“div”, { style: { padding:
-“40px”, textAlign: “center”, color: “#94a3b8” } }, “Loading…”) ) ),
-activeTab === “setup” && React.createElement(TeacherSetup, null),
-activeTab === “teacher” && React.createElement(SessionSummary, { gameId:
-config ? config.gameId : null }) ) ); }
-
-const root = ReactDOM.createRoot(document.getElementById(“root”));
-root.render(React.createElement(App, null));
+// ─── Mount
+──────────────────────────────────────────────────────────────────── var
+root = ReactDOM.createRoot(document.getElementById(“root”));
+root.render(e(App, null));
