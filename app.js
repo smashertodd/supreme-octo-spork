@@ -1,748 +1,229 @@
-// app.js - Fix the Paragraph Mini App 
+/* ============================================== Fix the Paragraph —
+style.css ============================================== */
 
-// CONFIG - update these two values: 
-var TRACKING_URL = [ 
-  "https://script.google.com/macros/s/",
-  "AKfycbyL4Ws4DK4UH_VbTE_4ENW9vmy7WRKly71NfPLDm2CF3oeBf91jUOTkXuSJJWiWMEHQ",
-  "/exec"
-].join("");
-var TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv"; 
-var PIN = "9999"; 
-var REFRESH_INTERVAL = 15000;
+:root { –primary: #4f46e5; –primary-hover: #4338ca; –success: #10b981;
+–danger: #ef4444; –warn-bg: #fef3c7; –warn-text: #92400e; –bg: #f3f4f6;
+–surface: #ffffff; –border: #e5e7eb; –text: #1f2937; –muted: #6b7280; }
 
-// Default paragraph config
-var DEFAULT_SENTENCES = [ 
-  "First, gather all your ingredients before you start cooking.", 
-  "Next, preheat the oven to the correct temperature.", 
-  "Then, mix the dry ingredients together in a large bowl.", 
-  "After that, add the wet ingredients and stir until combined.", 
-  "Finally, pour the mixture into a baking tin and place it in the oven."
-];
+, ::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-// Utilities
-function parseCSVRow(row) { 
-  var result = []; 
-  var insideQuote = false; 
-  var current = ""; 
-  for (var i = 0; i < row.length; i++) { 
-    var ch = row[i]; 
-    if (ch === '"' && !insideQuote) { 
-      insideQuote = true; 
-      continue; 
-    } 
-    if (ch === '"' && insideQuote) { 
-      insideQuote = false; 
-      continue; 
-    } 
-    if (ch === ',' && !insideQuote) { 
-      result.push(current.trim()); 
-      current = ""; 
-      continue; 
-    } 
-    current += ch; 
-  } 
-  result.push(current.trim()); 
-  return result; 
-}
+body { font-family: ‘Segoe UI’, system-ui, sans-serif; background:
+var(–bg); color: var(–text); min-height: 100vh; }
 
-function parseConfig(csv) { 
-  var lines = csv.trim().split("\n"); 
-  if (lines.length < 2) return null; 
-  
-  var headers = parseCSVRow(lines[0]).map(function(h) { return h.toLowerCase(); }); 
-  var idIdx = headers.indexOf("id"); 
-  var sentenceIdx = headers.indexOf("sentence"); 
-  var distractorIdx = headers.indexOf("distractor"); 
-  var clueIdx = headers.indexOf("clue"); 
-  
-  if (idIdx < 0 || sentenceIdx < 0) return null; 
-  
-  var sentences = []; 
-  var distractors = []; 
-  var clues = []; 
-  var gameId = ""; 
-  
-  for (var i = 1; i < lines.length; i++) { 
-    if (!lines[i].trim()) continue; 
-    var cols = parseCSVRow(lines[i]); 
-    if (i === 1) gameId = cols[idIdx] || "unknown"; 
-    sentences.push(cols[sentenceIdx] || ""); 
-    if (distractorIdx >= 0) distractors.push(cols[distractorIdx] || ""); 
-    if (clueIdx >= 0) clues.push(cols[clueIdx] || ""); 
-  } 
-  return { gameId: gameId, sentences: sentences, distractors: distractors, clues: clues }; 
-}
+/* —- NAV —- */ nav { background: var(–primary); color: white; display:
+flex; align-items: center; justify-content: space-between; padding: 0
+24px; height: 56px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); } nav
+.nav-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
+} nav .nav-tabs { display: flex; gap: 6px; } nav .nav-tab { background:
+transparent; border: 2px solid rgba(255,255,255,0.4); color: white;
+padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight:
+600; cursor: pointer; transition: all 0.2s; } nav .nav-tab:hover {
+background: rgba(255,255,255,0.15); } nav .nav-tab.active { background:
+white; color: var(–primary); border-color: white; }
 
-function shuffle(arr) { 
-  var a = arr.slice(); 
-  for (var i = a.length - 1; i > 0; i--) { 
-    var j = Math.floor(Math.random() * (i + 1)); 
-    var tmp = a[i]; 
-    a[i] = a[j]; 
-    a[j] = tmp; 
-  } 
-  return a; 
-}
+/* —- SCREENS —- */ .screen { display: none; } .screen.active { display:
+block; }
 
-function sendTrackingData(name, gameId, attempt, status, details) { 
-  var params = new URLSearchParams(); 
-  params.append("name", name || "anonymous"); 
-  params.append("gameId", gameId || "unknown");
-  params.append("attempt", String(attempt)); 
-  params.append("status", status); 
-  params.append("details", details || ""); 
-  fetch(TRACKING_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" })
-    .catch(function() {}); 
-}
+/* —- NAME MODAL —- */ .modal-backdrop { position: fixed; inset: 0;
+background: rgba(0,0,0,0.55); display: flex; align-items: center;
+justify-content: center; z-index: 200; opacity: 0; pointer-events: none;
+transition: opacity 0.25s; } .modal-backdrop.open { opacity: 1;
+pointer-events: auto; } .modal-box { background: white; border-radius:
+16px; padding: 40px 36px; max-width: 420px; width: 92%; box-shadow: 0
+25px 50px rgba(0,0,0,0.2); transform: translateY(24px); transition:
+transform 0.25s; text-align: center; } .modal-backdrop.open .modal-box {
+transform: translateY(0); } .modal-box h2 { font-size: 24px;
+font-weight: 700; margin-bottom: 8px; color: var(–text); } .modal-box p
+{ color: var(–muted); margin-bottom: 20px; } .modal-box input { width:
+100%; padding: 12px 16px; border: 2px solid var(–border); border-radius:
+8px; font-size: 16px; outline: none; transition: border-color 0.2s;
+margin-bottom: 16px; } .modal-box input:focus { border-color:
+var(–primary); } .modal-box .hint-icon { font-size: 48px; margin-bottom:
+12px; } .modal-box .hint-body { font-size: 17px; line-height: 1.6;
+color: #374151; margin-bottom: 24px; } .modal-box .hint-label {
+font-size: 13px; font-weight: 700; color: #d97706; text-transform:
+uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
 
-// React App
-var e = React.createElement;
+/* —- BUTTONS —- */ .btn { display: inline-flex; align-items: center;
+justify-content: center; gap: 6px; padding: 11px 24px; border-radius:
+8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none;
+transition: all 0.18s; text-decoration: none; } .btn-primary {
+background: var(–primary); color: white; } .btn-primary:hover {
+background: var(–primary-hover); } .btn-success { background:
+var(–success); color: white; } .btn-success:hover { background: #059669;
+} .btn-danger { background: var(–danger); color: white; }
+.btn-danger:hover { background: #dc2626; } .btn-outline { background:
+transparent; color: var(–primary); border: 2px solid var(–primary); }
+.btn-outline:hover { background: var(–primary); color: white; }
+.btn-ghost { background: transparent; color: var(–muted); border: 2px
+solid var(–border); } .btn-ghost:hover { border-color: var(–primary);
+color: var(–primary); } .btn-full { width: 100%; } .btn-lg { padding:
+14px 32px; font-size: 17px; border-radius: 10px; }
 
-// Name Modal
-function NameModal(props) { 
-  var _s = React.useState(""); 
-  var name = _s[0]; 
-  var setName = _s[1];
+/* —- GAME SCREEN —- */ .game-wrapper { max-width: 860px; margin: 0
+auto; padding: 28px 20px; } .game-header { display: flex;
+justify-content: space-between; align-items: flex-start; margin-bottom:
+20px; gap: 16px; flex-wrap: wrap; } .game-header h1 { font-size: 22px;
+font-weight: 700; color: var(–text); } .student-badge { font-size: 13px;
+color: var(–muted); background: var(–border); padding: 5px 12px;
+border-radius: 20px; white-space: nowrap; } .student-badge span { color:
+var(–primary); font-weight: 700; }
 
-  function submit(ev) { 
-    ev.preventDefault(); 
-    if (name.trim()) props.onSubmit(name.trim()); 
-  }
+/* —- DISTRACTOR WARNING —- */ .distractor-banner { background:
+var(–warn-bg); color: var(–warn-text); border: 1px solid #fbbf24;
+border-radius: 8px; padding: 10px 16px; font-weight: 600; font-size:
+14px; margin-bottom: 20px; display: none; } .distractor-banner.visible {
+display: block; }
 
-  return e("div", { 
-    role: "dialog", "aria-modal": "true", "aria-labelledby": "name-modal-title", 
-    style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 } 
-  }, 
-    e("div", { style: { background: "#fff", borderRadius: 12, padding: 32, maxWidth: 400, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" } }, 
-      e("h2", { id: "name-modal-title", style: { marginTop: 0, fontSize: 20 } }, "What's your name?"), 
-      e("p", { style: { color: "#555", marginBottom: 16 } }, "Your teacher will use this to see how you're going."), 
-      e("form", { onSubmit: submit }, 
-        e("input", { 
-          type: "text", value: name, 
-          onChange: function(ev) { setName(ev.target.value); }, 
-          placeholder: "Type your name here...", autoFocus: true, "aria-label": "Your name", 
-          style: { width: "100%", padding: "10px 14px", fontSize: 16, border: "2px solid #6c63ff", borderRadius: 8, boxSizing: "border-box", marginBottom: 16, outline: "none" } 
-        }), 
-        e("button", { 
-          type: "submit", disabled: !name.trim(), 
-          style: { width: "100%", padding: "12px", fontSize: 16, fontWeight: 700, background: name.trim() ? "#6c63ff" : "#ccc", color: "#fff", border: "none", borderRadius: 8, cursor: name.trim() ? "pointer" : "not-allowed" } 
-        }, "Let's go!") 
-      ) 
-    ) 
-  ); 
-}
+/* —- LIVE PREVIEW —- */ .preview-panel { background: white; border: 2px
+solid var(–border); border-radius: 10px; padding: 20px 24px;
+margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+.preview-label { font-size: 11px; font-weight: 700; color: #9ca3af;
+text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;
+} .preview-text { font-size: 17px; line-height: 2.1; color: #111827;
+min-height: 40px; } .flow-chunk { display: inline; border-radius: 4px;
+padding: 2px 6px; box-decoration-break: clone;
+-webkit-box-decoration-break: clone; transition: background-color 0.5s
+ease; } .flow-blank { display: inline-block; color: #9ca3af;
+border-bottom: 2px dashed #d1d5db; padding: 0 20px; margin: 0 4px;
+font-style: italic; font-size: 14px; }
 
-// PIN Modal
-function PinModal(props) { 
-  var _s = React.useState(""); 
-  var pin = _s[0];
-  var setPin = _s[1]; 
-  var _e = React.useState(false); 
-  var error = _e[0];
-  var setError = _e[1];
+/* —- BOARD —- */ .board { display: flex; flex-direction: column; gap:
+10px; margin-bottom: 28px; } .board-row { display: flex; width: 100%;
+min-height: 62px; } .sem-label { width: 148px; flex-shrink: 0; border:
+2px solid #000; border-right: none; border-top-left-radius: 8px;
+border-bottom-left-radius: 8px; display: flex; align-items: center;
+justify-content: center; text-align: center; font-size: 13px;
+font-weight: 700; padding: 8px; transition: background-color 0.5s, color
+0.5s; } .drop-slot { flex-grow: 1; border: 2px dashed #cbd5e1;
+border-left: none; border-top-right-radius: 8px;
+border-bottom-right-radius: 8px; background: #f8fafc; padding: 6px;
+display: flex; align-items: center; min-height: 62px; transition:
+border-color 0.2s, background 0.2s; } .drop-slot.slot-filled {
+border-style: solid; border-color: #e2e8f0; background: white; }
+.drop-slot.slot-drag-over { border-color: var(–primary); background:
+#eef2ff; }
 
-  function submit(ev) { 
-    ev.preventDefault(); 
-    if (pin === PIN) {
-      props.onSuccess(); 
-    } else { 
-      setError(true); 
-      setPin(""); 
-    } 
-  }
+/* —- POOL —- */ .pool-header { text-align: center; font-size: 12px;
+font-weight: 700; color: var(–muted); text-transform: uppercase;
+letter-spacing: 0.07em; margin-bottom: 12px; } .pool-area { background:
+white; border: 2px solid var(–border); border-radius: 10px; padding:
+20px; min-height: 90px; display: flex; flex-wrap: wrap; gap: 10px;
+justify-content: center; margin-bottom: 24px; }
 
-  return e("div", { 
-    role: "dialog", "aria-modal": "true", "aria-labelledby": "pin-modal-title", 
-    style: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000 } 
-  }, 
-    e("div", { style: { background: "#fff", borderRadius: 12, padding: 32, maxWidth: 360, width: "90%", boxShadow: "0 8px 32px rgba(0,0,0,0.2)" } }, 
-      e("h2", { id: "pin-modal-title", style: { marginTop: 0, fontSize: 20 } }, "Teacher Access"), 
-      e("p", { style: { color: "#555" } }, "Enter your PIN to view the session summary."), 
-      e("form", { onSubmit: submit }, 
-        e("input", { 
-          type: "password", value: pin, 
-          onChange: function(ev) { setPin(ev.target.value); setError(false); }, 
-          placeholder: "PIN", autoFocus: true, "aria-label": "Teacher PIN", 
-          style: { width: "100%", padding: "10px 14px", fontSize: 18, letterSpacing: 4, border: error ? "2px solid #e53e3e" : "2px solid #6c63ff", borderRadius: 8, boxSizing: "border-box", marginBottom: 8, outline: "none" } 
-        }), 
-        error && e("p", { role: "alert", style: { color: "#e53e3e", margin: "0 0 12px" } }, "Incorrect PIN. Try again."), 
-        e("div", { style: { display: "flex", gap: 10, marginTop: 8 } }, 
-          e("button", { type: "submit", style: { flex: 1, padding: "12px", fontSize: 15, fontWeight: 700, background: "#6c63ff", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer" } }, "Unlock"), 
-          e("button", { type: "button", onClick: props.onCancel, style: { flex: 1, padding: "12px", fontSize: 15, background: "#f0f0f0", color: "#333", border: "none", borderRadius: 8, cursor: "pointer" } }, "Cancel") 
-        ) 
-      ) 
-    ) 
-  ); 
-}
+/* —- PART CARDS —- */ .part-card { background: white; border: 2px solid
+#e5e7eb; padding: 11px 18px; border-radius: 8px; cursor: grab;
+font-size: 15px; user-select: none; box-shadow: 0 2px 6px
+rgba(0,0,0,0.07); transition: transform 0.12s, box-shadow 0.12s,
+border-color 0.3s; display: flex; align-items: center; gap: 8px; }
+.part-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform:
+translateY(-1px); } .part-card:active { cursor: grabbing; transform:
+scale(0.97); } .part-card.distractor { border-color: #fca5a5; }
+.part-card.correct { border-color: var(–success) !important; }
+.part-card .card-tick { color: var(–success); font-weight: 700; display:
+none; } .part-card.correct .card-tick { display: inline; }
 
-// Teacher Panel
-function TeacherPanel(props) { 
-  var sessionStart = props.sessionStart; 
-  var _rows = React.useState([]); 
-  var rows = _rows[0]; 
-  var setRows = _rows[1]; 
-  var _loading = React.useState(true); 
-  var loading = _loading[0];
-  var setLoading = _loading[1]; 
-  var _lastRefresh = React.useState(null); 
-  var lastRefresh = _lastRefresh[0]; 
-  var setLastRefresh = _lastRefresh[1];
+/* When card is in slot, make it take full width */ .drop-slot
+.part-card { width: 100%; cursor: grab; }
 
-  function fetchRows() { 
-    if (!TRACKING_CSV_URL || TRACKING_CSV_URL === "PASTE_YOUR_CSV_URL_HERE") { 
-      setLoading(false); 
-      return; 
-    }
-    fetch(TRACKING_CSV_URL + "&t=" + Date.now()) 
-      .then(function(r) { return r.text(); }) 
-      .then(function(csv) { 
-        var lines = csv.trim().split("\n"); 
-        if (lines.length < 2) { 
-          setRows([]); 
-          setLoading(false); 
-          return; 
-        } 
-        var headers = parseCSVRow(lines[0]).map(function(h) { return h.toLowerCase().trim(); }); 
-        var tsIdx = headers.indexOf("timestamp");
-        var nameIdx = headers.indexOf("name"); 
-        var statusIdx = headers.indexOf("status"); 
-        var parsed = []; 
-        for (var i = 1; i < lines.length; i++) { 
-          if (!lines[i].trim()) continue; 
-          var cols = parseCSVRow(lines[i]); 
-          var ts = tsIdx >= 0 ? new Date(cols[tsIdx]).getTime() : 0; 
-          if (ts >= sessionStart) { 
-            parsed.push({ 
-              name: nameIdx >= 0 ? cols[nameIdx] : "?", 
-              status: statusIdx >= 0 ? cols[statusIdx] : "?" 
-            }); 
-          } 
-        } 
-        setRows(parsed); 
-        setLoading(false);
-        setLastRefresh(new Date()); 
-      })
-      .catch(function() { setLoading(false); }); 
-  }
+/* —- CHECK ANSWER AREA —- */ .check-area { text-align: center;
+margin-bottom: 40px; }
 
-  React.useEffect(function() { 
-    fetchRows(); 
-    var interval = setInterval(fetchRows, REFRESH_INTERVAL); 
-    return function() { clearInterval(interval); }; 
-  }, [sessionStart]);
+/* —- TOAST —- */ .toast-container { position: fixed; bottom: 24px;
+left: 50%; transform: translateX(-50%); z-index: 500; display: flex;
+flex-direction: column; gap: 8px; align-items: center; } .toast {
+background: #1f2937; color: white; padding: 12px 24px; border-radius:
+8px; font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px
+rgba(0,0,0,0.2); opacity: 0; transform: translateY(8px); transition: all
+0.3s; } .toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #065f46; } .toast.error { background:
+#991b1b; }
 
-  // Compute stats 
-  var studentMap = {}; 
-  rows.forEach(function(r) { 
-    if (!studentMap[r.name]) studentMap[r.name] = [];
-    studentMap[r.name].push(r.status); 
-  }); 
-  var students = Object.keys(studentMap); 
-  var totalStudents = students.length; 
-  var completed = students.filter(function(n) { 
-    return studentMap[n].some(function(s) { return s === "completed"; });
-  }).length; 
-  var firstTryMasters = students.filter(function(n) { 
-    var statuses = studentMap[n]; 
-    return statuses[0] === "completed"; 
-  }).length;
-  var successRate = totalStudents > 0 ? Math.round((firstTryMasters / totalStudents) * 100) : 0;
+/* —- TEACHER SCREEN —- */ .teacher-wrapper { max-width: 860px; margin:
+0 auto; padding: 28px 20px; }
 
-  var trafficLight = successRate >= 80 ? "#38a169" : successRate >= 50 ? "#dd6b20" : "#e53e3e"; 
-  var trafficLabel = successRate >= 80 ? "Ready to move on" : successRate >= 50 ? "Some students need support" : "Re-model recommended";
+/* PIN Gate */ .pin-gate { max-width: 360px; margin: 60px auto;
+background: white; border-radius: 16px; padding: 40px; text-align:
+center; box-shadow: 0 8px 32px rgba(0,0,0,0.1); } .pin-gate h2 {
+font-size: 22px; font-weight: 700; margin-bottom: 8px; } .pin-gate p {
+color: var(–muted); margin-bottom: 20px; font-size: 15px; } .pin-gate
+input { width: 100%; padding: 12px; text-align: center; letter-spacing:
+6px; font-size: 22px; border: 2px solid var(–border); border-radius:
+8px; margin-bottom: 16px; outline: none; } .pin-gate input:focus {
+border-color: var(–primary); } .pin-error { color: var(–danger);
+font-size: 14px; margin-top: -8px; margin-bottom: 12px; display: none; }
 
-  var csvNotSet = !TRACKING_CSV_URL || TRACKING_CSV_URL === "PASTE_YOUR_CSV_URL_HERE";
+/* Teacher Sub-tabs */ .sub-tabs { display: flex; border-bottom: 2px
+solid var(–border); margin-bottom: 28px; gap: 0; } .sub-tab { padding:
+10px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
+border-bottom: 3px solid transparent; margin-bottom: -2px; color:
+var(–muted); background: none; border-top: none; border-left: none;
+border-right: none; transition: color 0.2s; } .sub-tab.active { color:
+var(–primary); border-bottom-color: var(–primary); } .sub-panel {
+display: none; } .sub-panel.active { display: block; }
 
-  return e("div", { style: { padding: 24, maxWidth: 700, margin: "0 auto" } }, 
-    e("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 } }, 
-      e("h2", { style: { margin: 0, fontSize: 22, color: "#2d3748" } }, "Session Summary"), 
-      e("button", { onClick: props.onReset, style: { padding: "8px 18px", fontSize: 14, fontWeight: 600, background: "#fff", color: "#e53e3e", border: "2px solid #e53e3e", borderRadius: 8, cursor: "pointer" } }, "Reset Session") 
-    ),
-    csvNotSet && e("div", {
-      style: { background: "#fff3cd", border: "1px solid #ffc107", borderRadius: 8, padding: 16, marginBottom: 20, color: "#856404" }
-    },
-      e("strong", null, "Setup needed: "),
-      "Update TRACKING_CSV_URL in app.js with your published Google Sheets CSV URL."
-    ),
-    e("div", {
-      style: { background: trafficLight, borderRadius: 12, padding: "18px 24px", marginBottom: 20, color: "#fff", display: "flex", alignItems: "center", gap: 16 }
-    },
-      e("span", { style: { fontSize: 36 } }, successRate >= 80 ? "✅" : successRate >= 50 ? "⚠️" : "❌"),
-      e("div", null,
-        e("div", { style: { fontSize: 28, fontWeight: 800 } }, successRate + "% first-try success"),
-        e("div", { style: { fontSize: 15, opacity: 0.9 } }, trafficLabel)
-      )
-    ),
-    e("div", { style: { display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 } },
-      e("div", { style: { background: "#f7f7f7", borderRadius: 10, padding: 16, textAlign: "center" } },
-        e("div", { style: { fontSize: 28, fontWeight: 800, color: "#6c63ff" } }, totalStudents),
-        e("div", { style: { fontSize: 13, color: "#555" } }, "Students active")
-      ),
-      e("div", { style: { background: "#f7f7f7", borderRadius: 10, padding: 16, textAlign: "center" } },
-        e("div", { style: { fontSize: 28, fontWeight: 800, color: "#38a169" } }, completed),
-        e("div", { style: { fontSize: 13, color: "#555" } }, "Completed")
-      ),
-      e("div", { style: { background: "#f7f7f7", borderRadius: 10, padding: 16, textAlign: "center" } },
-        e("div", { style: { fontSize: 28, fontWeight: 800, color: "#dd6b20" } }, firstTryMasters),
-        e("div", { style: { fontSize: 13, color: "#555" } }, "First-try masters")
-      )
-    ),
-    students.length > 0 && e("div", null,
-      e("h3", { style: { fontSize: 16, marginBottom: 10, color: "#4a5568" } }, "Students"),
-      e("div", { style: { display: "flex", flexDirection: "column", gap: 8 } },
-        students.map(function(name) {
-          var statuses = studentMap[name];
-          var done = statuses.some(function(s) { return s === "completed"; });
-          var firstTry = statuses[0] === "completed";
-          return e("div", {
-            key: name,
-            style: { background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, padding: "10px 16px", display: "flex", justifyContent: "space-between", alignItems: "center" }
-          },
-            e("span", { style: { fontWeight: 600 } }, name),
-            e("span", {
-              style: { fontSize: 13, fontWeight: 600, padding: "3px 10px", borderRadius: 20, background: firstTry ? "#c6f6d5" : done ? "#bee3f8" : "#fed7d7", color: firstTry ? "#276749" : done ? "#2b6cb0" : "#9b2c2c" }
-            }, firstTry ? "First try!" : done ? "Completed" : "In progress")
-          );
-        })
-      )
-    ),
-    loading && e("p", { style: { color: "#888", textAlign: "center" } }, "Loading..."),
-    lastRefresh && e("p", { style: { color: "#aaa", fontSize: 12, textAlign: "right", marginTop: 16 } },
-      "Last refreshed: " + lastRefresh.toLocaleTimeString()
-    )
-  ); 
-}
+/* Session Summary */ .traffic-light { border-radius: 12px; padding:
+20px 28px; display: flex; align-items: center; gap: 16px; margin-bottom:
+24px; } .traffic-light.green { background: #d1fae5; border: 2px solid
+#34d399; } .traffic-light.amber { background: #fef3c7; border: 2px solid
+#f59e0b; } .traffic-light.red { background: #fee2e2; border: 2px solid
+#f87171; } .tl-icon { font-size: 36px; } .tl-pct { font-size: 30px;
+font-weight: 800; } .tl-label { font-size: 14px; font-weight: 600;
+color: var(–muted); }
 
-// Sentence Card
-function SentenceCard(props) { 
-  var sentence = props.sentence; 
-  var index = props.index; 
-  var isDragging = props.isDragging; 
-  var onDragStart = props.onDragStart; 
-  var onDragOver = props.onDragOver; 
-  var onDrop = props.onDrop; 
-  var onDragEnd = props.onDragEnd; 
-  var onKeyDown = props.onKeyDown;
+.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap:
+12px; margin-bottom: 24px; } .stat-card { background: white; border: 2px
+solid var(–border); border-radius: 10px; padding: 16px; text-align:
+center; } .stat-num { font-size: 32px; font-weight: 800; }
+.stat-num.purple { color: #7c3aed; } .stat-num.green { color:
+var(–success); } .stat-num.amber { color: #d97706; } .stat-desc {
+font-size: 13px; color: var(–muted); margin-top: 2px; }
 
-  return e("div", { 
-    draggable: true, 
-    onDragStart: function() { onDragStart(index); }, 
-    onDragOver: function(ev) { ev.preventDefault(); onDragOver(index); }, 
-    onDrop: function() { onDrop(index); }, 
-    onDragEnd: onDragEnd, 
-    onKeyDown: function(ev) { onKeyDown(ev, index); }, 
-    tabIndex: 0, role: "listitem", "aria-label": "Sentence " + (index + 1) + ": " + sentence + ". Use arrow keys to reorder.", 
-    style: { background: isDragging ? "#e9e6ff" : "#fff", border: isDragging ? "2px solid #6c63ff" : "2px solid #e2e8f0", borderRadius: 10, padding: "14px 16px", marginBottom: 10, cursor: "grab", display: "flex", alignItems: "center", gap: 14, boxShadow: isDragging ? "0 4px 16px rgba(108,99,255,0.15)" : "0 1px 4px rgba(0,0,0,0.06)", transition: "box-shadow 0.15s, border-color 0.15s", userSelect: "none", outline: "none" } 
-  }, 
-    e("span", { "aria-hidden": "true", style: { fontSize: 20, color: "#aaa", flexShrink: 0 } }, "⠿"), 
-    e("span", { style: { fontSize: 16, lineHeight: 1.5, color: "#2d3748" } }, sentence) 
-  ); 
-}
+.student-list { display: flex; flex-direction: column; gap: 8px; }
+.student-row { background: white; border: 1px solid var(–border);
+border-radius: 8px; padding: 12px 16px; display: flex; justify-content:
+space-between; align-items: center; } .student-row .sname { font-weight:
+600; font-size: 15px; } .student-row .sdetail { font-size: 13px; color:
+var(–muted); } .badge { padding: 3px 10px; border-radius: 12px;
+font-size: 12px; font-weight: 700; } .badge-success { background:
+#d1fae5; color: #065f46; } .badge-warn { background: #fef3c7; color:
+#92400e; } .badge-neutral { background: #f3f4f6; color: #374151; }
 
-// Student Activity
-function StudentActivity(props) { 
-  var config = props.config; 
-  var studentName = props.studentName;
+.session-footer { margin-top: 20px; display: flex; justify-content:
+space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.refresh-note { font-size: 13px; color: var(–muted); }
 
-  var correctOrder = config.sentences; 
-  var _order = React.useState(function() { return shuffle(correctOrder); }); 
-  var order = _order[0]; 
-  var setOrder = _order[1]; 
-  var _dragging = React.useState(null); 
-  var dragging = _dragging[0]; 
-  var setDragging = _dragging[1]; 
-  var _over = React.useState(null); 
-  var over = _over[0]; 
-  var setOver = _over[1]; 
-  var _attempts = React.useState(0); 
-  var attempts = _attempts[0]; 
-  var setAttempts = _attempts[1]; 
-  var _clueIdx = React.useState(null); 
-  var clueIdx = _clueIdx[0]; 
-  var setClueIdx = _clueIdx[1]; 
-  var _status = React.useState("idle"); 
-  var status = _status[0]; 
-  var setStatus = _status[1]; 
-  var _feedback = React.useState(null); 
-  var feedback = _feedback[0]; 
-  var setFeedback = _feedback[1]; 
-  var _shakeKey = React.useState(0); 
-  var shakeKey = _shakeKey[0]; 
-  var setShakeKey = _shakeKey[1];
+/* Create Activity */ .create-form { background: white; border: 2px
+solid var(–border); border-radius: 12px; padding: 28px; } .create-form
+p.sub { color: var(–muted); font-size: 14px; margin-bottom: 20px; }
+.create-table { width: 100%; border-collapse: collapse; } .create-table
+th { text-align: left; font-size: 12px; font-weight: 700; color:
+var(–muted); text-transform: uppercase; letter-spacing: 0.06em; padding:
+0 8px 10px; } .create-table th:first-child { width: 36px; padding-left:
+0; } .create-table td { padding: 4px 6px; vertical-align: middle; }
+.create-table td:first-child { padding-left: 0; color: var(–muted);
+font-weight: 600; text-align: center; } .create-table input { width:
+100%; padding: 9px 12px; border: 2px solid var(–border); border-radius:
+6px; font-size: 14px; outline: none; transition: border-color 0.2s; }
+.create-table input:focus { border-color: var(–primary); } .create-table
+.del-btn { background: none; border: none; color: #f87171; font-size:
+18px; cursor: pointer; padding: 4px 8px; line-height: 1; } .create-table
+.del-btn:hover { color: var(–danger); } .create-actions { margin-top:
+20px; display: flex; gap: 10px; flex-wrap: wrap; }
 
-  function isCorrect(ord) { 
-    return ord.every(function(s, i) { return s === correctOrder[i]; }); 
-  }
+/* Generated link output */ .link-output { background: #f0fdf4; border:
+2px solid #86efac; border-radius: 8px; padding: 16px 20px; margin-top:
+20px; word-break: break-all; font-size: 14px; line-height: 1.6; display:
+none; } .link-output.visible { display: block; } .link-output strong {
+display: block; margin-bottom: 6px; color: #065f46; } .link-output a {
+color: var(–primary); }
 
-  function handleCheck() { 
-    var newAttempts = attempts + 1;
-    setAttempts(newAttempts); 
-    if (isCorrect(order)) { 
-      setStatus("success");
-      setFeedback(null); 
-      var firstTry = newAttempts === 1;
-      sendTrackingData(studentName, config.gameId, newAttempts, "completed", firstTry ? "first_try" : "multi_attempt"); 
-      if (firstTry && typeof InteractivesTelemetry !== "undefined") {
-        InteractivesTelemetry.track("first_try_mastered", { gameId: config.gameId }); 
-      } 
-      if (typeof InteractivesTelemetry !== "undefined") {
-        InteractivesTelemetry.track("paragraph_completed", { gameId: config.gameId, attempts: newAttempts }); 
-      } 
-    } else { 
-      setStatus("error");
-      setShakeKey(function(k) { return k + 1; });
-      sendTrackingData(studentName, config.gameId, newAttempts, "incorrect", ""); 
-      if (typeof InteractivesTelemetry !== "undefined") {
-        InteractivesTelemetry.track("paragraph_attempt", { gameId: config.gameId, attempt: newAttempts, correct: false }); 
-      } 
-      if (config.distractors && config.distractors[0]) { 
-        var wrong = order.findIndex(function(s, i) { return s !== correctOrder[i]; }); 
-        if (wrong >= 0 && config.distractors[wrong]) {
-          setFeedback(config.distractors[wrong]); 
-          if (typeof InteractivesTelemetry !== "undefined") { 
-            InteractivesTelemetry.track("distractor_used", { gameId: config.gameId, index: wrong }); 
-          } 
-        } 
-      } 
-    } 
-  }
+/* —- COMPLETION STATE —- */ .board-row.completed .sem-label {
+border-color: transparent; } .board-row.completed .drop-slot {
+border-color: transparent; background: transparent; }
+.board-row.completed .part-card { border-color: transparent !important;
+box-shadow: none; font-weight: 600; }
 
-  function handleClue(idx) { 
-    setClueIdx(idx); 
-    if (typeof InteractivesTelemetry !== "undefined") {
-      InteractivesTelemetry.track("clue_used", { gameId: config.gameId, index: idx }); 
-    } 
-  }
-
-  function handleReset() { 
-    setOrder(shuffle(correctOrder));
-    setAttempts(0); 
-    setStatus("idle"); 
-    setFeedback(null); 
-    setClueIdx(null);
-    setDragging(null); 
-    setOver(null); 
-  }
-
-  function handleDragStart(idx) { setDragging(idx); } 
-  function handleDragOver(idx) { setOver(idx); } 
-  function handleDragEnd() { setDragging(null); setOver(null); } 
-  
-  function handleDrop(idx) { 
-    if (dragging === null || dragging === idx) return; 
-    var newOrder = order.slice(); 
-    var item = newOrder.splice(dragging, 1)[0];
-    newOrder.splice(idx, 0, item); 
-    setOrder(newOrder); 
-    setDragging(null);
-    setOver(null); 
-    setStatus("idle"); 
-    setFeedback(null); 
-  }
-
-  function handleKeyDown(ev, idx) { 
-    if (ev.key === "ArrowUp" && idx > 0) {
-      ev.preventDefault(); 
-      var newOrder = order.slice(); 
-      var tmp = newOrder[idx]; 
-      newOrder[idx] = newOrder[idx - 1]; 
-      newOrder[idx - 1] = tmp; 
-      setOrder(newOrder); 
-      setStatus("idle"); 
-    } 
-    if (ev.key === "ArrowDown" && idx < order.length - 1) { 
-      ev.preventDefault(); 
-      var newOrder = order.slice(); 
-      var tmp = newOrder[idx]; 
-      newOrder[idx] = newOrder[idx + 1]; 
-      newOrder[idx + 1] = tmp; 
-      setOrder(newOrder); 
-      setStatus("idle"); 
-    } 
-  }
-
-  if (status === "success") { 
-    return e("div", { style: { textAlign: "center", padding: 40, maxWidth: 600, margin: "0 auto" } }, 
-      e("div", { style: { fontSize: 64, marginBottom: 16 } }, "🎉"), 
-      e("h2", { style: { color: "#38a169", fontSize: 28, marginBottom: 8 } }, attempts === 1 ? "First try! Amazing!" : "Well done!" ), 
-      e("p", { style: { color: "#555", fontSize: 16, marginBottom: 24 } }, "You got it " + (attempts === 1 ? "on your first try!" : "in " + attempts + " attempts.") ), 
-      e("button", { onClick: handleReset, style: { padding: "12px 32px", fontSize: 16, fontWeight: 700, background: "#6c63ff", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer" } }, "Try again") 
-    ); 
-  }
-
-  return e("div", { style: { maxWidth: 680, margin: "0 auto", padding: "0 16px 40px" } }, 
-    e("p", { style: { color: "#555", fontSize: 15, marginBottom: 20, textAlign: "center" } }, "Drag the sentences into the correct order to form a well-structured paragraph." ), 
-    e("div", { role: "list", "aria-label": "Sentences to reorder", key: shakeKey },
-      order.map(function(sentence, idx) { 
-        return e(SentenceCard, { 
-          key: sentence, sentence: sentence, index: idx, 
-          isDragging: dragging === idx || over === idx, 
-          onDragStart: handleDragStart, onDragOver: handleDragOver, 
-          onDrop: handleDrop, onDragEnd: handleDragEnd, onKeyDown: handleKeyDown 
-        }); 
-      }) 
-    ), 
-    status === "error" && e("div", { role: "alert", style: { background: "#fff5f5", border: "1px solid #fc8181", borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: "#c53030", fontSize: 14 } }, 
-      feedback ? e("span", null, feedback) : e("span", null, "Not quite right. Try rearranging the sentences.") 
-    ),
-    clueIdx !== null && config.clues && config.clues[clueIdx] && e("div", { style: { background: "#ebf8ff", border: "1px solid #90cdf4", borderRadius: 8, padding: "12px 16px", marginBottom: 16, color: "#2b6cb0", fontSize: 14 } }, 
-      e("strong", null, "Clue: "), config.clues[clueIdx]
-    ), 
-    e("div", { style: { display: "flex", gap: 12, justifyContent: "center", flexWrap: "wrap" } }, 
-      e("button", { onClick: handleCheck, style: { padding: "12px 32px", fontSize: 16, fontWeight: 700, background: "#6c63ff", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer", minWidth: 140 } }, "Check my answer"),
-      config.clues && config.clues.some(function(c) { return c; }) && e("button", { onClick: function() { handleClue(0); }, style: { padding: "12px 24px", fontSize: 15, background: "#fff", color: "#6c63ff", border: "2px solid #6c63ff", borderRadius: 10, cursor: "pointer" } }, "Show clue") 
-    ), 
-    attempts > 0 && e("p", { style: { textAlign: "center", color: "#888", marginTop: 12, fontSize: 14 } }, "Attempts: " + attempts ) 
-  ); 
-}
-
-// No Config Message
-function NoConfigMessage() { 
-  return e("div", { style: { maxWidth: 480, margin: "60px auto", padding: 40, background: "#fff", borderRadius: 16, textAlign: "center", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" } },
-    e("div", { style: { fontSize: 48, marginBottom: 16 } }, "🔗"), 
-    e("h2", { style: { color: "#2d3748", marginBottom: 12, fontSize: 22 } }, "You need a teacher-generated link" ), 
-    e("p", { style: { color: "#555", fontSize: 16, lineHeight: 1.6 } }, "To use this activity, ask your teacher to share their activity link with you." ) 
-  ); 
-}
-
-// Teacher Setup
-function TeacherSetup() { 
-  var _sentences = React.useState(["","","","",""]); 
-  var sentences = _sentences[0]; 
-  var setSentences = _sentences[1]; 
-  var _distractors = React.useState(["","","","",""]); 
-  var distractors = _distractors[0]; 
-  var setDistractors = _distractors[1]; 
-  var _clues = React.useState(["","","","",""]); 
-  var clues = _clues[0]; 
-  var setClues = _clues[1]; 
-  var _gameId = React.useState("game-" + Date.now()); 
-  var gameId = _gameId[0]; 
-  var _link = React.useState(null); 
-  var link = _link[0]; 
-  var setLink = _link[1]; 
-  var _copied = React.useState(false);
-  var copied = _copied[0]; 
-  var setCopied = _copied[1];
-
-  function updateSentence(idx, val) { var a = sentences.slice(); a[idx] = val; setSentences(a); } 
-  function updateDistractor(idx, val) { var a = distractors.slice(); a[idx] = val; setDistractors(a); } 
-  function updateClue(idx, val) { var a = clues.slice(); a[idx] = val; setClues(a); } 
-  function addRow() { 
-    setSentences(sentences.concat([""]));
-    setDistractors(distractors.concat([""])); 
-    setClues(clues.concat([""]));
-  } 
-  function removeRow(idx) { 
-    setSentences(sentences.filter(function(_, i) { return i !== idx; })); 
-    setDistractors(distractors.filter(function(_, i) { return i !== idx; })); 
-    setClues(clues.filter(function(_, i) { return i !== idx; })); 
-  }
-
-  function generateLink() { 
-    var valid = sentences.filter(function(s) { return s.trim(); }); 
-    if (valid.length < 2) { 
-      alert("Please enter at least 2 sentences."); 
-      return; 
-    } 
-    var csv = "id,sentence,distractor,clue\n" + sentences.map(function(s, i) { 
-      return [gameId, s, distractors[i] || "", clues[i] || ""].map(function(v) {
-        return '"' + v.replace(/"/g,'""') + '"'; 
-      }).join(","); 
-    }).join("\n"); 
-    
-    var encoded = btoa(unescape(encodeURIComponent(csv))); 
-    var url = window.location.origin + window.location.pathname + "?config=" + encoded; 
-    setLink(url); 
-  }
-
-  function copyLink() { 
-    if (!link) return;
-    navigator.clipboard.writeText(link).then(function() { 
-      setCopied(true);
-      setTimeout(function() { setCopied(false); }, 2000); 
-    }); 
-  }
-
-  var numRows = sentences.length;
-
-  return e("div", { style: { maxWidth: 800, margin: "0 auto", padding: "0 16px 60px" } }, 
-    e("p", { style: { color: "#555", marginBottom: 24, fontSize: 15 } }, "Enter sentences in the correct order. Add optional distractors (hints for wrong answers) and clues." ), 
-    e("div", { style: { overflowX: "auto" } }, 
-      e("table", { style: { width: "100%", borderCollapse: "collapse", fontSize: 14 } }, 
-        e("thead", null, 
-          e("tr", null, 
-            e("th", { style: { textAlign: "left", padding: "8px 10px", color: "#6c63ff", width: 30 } }, "#"), 
-            e("th", { style: { textAlign: "left", padding: "8px 10px", color: "#6c63ff" } }, "Sentence (correct order) *"), 
-            e("th", { style: { textAlign: "left", padding: "8px 10px", color: "#6c63ff" } }, "Distractor (optional)"), 
-            e("th", { style: { textAlign: "left", padding: "8px 10px", color: "#6c63ff" } }, "Clue (optional)"),
-            e("th", { style: { width: 40 } }) 
-          ) 
-        ), 
-        e("tbody", null,
-          sentences.map(function(s, idx) { 
-            return e("tr", { key: idx, style: { borderTop: "1px solid #eee" } }, 
-              e("td", { style: { padding: "8px 10px", color: "#888", fontWeight: 700 } }, idx + 1), 
-              e("td", { style: { padding: "6px 8px" } }, 
-                e("input", { type: "text", value: s, onChange: function(ev) { updateSentence(idx, ev.target.value); }, placeholder: "Sentence " + (idx + 1), "aria-label": "Sentence " + (idx + 1), style: { width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14, boxSizing: "border-box" } }) 
-              ), 
-              e("td", { style: { padding: "6px 8px" } }, 
-                e("input", { type: "text", value: distractors[idx] || "", onChange: function(ev) { updateDistractor(idx, ev.target.value); }, placeholder: "Optional hint...", "aria-label": "Distractor for sentence " + (idx + 1), style: { width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14, boxSizing: "border-box" } }) 
-              ), 
-              e("td", { style: { padding: "6px 8px" } }, 
-                e("input", { type: "text", value: clues[idx] || "", onChange: function(ev) { updateClue(idx, ev.target.value); }, placeholder: "Optional clue...", "aria-label": "Clue for sentence " + (idx + 1), style: { width: "100%", padding: "8px 10px", border: "1px solid #d1d5db", borderRadius: 6, fontSize: 14, boxSizing: "border-box" } }) 
-              ),
-              e("td", { style: { padding: "6px 8px", textAlign: "center" } },
-                numRows > 2 && e("button", { onClick: function() { removeRow(idx); }, "aria-label": "Remove row " + (idx + 1), style: { background: "none", border: "none", color: "#e53e3e", cursor: "pointer", fontSize: 18, padding: 4 } }, "×") 
-              ) 
-            ); 
-          }) 
-        ) 
-      ) 
-    ), 
-    e("button", { onClick: addRow, style: { marginTop: 12, padding: "8px 20px", fontSize: 14, background: "#fff", color: "#6c63ff", border: "2px solid #6c63ff", borderRadius: 8, cursor: "pointer" } }, "+ Add sentence"), 
-    e("div", { style: { marginTop: 28, display: "flex", gap: 12, flexWrap: "wrap" } }, 
-      e("button", { onClick: generateLink, style: { padding: "12px 28px", fontSize: 15, fontWeight: 700, background: "#6c63ff", color: "#fff", border: "none", borderRadius: 10, cursor: "pointer" } }, "Generate activity link") 
-    ),
-    link && e("div", { style: { marginTop: 24, background: "#f0f4ff", border: "1px solid #c3d0ff", borderRadius: 10, padding: 20 } }, 
-      e("p", { style: { fontSize: 13, color: "#555", marginBottom: 8 } }, "Share this link with your students:"), 
-      e("div", { style: { display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" } }, 
-        e("input", { type: "text", readOnly: true, value: link, "aria-label": "Generated activity link", style: { flex: 1, minWidth: 200, padding: "10px 12px", fontSize: 13, border: "1px solid #c3d0ff", borderRadius: 8, background: "#fff" } }), 
-        e("button", { onClick: copyLink, style: { padding: "10px 20px", fontSize: 14, fontWeight: 600, background: copied ? "#38a169" : "#6c63ff", color: "#fff", border: "none", borderRadius: 8, cursor: "pointer", whiteSpace: "nowrap" } }, copied ? "Copied!" : "Copy link") 
-      ) 
-    ) 
-  ); 
-}
-
-// App Root
-function App() { 
-  var params = new URLSearchParams(window.location.search); 
-  var configParam = params.get("config"); 
-  var isTeacherPage = params.get("teacher") === "1"; 
-  var _tab = React.useState(isTeacherPage ? "teacher" : "student"); 
-  var tab = _tab[0]; 
-  var setTab = _tab[1]; 
-  var _pinUnlocked = React.useState(false); 
-  var pinUnlocked = _pinUnlocked[0]; 
-  var setPinUnlocked = _pinUnlocked[1]; 
-  var _showPinModal = React.useState(false); 
-  var showPinModal = _showPinModal[0]; 
-  var setShowPinModal = _showPinModal[1]; 
-  var _studentName = React.useState(null); 
-  var studentName = _studentName[0]; 
-  var setStudentName = _studentName[1]; 
-  var _sessionStart = React.useState(Date.now()); 
-  var sessionStart = _sessionStart[0]; 
-  var setSessionStart = _sessionStart[1];
-
-  var _config = React.useState(null); 
-  var config = _config[0]; 
-  var setConfig = _config[1]; 
-  var _configError = React.useState(false); 
-  var configError = _configError[0]; 
-  var setConfigError = _configError[1];
-
-  React.useEffect(function() { 
-    if (!configParam) return; 
-    try { 
-      var decoded = decodeURIComponent(escape(atob(configParam))); 
-      var parsed = parseConfig(decoded); 
-      if (parsed) setConfig(parsed); else setConfigError(true); 
-    } catch (err) { 
-      setConfigError(true); 
-    } 
-  }, []);
-
-  function handleTabClick(newTab) { 
-    if (newTab === "teacher" && !pinUnlocked) { 
-      setShowPinModal(true); 
-    } else { 
-      setTab(newTab); 
-    } 
-  }
-
-  function handlePinSuccess() { 
-    setPinUnlocked(true);
-    setShowPinModal(false); 
-    setTab("teacher"); 
-  }
-
-  function handleReset() { 
-    if (window.confirm("Reset the session? This will clear current stats and start fresh.")) {
-      setSessionStart(Date.now()); 
-    } 
-  }
-
-  var showStudentContent = tab === "student";
-
-  return e("div", { style: { minHeight: "100vh", background: "#f4f3ff", fontFamily: "'Segoe UI', system-ui, sans-serif" } }, 
-    showPinModal && e(PinModal, { onSuccess: handlePinSuccess, onCancel: function() { setShowPinModal(false); } }),
-    // Header
-    e("header", { style: { background: "#6c63ff", color: "#fff", padding: "0 24px" } },
-      e("div", { style: { maxWidth: 800, margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between", height: 60 } },
-        e("h1", { style: { margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.5px" } }, "Fix the Paragraph"),
-        e("nav", { role: "tablist", "aria-label": "App sections", style: { display: "flex", gap: 4 } },
-          e("button", {
-            role: "tab",
-            "aria-selected": tab === "student",
-            onClick: function() { setTab("student"); },
-            style: {
-              padding: "8px 18px", fontSize: 14, fontWeight: 600, border: "none",
-              borderRadius: 8, cursor: "pointer",
-              background: tab === "student" ? "rgba(255,255,255,0.25)" : "transparent",
-              color: "#fff"
-            }
-          }, "Activity"),
-          e("button", {
-            role: "tab",
-            "aria-selected": tab === "teacher",
-            onClick: function() { handleTabClick("teacher"); },
-            style: {
-              padding: "8px 18px", fontSize: 14, fontWeight: 600, border: "none",
-              borderRadius: 8, cursor: "pointer",
-              background: tab === "teacher" ? "rgba(255,255,255,0.25)" : "transparent",
-              color: "#fff"
-            }
-          }, "Teacher")
-        )
-      )
-    ),
-    // Name modal for students
-    tab === "student" && config && !studentName && e(NameModal, { onSubmit: setStudentName }),
-    // Tab panels
-    e("main", { style: { maxWidth: 800, margin: "0 auto", paddingTop: 32 } },
-      tab === "student" && e("div", { role: "tabpanel" },
-        configError
-          ? e("div", { style: { textAlign: "center", padding: 40, color: "#e53e3e" } }, "Could not load the activity. The link may be invalid.")
-          : config
-            ? e(StudentActivity, { config: config, studentName: studentName || "anonymous" })
-            : e(NoConfigMessage, null)
-      ),
-      tab === "teacher" && pinUnlocked && e("div", { role: "tabpanel" },
-        e("div", { style: { padding: "0 24px" } },
-          e("div", { style: { borderBottom: "2px solid #e2e8f0", marginBottom: 28, display: "flex", gap: 0 } })
-        ),
-        e(TeacherTabContent, { sessionStart: sessionStart, onReset: handleReset, configParam: configParam })
-      )
-    )
-  ); 
-}
-
-// Teacher Tab Content
-function TeacherTabContent(props) { 
-  var _sub = React.useState("session"); 
-  var sub = _sub[0]; 
-  var setSub = _sub[1];
-
-  return e("div", null, 
-    e("div", { style: { padding: "0 24px", borderBottom: "2px solid #e2e8f0", display: "flex", gap: 4, marginBottom: 0 } }, 
-      e("button", { onClick: function() { setSub("session"); }, style: { padding: "10px 20px", fontWeight: 600, fontSize: 14, border: "none", borderBottom: sub === "session" ? "3px solid #6c63ff" : "3px solid transparent", background: "transparent", color: sub === "session" ? "#6c63ff" : "#555", cursor: "pointer" } }, "Session Summary"), 
-      e("button", { onClick: function() { setSub("setup"); }, style: { padding: "10px 20px", fontWeight: 600, fontSize: 14, border: "none", borderBottom: sub === "setup" ? "3px solid #6c63ff" : "3px solid transparent", background: "transparent", color: sub === "setup" ? "#6c63ff" : "#555", cursor: "pointer" } }, "Create Activity") 
-    ), 
-    sub === "session" ? e(TeacherPanel, { sessionStart: props.sessionStart, onReset: props.onReset }) : e(TeacherSetup, null) 
-  ); 
-}
-
-// Mount
-var root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(e(App, null));
+/* —- RESPONSIVE —- */ @media (max-width: 600px) { .sem-label { width:
+100px; font-size: 11px; } .stats-grid { grid-template-columns: 1fr 1fr;
+} nav .nav-title { font-size: 16px; } }
