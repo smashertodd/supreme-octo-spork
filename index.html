@@ -1,19 +1,143 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Fix the Paragraph</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; color: #1e293b; }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script type="text/babel" src="app.js"></script>
-</body>
-</html>
+Fix the Paragraph
+
+    <div class="modal-box">
+      <h2 id="name-modal-title" class="text-2xl font-bold text-indigo-700 mb-2">Fix the Paragraph</h2>
+      <p class="text-gray-600 mb-4">Enter your name to begin.</p>
+      <input id="student-name" type="text" placeholder="Your name..." class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-indigo-400" aria-label="Student name" />
+      <button id="start-btn" class="btn-primary w-full">Start</button>
+    </div>
+
+    <div class="modal-box">
+      <h2 id="hint-modal-title" class="text-xl font-bold text-indigo-700 mb-3">💡 Hint</h2>
+      <p id="hint-text" class="text-gray-700 mb-4"></p>
+      <button id="hint-close-btn" class="btn-primary w-full">Got it!</button>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-2 mb-6" role="tablist">
+      <button id="tab-student" role="tab" aria-selected="true" class="tab-btn tab-active">📝 Student</button>
+      <button id="tab-teacher" role="tab" aria-selected="false" class="tab-btn">🔒 Teacher</button>
+    </div>
+
+    <!-- ===== STUDENT VIEW ===== -->
+    <div id="view-student">
+
+      <!-- Header -->
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h1 id="game-title" class="text-2xl font-bold text-indigo-700">Fix the Paragraph</h1>
+          <p id="game-instructions" class="text-gray-500 text-sm mt-1"></p>
+        </div>
+        <div class="text-right text-sm text-gray-400">
+          <span id="player-name-display"></span><br/>
+          <span id="attempt-display"></span>
+        </div>
+      </div>
+
+      <!-- Live Preview Panel -->
+      <div id="preview-panel" class="preview-panel mb-5">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2 font-semibold">Live Preview</p>
+        <p id="preview-text" class="text-gray-700 leading-relaxed min-h-[2rem]"></p>
+      </div>
+
+      <!-- Drop Slots -->
+      <div class="mb-5">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2 font-semibold">Arrange the sentences</p>
+        <div id="slots-container" class="flex flex-col gap-2"></div>
+      </div>
+
+      <!-- Word Pool -->
+      <div class="mb-5">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-2 font-semibold">Sentence pool</p>
+        <div id="pool-container" class="pool-container"></div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="flex flex-wrap gap-3 mb-4">
+        <button id="check-btn" class="btn-primary">✅ Check</button>
+        <button id="hint-btn" class="btn-secondary">💡 Hint</button>
+        <button id="reset-btn" class="btn-ghost">🔄 Reset</button>
+      </div>
+
+      <!-- Feedback -->
+      <div id="feedback-box" class="hidden feedback-box" role="alert" aria-live="polite"></div>
+
+    </div>
+
+    <!-- ===== TEACHER VIEW ===== -->
+    <div id="view-teacher" class="hidden">
+
+      <!-- PIN Gate -->
+      <div id="teacher-pin-gate">
+        <div class="bg-white rounded-2xl shadow p-6 max-w-sm mx-auto mt-8">
+          <h2 class="text-xl font-bold text-indigo-700 mb-2">Teacher Access</h2>
+          <p class="text-gray-500 text-sm mb-4">Enter the PIN to continue.</p>
+          <input id="pin-input" type="password" maxlength="4" placeholder="••••" class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-3 text-center text-xl tracking-widest focus:outline-none focus:ring-2 focus:ring-indigo-400" aria-label="Teacher PIN" />
+          <button id="pin-submit-btn" class="btn-primary w-full">Unlock</button>
+          <p id="pin-error" class="text-red-500 text-sm mt-2 hidden">Incorrect PIN. Try again.</p>
+        </div>
+      </div>
+
+      <!-- Teacher Dashboard -->
+      <div id="teacher-dashboard" class="hidden">
+
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-bold text-indigo-700">Teacher Dashboard</h2>
+          <button id="reset-session-btn" class="btn-ghost text-sm">🗑️ Reset Session</button>
+        </div>
+
+        <!-- Tabs inside teacher -->
+        <div class="flex gap-2 mb-5">
+          <button id="ttab-results" class="tab-btn tab-active text-sm">📊 Results</button>
+          <button id="ttab-create" class="tab-btn text-sm">➕ Create Activity</button>
+        </div>
+
+        <!-- Results Panel -->
+        <div id="tview-results">
+          <div id="results-summary" class="grid grid-cols-3 gap-3 mb-5">
+            <div class="stat-card"><p class="stat-num" id="stat-attempts">0</p><p class="stat-label">Attempts</p></div>
+            <div class="stat-card"><p class="stat-num text-green-600" id="stat-correct">0</p><p class="stat-label">Correct</p></div>
+            <div class="stat-card"><p class="stat-num text-red-500" id="stat-incorrect">0</p><p class="stat-label">Incorrect</p></div>
+          </div>
+          <div id="results-table-wrap" class="overflow-x-auto">
+            <table class="results-table w-full text-sm" aria-label="Student results">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Activity</th>
+                  <th>Attempt</th>
+                  <th>Status</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody id="results-tbody"></tbody>
+            </table>
+          </div>
+          <p id="no-results-msg" class="text-gray-400 text-sm text-center mt-6">No attempts yet this session.</p>
+        </div>
+
+        <!-- Create Activity Panel -->
+        <div id="tview-create" class="hidden">
+          <div class="bg-white rounded-2xl shadow p-6">
+            <h3 class="font-bold text-indigo-700 mb-1">Create / Edit Activity</h3>
+            <p class="text-gray-500 text-sm mb-4">Edit your Google Sheet directly, then paste the published CSV URL below and click Reload.</p>
+            <label class="block text-sm font-medium text-gray-700 mb-1" for="csv-url-input">Published CSV URL</label>
+            <input id="csv-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/..." class="w-full border border-gray-300 rounded-lg px-4 py-2 mb-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400" />
+            <button id="reload-csv-btn" class="btn-primary">🔄 Reload Activities</button>
+            <p id="csv-reload-msg" class="text-sm mt-3 hidden"></p>
+
+            <hr class="my-5"/>
+            <h3 class="font-bold text-indigo-700 mb-1">Google Sheet Format</h3>
+            <p class="text-gray-500 text-sm mb-2">Your sheet should have these columns:</p>
+            <div class="overflow-x-auto">
+              <table class="results-table text-xs w-full">
+                <thead><tr><th>Game_ID</th><th>Title</th><th>Instructions</th><th>Sentence_1</th><th>Sentence_2</th><th>…</th><th>Hint</th><th>If_Perfect_Go_To</th><th>If_Stuck_Go_To</th></tr></thead>
+                <tbody><tr><td>para1</td><td>My Paragraph</td><td>Put in order…</td><td>First sentence.</td><td>Second sentence.</td><td>…</td><td>Think about topic sentences.</td><td>para2</td><td>para1b</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
