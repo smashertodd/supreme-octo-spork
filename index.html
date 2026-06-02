@@ -1,13 +1,89 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fix the Paragraph</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div id="root"></div>
-  <script src="app.js"></script>
-</body>
-</html>
+Fix the Paragraph
+
+    <button id="tab-student" class="tab active">Student</button>
+    <button id="tab-teacher" class="tab">Teacher</button>
+
+    <!-- Name Entry -->
+    <div id="screen-name" class="screen active">
+      <div class="card center-card">
+        <h1 class="app-title">Fix the Paragraph</h1>
+        <p class="subtitle">Enter your name to get started.</p>
+        <div class="form-group">
+          <label for="input-name">Your name</label>
+          <input id="input-name" type="text" placeholder="First name" autocomplete="off" />
+        </div>
+        <button id="btn-start" class="btn btn-primary">Start</button>
+      </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="screen-loading" class="screen">
+      <div class="card center-card">
+        <div class="spinner" aria-label="Loading"></div>
+        <p class="subtitle">Loading activities…</p>
+      </div>
+    </div>
+
+    <!-- Library (multiple active activities) -->
+    <div id="screen-library" class="screen">
+      <div class="card">
+        <h2 class="section-heading">Choose an Activity</h2>
+        <div id="library-list" class="library-list"></div>
+      </div>
+    </div>
+
+    <!-- Activity -->
+    <div id="screen-activity" class="screen">
+      <div class="card">
+        <div class="activity-header">
+          <h2 id="activity-title" class="section-heading"></h2>
+          <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
+        </div>
+
+        <p class="instruction">Drag the sentences into the correct order. Watch out — one might not belong!</p>
+
+        <div class="zone-label">Sentences</div>
+        <div id="choice-pool" class="sentence-pool drop-target" aria-label="Sentence pool"></div>
+
+        <div class="drop-arrow" aria-hidden="true">↓ drag here ↓</div>
+
+        <div class="zone-label">Your paragraph</div>
+        <div id="drop-zone" class="drop-zone drop-target" aria-label="Drop zone — build your paragraph here"></div>
+
+        <div id="feedback" class="feedback" role="alert" aria-live="polite"></div>
+
+        <div class="action-row">
+          <button id="btn-check" class="btn btn-primary">Check my answer</button>
+          <button id="btn-retry" class="btn btn-secondary" style="display:none">Try again</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Error -->
+    <div id="screen-error" class="screen">
+      <div class="card center-card">
+        <p class="error-icon" aria-hidden="true">⚠️</p>
+        <p id="error-message" class="subtitle"></p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="teacher-header">
+        <h2 class="section-heading">Student Results</h2>
+        <button id="btn-reset-session" class="btn btn-ghost btn-sm">Reset session</button>
+      </div>
+      <p class="subtitle small">Auto-refreshes every 15 seconds.</p>
+      <div id="teacher-results"></div>
+    </div>
+
+    <div class="modal-box">
+      <h3 class="modal-title">Teacher Access</h3>
+      <p class="subtitle small">Enter your PIN to continue.</p>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" class="pin-input" />
+      <p id="pin-error" class="pin-error" role="alert" aria-live="polite"></p>
+      <div class="modal-actions">
+        <button id="btn-pin-cancel" class="btn btn-ghost">Cancel</button>
+        <button id="btn-pin-submit" class="btn btn-primary">Enter</button>
+      </div>
+    </div>
