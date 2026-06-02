@@ -48,7 +48,7 @@ document.getElementById(‘tview-create’);
 
 const statAttempts = document.getElementById(‘stat-attempts’); const
 statCorrect = document.getElementById(‘stat-correct’); const
-statIncorrect= document.getElementById(‘stat-incorrect’); const
+statIncorrect = document.getElementById(‘stat-incorrect’); const
 resultsTbody = document.getElementById(‘results-tbody’); const
 noResultsMsg = document.getElementById(‘no-results-msg’); const
 resetSessionBtn = document.getElementById(‘reset-session-btn’);
@@ -74,9 +74,9 @@ function rowToActivity(row) { const sentences = []; for (let i = 1; i <=
 20; i++) { const s = row[Sentence_${i}]; if (s) sentences.push(s); }
 return { id: row[‘Game_ID’], title: row[‘Title’] || ‘Fix the Paragraph’,
 instructions: row[‘Instructions’] || ‘Drag the sentences into the
-correct order.’, sentences, hint: row[‘Hint’] || ’‘,
-ifPerfectGoTo:row[’If_Perfect_Go_To’] ||’‘, ifStuckGoTo:
-row[’If_Stuck_Go_To’] ||’’, }; }
+correct order.’, sentences, hint: row[‘Hint’] || ’‘, ifPerfectGoTo:
+row[’If_Perfect_Go_To’] ||’‘, ifStuckGoTo: row[’If_Stuck_Go_To’] ||’’,
+}; }
 
 // ── Load Activities ──────────────────────────── async function
 loadActivities(url) { const fetchUrl = url || CSV_URL; try { const res =
@@ -100,11 +100,9 @@ null); showNameModal(); }
 
 // ── Name Modal ───────────────────────────────── function
 showNameModal() { nameModal.classList.remove(‘hidden’);
-nameModal.setAttribute(‘aria-hidden’, ‘false’);
 studentNameInput.focus(); }
 
-function hideNameModal() { nameModal.classList.add(‘hidden’);
-nameModal.setAttribute(‘aria-hidden’, ‘true’); }
+function hideNameModal() { nameModal.classList.add(‘hidden’); }
 
 startBtn.addEventListener(‘click’, () => { const name =
 studentNameInput.value.trim(); if (!name) { studentNameInput.focus();
@@ -115,108 +113,85 @@ studentNameInput.addEventListener(‘keydown’, e => { if (e.key ===
 
 // ── Game ─────────────────────────────────────── function startGame()
 { if (!currentActivity) { feedbackBox.textContent = ‘No activity loaded.
-Please check the CSV URL in Teacher settings.’;
-feedbackBox.classList.remove(‘hidden’); return; } attemptNumber++;
-playerNameDisplay.textContent = studentName; attemptDisplay.textContent
-= Attempt ${attemptNumber}; gameTitle.textContent =
-currentActivity.title; gameInstructions.textContent =
-currentActivity.instructions; feedbackBox.classList.add(‘hidden’);
-feedbackBox.textContent = ’’; buildBoard(); updatePreview(); }
+Please check the CSV URL in Teacher settings.’; feedbackBox.className =
+‘feedback-box feedback-warn’; feedbackBox.classList.remove(‘hidden’);
+return; } attemptNumber++; playerNameDisplay.textContent = studentName;
+attemptDisplay.textContent = Attempt ${attemptNumber};
+gameTitle.textContent = currentActivity.title;
+gameInstructions.textContent = currentActivity.instructions;
+feedbackBox.classList.add(‘hidden’); feedbackBox.textContent = ’’;
+buildBoard(); updatePreview(); }
 
 // ── Board ────────────────────────────────────── let draggedCard =
-null; let dragSource = null; // ‘pool’ or slot index
+null; let dragSource = null; let selectedCard = null;
 
 function buildBoard() { slotsContainer.innerHTML = ’‘;
-poolContainer.innerHTML =’’;
+poolContainer.innerHTML =’’; selectedCard = null;
 
 const shuffled = […currentActivity.sentences].sort(() => Math.random() -
 0.5);
 
-// Create slots currentActivity.sentences.forEach((_, i) => { const slot
-= document.createElement(‘div’); slot.className = ‘drop-slot’;
+currentActivity.sentences.forEach((_, i) => { const slot =
+document.createElement(‘div’); slot.className = ‘drop-slot’;
 slot.dataset.index = i; slot.setAttribute(‘aria-label’, Slot ${i + 1});
-addSlotDragListeners(slot); slotsContainer.appendChild(slot); });
+addSlotListeners(slot); slotsContainer.appendChild(slot); });
 
-// Create cards in pool shuffled.forEach(sentence => { const card =
-createCard(sentence); poolContainer.appendChild(card); }); }
+shuffled.forEach(sentence => {
+poolContainer.appendChild(createCard(sentence)); }); }
 
 function createCard(sentence) { const card =
 document.createElement(‘div’); card.className = ‘part-card’;
 card.draggable = true; card.textContent = sentence;
 card.setAttribute(‘role’, ‘button’); card.setAttribute(‘tabindex’, ‘0’);
-card.setAttribute(‘aria-grabbed’, ‘false’); addCardDragListeners(card);
-addCardClickListener(card); return card; }
+addCardListeners(card); return card; }
 
-function addCardDragListeners(card) { card.addEventListener(‘dragstart’,
-e => { draggedCard = card; dragSource = card.parentElement;
-card.setAttribute(‘aria-grabbed’, ‘true’); e.dataTransfer.effectAllowed
-= ‘move’; }); card.addEventListener(‘dragend’, () => { draggedCard =
-null; dragSource = null; card.setAttribute(‘aria-grabbed’, ‘false’); });
-}
-
-function addCardClickListener(card) { card.addEventListener(‘click’, ()
-=> handleCardClick(card)); card.addEventListener(‘keydown’, e => { if
+function addCardListeners(card) { // Drag
+card.addEventListener(‘dragstart’, e => { draggedCard = card; dragSource
+= card.parentElement; e.dataTransfer.effectAllowed = ‘move’; });
+card.addEventListener(‘dragend’, () => { draggedCard = null; dragSource
+= null; }); // Click / keyboard card.addEventListener(‘click’, () =>
+handleCardClick(card)); card.addEventListener(‘keydown’, e => { if
 (e.key === ‘Enter’ || e.key === ’ ’) { e.preventDefault();
 handleCardClick(card); } }); }
 
-let selectedCard = null;
+function handleCardClick(card) { if (selectedCard === null) {
+selectedCard = card; card.classList.add(‘selected’); return; } if
+(selectedCard === card) { card.classList.remove(‘selected’);
+selectedCard = null; return; }
 
-function handleCardClick(card) { const parent = card.parentElement;
-const isInSlot = parent.classList.contains(‘drop-slot’); const isInPool
-= parent === poolContainer;
+const target = card.parentElement; const srcParent =
+selectedCard.parentElement;
 
-if (selectedCard === null) { // Select this card selectedCard = card;
-card.classList.add(‘selected’); return; }
-
-if (selectedCard === card) { // Deselect selectedCard = null;
-card.classList.remove(‘selected’); return; }
-
-// Move selectedCard to target const targetIsSlot =
-parent.classList.contains(‘drop-slot’); const targetIsPool = parent ===
-poolContainer;
-
-if (targetIsSlot) { if (parent.querySelector(‘.part-card’)) { // Swap
-const existingCard = parent.querySelector(‘.part-card’); const srcParent
-= selectedCard.parentElement; srcParent.appendChild(existingCard);
-parent.appendChild(selectedCard); } else {
-parent.appendChild(selectedCard); } } else if (targetIsPool) {
-poolContainer.appendChild(selectedCard); } else if (isInSlot ||
-isInPool) { // Clicked another card — swap selection
-selectedCard.classList.remove(‘selected’); selectedCard = card;
-card.classList.add(‘selected’); return; }
+if (target.classList.contains(‘drop-slot’)) { const existing =
+target.querySelector(‘.part-card’); if (existing) {
+srcParent.appendChild(existing); } target.appendChild(selectedCard); }
+else if (target === poolContainer) {
+poolContainer.appendChild(selectedCard); } else { // Clicked another
+card — swap selection selectedCard.classList.remove(‘selected’);
+selectedCard = card; card.classList.add(‘selected’); return; }
 
 selectedCard.classList.remove(‘selected’); selectedCard = null;
-updateSlotStates(); updatePreview(); }
+updatePreview(); }
 
-function addSlotDragListeners(slot) { slot.addEventListener(‘dragover’,
-e => { e.preventDefault(); slot.classList.add(‘slot-drag-over’); });
-slot.addEventListener(‘dragleave’, () => {
-slot.classList.remove(‘slot-drag-over’); });
-slot.addEventListener(‘drop’, e => { e.preventDefault();
-slot.classList.remove(‘slot-drag-over’); if (!draggedCard) return;
+function addSlotListeners(slot) { slot.addEventListener(‘dragover’, e =>
+{ e.preventDefault(); slot.classList.add(‘slot-drag-over’); });
+slot.addEventListener(‘dragleave’, () =>
+slot.classList.remove(‘slot-drag-over’)); slot.addEventListener(‘drop’,
+e => { e.preventDefault(); slot.classList.remove(‘slot-drag-over’); if
+(!draggedCard) return; const existing =
+slot.querySelector(‘.part-card’); if (existing && existing !==
+draggedCard) { dragSource.appendChild(existing); }
+slot.appendChild(draggedCard); updatePreview(); }); // Click on empty
+slot moves selected card into it slot.addEventListener(‘click’, () => {
+if (selectedCard && !slot.querySelector(‘.part-card’)) {
+slot.appendChild(selectedCard);
+selectedCard.classList.remove(‘selected’); selectedCard = null;
+updatePreview(); } }); }
 
-    const existingCard = slot.querySelector('.part-card');
-    if (existingCard && existingCard !== draggedCard) {
-      // Send existing card back to source
-      dragSource.appendChild(existingCard);
-    }
-    slot.appendChild(draggedCard);
-    updateSlotStates();
-    updatePreview();
-
-}); }
-
-// Pool also accepts drops (return card)
 poolContainer.addEventListener(‘dragover’, e => e.preventDefault());
 poolContainer.addEventListener(‘drop’, e => { e.preventDefault(); if
 (!draggedCard) return; poolContainer.appendChild(draggedCard);
-updateSlotStates(); updatePreview(); });
-
-function updateSlotStates() { const slots =
-slotsContainer.querySelectorAll(‘.drop-slot’); slots.forEach(slot => {
-if (slot.querySelector(‘.part-card’)) {
-slot.classList.add(‘slot-filled’); } else {
-slot.classList.remove(‘slot-filled’); } }); }
+updatePreview(); });
 
 // ── Preview ──────────────────────────────────── function
 updatePreview() { const slots =
@@ -233,16 +208,13 @@ Array.from(slotsContainer.querySelectorAll(‘.drop-slot’)); const answers
 = slots.map(s => { const c = s.querySelector(‘.part-card’); return c ?
 c.textContent : ’’; });
 
-const correct = currentActivity.sentences; let allFilled =
-answers.every(a => a !== ’‘); if (!allFilled) { showFeedback(’Please
-fill all slots before checking.’, ‘warn’); return; }
+if (!answers.every(a => a !== ’‘)) { showFeedback(’Please fill all slots
+before checking.’, ‘warn’); return; }
 
-let correctCount = 0; answers.forEach((a, i) => { if (a === correct[i])
-correctCount++; });
-
-const isPerfect = correctCount === correct.length; const status =
-isPerfect ? ‘Correct’ : ‘Incorrect’; const details =
-${correctCount}/${correct.length} correct;
+const correct = currentActivity.sentences; const correctCount =
+answers.filter((a, i) => a === correct[i]).length; const isPerfect =
+correctCount === correct.length; const status = isPerfect ? ‘Correct’ :
+‘Incorrect’; const details = ${correctCount}/${correct.length} correct;
 
 track(studentName, currentActivity.id, attemptNumber, status, details);
 recordResult(studentName, currentActivity.id, attemptNumber, status,
@@ -264,12 +236,10 @@ startGame(); }
 hintBtn.addEventListener(‘click’, () => { if (!currentActivity ||
 !currentActivity.hint) return; hintText.textContent =
 currentActivity.hint; hintModal.classList.remove(‘hidden’);
-hintModal.setAttribute(‘aria-hidden’, ‘false’); hintCloseBtn.focus();
-});
+hintCloseBtn.focus(); });
 
 hintCloseBtn.addEventListener(‘click’, () => {
-hintModal.classList.add(‘hidden’); hintModal.setAttribute(‘aria-hidden’,
-‘true’); });
+hintModal.classList.add(‘hidden’); });
 
 // ── Reset ──────────────────────────────────────
 resetBtn.addEventListener(‘click’, () => { buildBoard();
@@ -280,7 +250,7 @@ showFeedback(msg, type) { feedbackBox.textContent = msg;
 feedbackBox.className = feedback-box feedback-${type};
 feedbackBox.classList.remove(‘hidden’); }
 
-// ── Tabs ───────────────────────────────────────
+// ── Main Tabs ──────────────────────────────────
 tabStudent.addEventListener(‘click’, () => {
 tabStudent.classList.add(‘tab-active’);
 tabStudent.setAttribute(‘aria-selected’, ‘true’);
@@ -295,7 +265,7 @@ tabTeacher.setAttribute(‘aria-selected’, ‘true’);
 tabStudent.classList.remove(‘tab-active’);
 tabStudent.setAttribute(‘aria-selected’, ‘false’);
 viewTeacher.classList.remove(‘hidden’);
-viewStudent.classList.add(‘hidden’); // Reset PIN gate each visit
+viewStudent.classList.add(‘hidden’);
 teacherPinGate.classList.remove(‘hidden’);
 teacherDashboard.classList.add(‘hidden’); pinInput.value = ’‘;
 pinError.classList.add(’hidden’); });
@@ -332,12 +302,11 @@ sessionStart = Date.now(); refreshDashboard(); } });
 // ── Tracking ─────────────────────────────────── function track(name,
 gameId, attempt, status, details) { if (typeof InteractivesTelemetry !==
 ‘undefined’) { try { InteractivesTelemetry.track({ name, gameId,
-attempt, status, details }); } catch(e) {} } // Also send to Google
-Sheets const payload = { Timestamp: new Date().toISOString(), Name:
-name, Game_ID: gameId, Attempt: attempt, Status: status, Details:
-details }; fetch(TRACKING_URL, { method: ‘POST’, mode: ‘no-cors’,
-headers: { ‘Content-Type’: ‘application/json’ }, body:
-JSON.stringify(payload) }).catch(() => {}); }
+attempt, status, details }); } catch(e) {} } fetch(TRACKING_URL, {
+method: ‘POST’, mode: ‘no-cors’, headers: { ‘Content-Type’:
+‘application/json’ }, body: JSON.stringify({ Timestamp: new
+Date().toISOString(), Name: name, Game_ID: gameId, Attempt: attempt,
+Status: status, Details: details }) }).catch(() => {}); }
 
 function recordResult(name, gameId, attempt, status, details) {
 trackingRows.push({ timestamp: Date.now(), name, gameId, attempt,
@@ -345,12 +314,12 @@ status, details }); }
 
 // ── Dashboard ────────────────────────────────── function
 refreshDashboard() { const rows = trackingRows.filter(r =>
-r.timestamp >= sessionStart); const total = rows.length; const correct =
-rows.filter(r => r.status === ‘Correct’).length; const wrong =
-rows.filter(r => r.status === ‘Incorrect’).length;
+r.timestamp >= sessionStart); const correct = rows.filter(r => r.status
+=== ‘Correct’).length; const wrong = rows.filter(r => r.status ===
+‘Incorrect’).length;
 
-statAttempts.textContent = total; statCorrect.textContent = correct;
-statIncorrect.textContent= wrong;
+statAttempts.textContent = rows.length; statCorrect.textContent =
+correct; statIncorrect.textContent = wrong;
 
 resultsTbody.innerHTML = ’‘; if (rows.length === 0) {
 noResultsMsg.classList.remove(’hidden’); } else {
@@ -371,7 +340,7 @@ showCsvMsg(✅ Loaded ${activities.length} activit${activities.length === 1 ? 'y
 try again.’, ‘error’); } });
 
 function showCsvMsg(msg, type) { csvReloadMsg.textContent = msg;
-csvReloadMsg.className = csv-msg ${type ? 'csv-msg-' + type : ''};
+csvReloadMsg.className = csv-msg${type ? ' csv-msg-' + type : ''};
 csvReloadMsg.classList.remove(‘hidden’); }
 
 // ── Start ────────────────────────────────────── init();
