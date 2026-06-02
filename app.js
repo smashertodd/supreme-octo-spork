@@ -1,575 +1,346 @@
-// app.js - Fix the Paragraph Mini App (Vanilla JS Edition)
+// ============================================================ // Fix
+the Paragraph — app.js //
+============================================================
 
-// ─── CONFIGURATION ──────────────────────────────────────────────────────────
-var TRACKING_URL    = "https://script.google.com/macros/s/AKfycbyL4Ws4DK4UH_VbTE_4ENW9vmy7WRKly71NfPLDm2CF3oeBf91jUOTkXuSJJWiWMEHQ/exec";
-var LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
-var TRACKING_CSV_URL= "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
-var PIN              = "9999";
-var REFRESH_INTERVAL = 15000;
+const LIBRARY_CSV_URL =
+“https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv”;
+const TRACKING_CSV_URL =
+“https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv”;
+const TRACKING_URL =
+“https://script.google.com/macros/s/AKfycbyL4Ws4DK4UH_VbTE_4ENW9vmy7WRKly71NfPLDm2CF3oeBf91UOTkXuSJJWiWMEHQ/exec”;
+const TEACHER_PIN = “9999”; const REFRESH_INTERVAL = 15000;
 
-// ─── STATE ──────────────────────────────────────────────────────────────────
-var state = {
-  tab:          "student",   // "student" | "teacher"
-  pinUnlocked:  false,
-  studentName:  "",
-  currentAct:   null,        // { gameId, title, sentences[] }
-  sessionStart: Date.now(),
-  // activity state
-  pool:         [],
-  slots:        [],
-  attempts:     0,
-  actStatus:    "idle",      // "idle" | "error" | "success"
-  dragging:     null,        // { source:"pool"|"slot", index, item }
-  // teacher state
-  teacherRows:  [],
-  teacherTimer: null
-};
+// ── State ──────────────────────────────────────────────────── let
+studentName = ““; let activities = {}; // { game_id: { title, parts: [],
+distractors: [] } } let currentGame = null; // game_id string let
+sessionStart = null; // timestamp when session was reset (for teacher
+filter) let dragSrcEl = null;
 
-// ─── UTILITIES ──────────────────────────────────────────────────────────────
-function parseCSVRow(row) {
-  var result = [], insideQuote = false, current = "";
-  for (var i = 0; i < row.length; i++) {
-    var ch = row[i];
-    if (ch === '"' && !insideQuote) { insideQuote = true; continue; }
-    if (ch === '"' && insideQuote)  { insideQuote = false; continue; }
-    if (ch === ',' && !insideQuote) { result.push(current.trim()); current = ""; continue; }
-    current += ch;
-  }
-  result.push(current.trim());
-  return result;
+// ── Boot ─────────────────────────────────────────────────────
+document.addEventListener(“DOMContentLoaded”, () => {
+showScreen(“screen-name”);
+document.getElementById(“btn-start”).addEventListener(“click”,
+handleNameSubmit);
+document.getElementById(“btn-check”).addEventListener(“click”,
+checkAnswer);
+document.getElementById(“btn-retry”).addEventListener(“click”,
+retryActivity);
+document.getElementById(“btn-library”).addEventListener(“click”, () =>
+showLibrary());
+document.getElementById(“tab-student”).addEventListener(“click”, () =>
+switchTab(“student”));
+document.getElementById(“tab-teacher”).addEventListener(“click”, () =>
+promptTeacherPin());
+document.getElementById(“btn-pin-submit”).addEventListener(“click”,
+submitPin);
+document.getElementById(“btn-pin-cancel”).addEventListener(“click”,
+closePinModal);
+document.getElementById(“btn-reset-session”).addEventListener(“click”,
+resetSession);
+document.getElementById(“pin-input”).addEventListener(“keydown”, e => {
+if (e.key === “Enter”) submitPin(); }); });
+
+// ── Screens ──────────────────────────────────────────────────
+function showScreen(id) { document.querySelectorAll(“.screen”).forEach(s
+=> s.classList.remove(“active”)); const el =
+document.getElementById(id); if (el) el.classList.add(“active”); }
+
+// ── Name Entry ───────────────────────────────────────────────
+function handleNameSubmit() { const input =
+document.getElementById(“input-name”); const name = input.value.trim();
+if (!name) { input.classList.add(“error”); input.placeholder = “Please
+enter your name”; return; } input.classList.remove(“error”); studentName
+= name; loadLibrary(); }
+
+// ── CSV Parsing ───────────────────────────────────────────────
+function parseCSV(text) { const rows = []; const lines = text.split(//);
+const headers = splitCSVLine(lines[0]); for (let i = 1; i <
+lines.length; i++) { if (!lines[i].trim()) continue; const values =
+splitCSVLine(lines[i]); const row = {}; headers.forEach((h, idx) => {
+row[h.trim()] = (values[idx] || ““).trim(); }); rows.push(row); } return
+rows; }
+
+function splitCSVLine(line) { const result = []; let current = ““; let
+inQuotes = false; for (let i = 0; i < line.length; i++) { const ch =
+line[i]; if (ch === ‘“‘) { if (inQuotes && line[i + 1] ===’”’) { current
++= ’”’; i++; } else { inQuotes = !inQuotes; } } else if (ch === “,” &&
+!inQuotes) { result.push(current); current = ““; } else { current += ch;
+} } result.push(current); return result; }
+
+// ── Library Loading ───────────────────────────────────────────
+function loadLibrary() { showScreen(“screen-loading”);
+fetch(LIBRARY_CSV_URL) .then(r => r.text()) .then(text => { const rows =
+parseCSV(text); buildActivities(rows); const activeGames =
+Object.keys(activities); if (activeGames.length === 0) { showError(“No
+active activities found. Ask your teacher to activate one.”); return; }
+if (activeGames.length === 1) { // Auto-land on the single active
+activity startActivity(activeGames[0]); } else { showLibrary(); } })
+.catch(() => showError(“Couldn’t load activities. Please try again.”));
 }
 
-function shuffle(arr) {
-  var a = arr.slice();
-  for (var i = a.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i + 1));
-    var tmp = a[i]; a[i] = a[j]; a[j] = tmp;
-  }
-  return a;
-}
+function buildActivities(rows) { activities = {}; rows.forEach(row => {
+const status = (row[“Status”] || ““).toLowerCase(); if (status
+!==”active”) return; const id = row[“Game_ID”]; const type =
+(row[“Type”] || ““).toLowerCase(); if (!id) return; if (!activities[id])
+{ activities[id] = { title: row[“Title”] || id, parts: [], distractors:
+[] }; } // Title is only on the first row — preserve it if
+(row[“Title”]) activities[id].title = row[“Title”];
 
-function el(tag, attrs, children) {
-  var elem = document.createElement(tag);
-  if (attrs) {
-    Object.keys(attrs).forEach(function(k) {
-      if (k === "className")      { elem.className = attrs[k]; }
-      else if (k === "style" && typeof attrs[k] === "object") {
-        Object.assign(elem.style, attrs[k]);
-      }
-      else if (k.startsWith("on")) {
-        elem.addEventListener(k.slice(2).toLowerCase(), attrs[k]);
-      }
-      else { elem.setAttribute(k, attrs[k]); }
-    });
-  }
-  if (children) {
-    (Array.isArray(children) ? children : [children]).forEach(function(c) {
-      if (c == null) return;
-      elem.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
-    });
-  }
-  return elem;
-}
-
-function sendTrackingData(name, gameId, attempt, status, details) {
-  var params = new URLSearchParams();
-  params.append("name",    name    || "anonymous");
-  params.append("gameId",  gameId  || "unknown");
-  params.append("attempt", String(attempt));
-  params.append("status",  status);
-  params.append("details", details || "");
-  fetch(TRACKING_URL + "?" + params.toString(), { method: "GET", mode: "no-cors" }).catch(function(){});
-}
-
-// ─── RENDER ENGINE ──────────────────────────────────────────────────────────
-function render() {
-  var root = document.getElementById("root");
-  root.innerHTML = "";
-  root.appendChild(buildApp());
-}
-
-// ─── APP SHELL ──────────────────────────────────────────────────────────────
-function buildApp() {
-  var wrap = el("div", {});
-
-  // ── PIN MODAL ──
-  if (state.showPin) {
-    wrap.appendChild(buildPinModal());
-    return wrap;
-  }
-
-  // ── NAME MODAL (student tab, no name yet) ──
-  if (state.tab === "student" && !state.studentName) {
-    wrap.appendChild(buildNameModal());
-    return wrap;
-  }
-
-  // ── NAV BAR ──
-  wrap.appendChild(buildNavBar());
-
-  // ── MAIN CONTENT ──
-  var main = el("main", {});
-  if (state.tab === "student") {
-    if (!state.currentAct) {
-      main.appendChild(buildLibraryScreen());
+    const item = { text: row["Text"], label: row["Label"], hint: row["Hint"] };
+    if (type === "distractor") {
+      activities[id].distractors.push(item);
     } else {
-      main.appendChild(buildStudentActivity());
-    }
-  } else {
-    main.appendChild(buildTeacherPanel());
-  }
-  wrap.appendChild(main);
-  return wrap;
-}
-
-// ─── NAV BAR ────────────────────────────────────────────────────────────────
-function buildNavBar() {
-  var studentBtn = el("button", {
-    className: "tab-btn " + (state.tab === "student" ? "tab-active" : ""),
-    onClick: function() { state.tab = "student"; render(); }
-  }, "Student View");
-
-  var teacherBtn = el("button", {
-    className: "tab-btn " + (state.tab === "teacher" ? "tab-active" : ""),
-    onClick: function() {
-      if (!state.pinUnlocked) { state.showPin = true; render(); return; }
-      state.tab = "teacher";
-      render();
-      startTeacherRefresh();
-    }
-  }, "Teacher View");
-
-  return el("div", {
-    style: {
-      background: "var(--surface)", borderBottom: "1px solid var(--border)",
-      padding: "16px 24px", display: "flex",
-      justifyContent: "space-between", alignItems: "center"
-    }
-  }, [
-    el("div", { style: { fontWeight: "800", color: "var(--accent)", fontSize: "18px" } }, "Fix the Paragraph"),
-    el("div", { className: "tab-bar", style: { borderBottom: "none", margin: "0", padding: "0" } }, [studentBtn, teacherBtn])
-  ]);
-}
-
-// ─── NAME MODAL ─────────────────────────────────────────────────────────────
-function buildNameModal() {
-  var input = el("input", {
-    className: "text-input",
-    type: "text",
-    placeholder: "Type your name...",
-    autofocus: "true"
-  });
-
-  var btn = el("button", {
-    className: "btn-primary btn-full",
-    onClick: function() {
-      var v = input.value.trim();
-      if (!v) return;
-      state.studentName = v;
-      render();
-    }
-  }, "Let's Go!");
-
-  input.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") btn.click();
-  });
-
-  return el("div", { className: "modal-backdrop" }, [
-    el("div", { className: "modal-box" }, [
-      el("h2", { className: "modal-heading" }, "Fix the Paragraph"),
-      el("p",  { className: "modal-subtext" }, "Enter your name to begin."),
-      input,
-      btn
-    ])
-  ]);
-}
-
-// ─── PIN MODAL ──────────────────────────────────────────────────────────────
-function buildPinModal() {
-  var errDiv = el("div", { className: "error-msg", style: { display: "none" } }, "Incorrect PIN");
-  var input  = el("input", {
-    className: "text-input pin-input",
-    type: "password",
-    placeholder: "****",
-    autofocus: "true"
-  });
-
-  var unlockBtn = el("button", {
-    className: "btn-primary",
-    style: { flex: "1" },
-    onClick: function() {
-      if (input.value === PIN) {
-        state.pinUnlocked = true;
-        state.showPin     = false;
-        state.tab         = "teacher";
-        render();
-        startTeacherRefresh();
-      } else {
-        errDiv.style.display = "block";
-        input.value = "";
-      }
-    }
-  }, "Unlock");
-
-  var cancelBtn = el("button", {
-    className: "btn-secondary",
-    style: { flex: "1" },
-    onClick: function() { state.showPin = false; render(); }
-  }, "Cancel");
-
-  input.addEventListener("keydown", function(e) {
-    if (e.key === "Enter") unlockBtn.click();
-  });
-
-  return el("div", { className: "modal-backdrop" }, [
-    el("div", { className: "modal-box" }, [
-      el("h2", { className: "modal-heading" }, "Teacher Access"),
-      el("p",  { className: "modal-subtext" }, "Enter PIN to view student progress."),
-      input,
-      errDiv,
-      el("div", { className: "btn-row", style: { marginTop: "16px" } }, [unlockBtn, cancelBtn])
-    ])
-  ]);
-}
-
-// ─── LIBRARY SCREEN ─────────────────────────────────────────────────────────
-function buildLibraryScreen() {
-  var wrapper = el("div", { className: "app-wrapper" });
-
-  var loadingDiv = el("div", { style: { textAlign: "center", marginTop: "60px", color: "var(--text-muted)" } }, "Loading Library...");
-  wrapper.appendChild(loadingDiv);
-
-  fetch(LIBRARY_CSV_URL + "&t=" + Date.now())
-    .then(function(r) { return r.text(); })
-    .then(function(csv) {
-      var lines   = csv.trim().split("\n");
-      var headers = parseCSVRow(lines[0]).map(function(h) { return h.toLowerCase().trim(); });
-      var titleIdx = headers.indexOf("title");
-      var library  = [];
-
-      for (var i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        var cols  = parseCSVRow(lines[i]);
-        var title = titleIdx >= 0 ? cols[titleIdx] : cols[0];
-        if (!title) continue;
-        var sentences = [];
-        for (var j = 0; j < cols.length; j++) {
-          if (j !== titleIdx && cols[j] && cols[j].trim()) {
-            sentences.push(cols[j].trim());
-          }
-        }
-        if (sentences.length >= 2) {
-          library.push({ gameId: "lib-" + i, title: title, sentences: sentences });
-        }
-      }
-
-      wrapper.innerHTML = "";
-
-      // Header
-      wrapper.appendChild(
-        el("div", { className: "view-header", style: { justifyContent: "center" } }, [
-          el("h2", { className: "game-title" }, "Activity Library")
-        ])
-      );
-
-      if (library.length === 0) {
-        wrapper.appendChild(el("p", { style: { textAlign: "center", color: "var(--text-muted)" } }, "No activities found. Add some rows to your Google Sheet!"));
-        return;
-      }
-
-      var grid = el("div", {
-        style: {
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-          gap: "20px"
-        }
-      });
-
-      library.forEach(function(act) {
-        var card = el("div", {
-          className: "part-card",
-          style: { cursor: "pointer", display: "flex", flexDirection: "column", gap: "8px", padding: "24px", textAlign: "center" },
-          onClick: function() { selectActivity(act); }
-        }, [
-          el("div", { style: { fontSize: "18px", fontWeight: "700" } }, act.title),
-          el("div", { style: { fontSize: "13px", color: "var(--text-muted)" } }, act.sentences.length + " sentences")
-        ]);
-        grid.appendChild(card);
-      });
-
-      wrapper.appendChild(grid);
-    })
-    .catch(function() {
-      wrapper.innerHTML = "";
-      wrapper.appendChild(el("p", { style: { textAlign: "center", color: "var(--error, red)" } }, "Could not load library. Check your CSV URL and sheet permissions."));
-    });
-
-  return wrapper;
-}
-
-function selectActivity(act) {
-  state.currentAct = act;
-  state.pool       = shuffle(act.sentences.map(function(s, i) { return { id: i, text: s }; }));
-  state.slots      = new Array(act.sentences.length).fill(null);
-  state.attempts   = 0;
-  state.actStatus  = "idle";
-  state.dragging   = null;
-  render();
-}
-
-// ─── STUDENT ACTIVITY ───────────────────────────────────────────────────────
-function buildStudentActivity() {
-  var act          = state.currentAct;
-  var correctOrder = act.sentences;
-
-  if (state.actStatus === "success") {
-    return el("div", { className: "app-wrapper" }, [
-      el("div", { className: "create-card", style: { textAlign: "center", marginTop: "40px", alignItems: "center" } }, [
-        el("div", { style: { fontSize: "64px", marginBottom: "16px" } }, "🎉"),
-        el("h2", { className: "modal-heading", style: { color: "var(--success, green)" } },
-          state.attempts === 1 ? "First try! Amazing!" : "Well done!"),
-        el("p", { className: "modal-subtext", style: { marginBottom: "24px" } },
-          "You ordered the paragraph perfectly in " + state.attempts + " attempt(s)."),
-        el("button", { className: "btn-secondary", onClick: function() { state.currentAct = null; render(); } }, "Back to Library")
-      ])
-    ]);
-  }
-
-  var wrapper = el("div", { className: "app-wrapper" });
-
-  // View header
-  wrapper.appendChild(
-    el("div", { className: "view-header" }, [
-      el("button", { className: "btn-ghost btn-sm", onClick: function() { state.currentAct = null; render(); } }, "Back to Library"),
-      el("div", { className: "player-info" }, "👤 " + state.studentName)
-    ])
-  );
-
-  // Preview panel
-  wrapper.appendChild(
-    el("div", { className: "preview-panel" }, [
-      el("h2", { className: "section-heading", style: { marginBottom: "8px" } }, act.title),
-      el("p", { className: "game-instructions" }, "Drag the sentences into the correct order.")
-    ])
-  );
-
-  // Pool
-  wrapper.appendChild(buildPool());
-
-  // Slots
-  wrapper.appendChild(buildSlots(correctOrder));
-
-  // Error feedback
-  if (state.actStatus === "error") {
-    wrapper.appendChild(
-      el("div", { className: "feedback-box feedback-error", style: { marginBottom: "24px" } }, "Not quite right! Try swapping some sentences.")
-    );
-  }
-
-  // Check button
-  var checkBtn = el("button", {
-    className: "btn-primary",
-    onClick: handleCheck
-  }, "Check My Answer");
-  if (state.pool.length > 0) checkBtn.setAttribute("disabled", "true");
-
-  wrapper.appendChild(
-    el("div", { className: "btn-row", style: { justifyContent: "center" } }, [checkBtn])
-  );
-
-  return wrapper;
-}
-
-function buildPool() {
-  var poolItems = state.pool.map(function(item, idx) {
-    var card = el("div", {
-      className: "part-card",
-      draggable: "true"
-    }, item.text);
-
-    card.addEventListener("dragstart", function(e) {
-      state.dragging = { source: "pool", index: idx, item: item };
-      e.dataTransfer.effectAllowed = "move";
-    });
-    card.addEventListener("dragend", function() { state.dragging = null; });
-
-    return card;
-  });
-
-  return el("div", { className: "section-block" }, [
-    el("div", { className: "section-label" }, "Sentence Pool"),
-    el("div", { className: "pool-container" },
-      poolItems.length > 0 ? poolItems : [el("span", { style: { color: "var(--text-muted)" } }, "All sentences placed!")]
-    )
-  ]);
-}
-
-function buildSlots(correctOrder) {
-  var slotEls = state.slots.map(function(item, idx) {
-    var slotDiv = el("div", { className: "drop-slot" });
-
-    slotDiv.addEventListener("dragover", function(e) {
-      e.preventDefault();
-      slotDiv.classList.add("slot-drag-over");
-    });
-    slotDiv.addEventListener("dragleave", function() {
-      slotDiv.classList.remove("slot-drag-over");
-    });
-    slotDiv.addEventListener("drop", function() {
-      slotDiv.classList.remove("slot-drag-over");
-      if (!state.dragging) return;
-      var d       = state.dragging;
-      var newPool = state.pool.slice();
-      var newSlots= state.slots.slice();
-
-      if (d.source === "pool") {
-        newPool = newPool.filter(function(p) { return p.id !== d.item.id; });
-      } else {
-        newSlots[d.source === "slot" ? d.index : d.index] = null;
-        newSlots[d.index] = null;
-      }
-      if (newSlots[idx]) { newPool.push(newSlots[idx]); }
-      newSlots[idx]  = d.item;
-      state.pool     = newPool;
-      state.slots    = newSlots;
-      state.dragging = null;
-      state.actStatus= "idle";
-      render();
-    });
-
-    if (item) {
-      var card = el("div", {
-        className: "part-card",
-        draggable: "true"
-      }, item.text);
-
-      card.addEventListener("dragstart", function(e) {
-        state.dragging = { source: "slot", index: idx, item: item };
-        e.dataTransfer.effectAllowed = "move";
-      });
-      card.addEventListener("dragend", function() { state.dragging = null; });
-      card.addEventListener("click", function() {
-        var newSlots = state.slots.slice();
-        newSlots[idx] = null;
-        state.slots   = newSlots;
-        state.pool    = state.pool.concat([item]);
-        state.actStatus = "idle";
-        render();
-      });
-      slotDiv.appendChild(card);
-    } else {
-      slotDiv.appendChild(el("span", { style: { color: "var(--text-muted)", fontSize: "14px" } }, "Drop sentence " + (idx + 1) + " here"));
+      activities[id].parts.push(item);
     }
 
-    return slotDiv;
-  });
+}); }
 
-  return el("div", { className: "section-block" }, [
-    el("div", { className: "section-label" }, "Paragraph Order"),
-    el("div", { className: "slots-container" }, slotEls)
-  ]);
+// ── Library Screen ────────────────────────────────────────────
+function showLibrary() { showScreen(“screen-library”); const list =
+document.getElementById(“library-list”); list.innerHTML = ““;
+Object.entries(activities).forEach(([id, game]) => { const card =
+document.createElement(”button”); card.className = “activity-card”;
+card.innerHTML =
+<span class="card-title">${game.title}</span>       <span class="card-meta">${game.parts.length} sentences${game.distractors.length ? +
+game.distractors.lengthdistractor{game.distractors.length > 1 ? “s” :
+““}: ""}</span>; card.addEventListener(”click”, () =>
+startActivity(id)); list.appendChild(card); }); }
+
+// ── Activity ──────────────────────────────────────────────────
+function startActivity(gameId) { currentGame = gameId; const game =
+activities[gameId]; renderActivity(game); showScreen(“screen-activity”);
 }
 
-function handleCheck() {
-  var correctOrder = state.currentAct.sentences;
-  var isComplete   = state.slots.every(function(s) { return s !== null; });
-  if (!isComplete) { alert("Please fill all slots before checking!"); return; }
+function renderActivity(game) {
+document.getElementById(“activity-title”).textContent = game.title;
 
-  state.attempts++;
-  var isCorrect = state.slots.every(function(s, i) { return s.text === correctOrder[i]; });
+// Combine parts + distractors, shuffle const allSentences = [
+…game.parts.map(p => ({ …p, isDistractor: false })),
+…game.distractors.map(d => ({ …d, isDistractor: true })) ];
+shuffle(allSentences);
 
-  if (isCorrect) {
-    state.actStatus = "success";
-    sendTrackingData(state.studentName, state.currentAct.title, state.attempts, "completed",
-      state.attempts === 1 ? "first_try" : "multi_attempt");
-  } else {
-    state.actStatus = "error";
-    sendTrackingData(state.studentName, state.currentAct.title, state.attempts, "incorrect", "");
-  }
-  render();
+// Choice pool const pool = document.getElementById(“choice-pool”);
+pool.innerHTML = ““; allSentences.forEach((item, i) => { const chip =
+createChip(item, i); pool.appendChild(chip); });
+
+// Drop zone const dropZone = document.getElementById(“drop-zone”);
+dropZone.innerHTML = ““; dropZone.addEventListener(”dragover”,
+onDragOver); dropZone.addEventListener(“drop”, e => onDrop(e,
+dropZone));
+
+// Pool also accepts drops back pool.addEventListener(“dragover”,
+onDragOver); pool.addEventListener(“drop”, e => onDrop(e, pool));
+
+// Reset feedback document.getElementById(“feedback”).textContent = ““;
+document.getElementById(”btn-check”).style.display = “inline-flex”;
+document.getElementById(“btn-retry”).style.display = “none”; }
+
+function createChip(item, index) { const chip =
+document.createElement(“div”); chip.className = “sentence-chip”;
+chip.draggable = true; chip.dataset.index = index;
+chip.dataset.distractor = item.isDistractor ? “true” : “false”;
+chip.dataset.label = item.label || ““; chip.textContent = item.text;
+chip.title = item.hint ||”“;
+
+chip.addEventListener(“dragstart”, onDragStart);
+chip.addEventListener(“dragend”, onDragEnd);
+
+// Touch support chip.addEventListener(“touchstart”, onTouchStart, {
+passive: true }); chip.addEventListener(“touchmove”, onTouchMove, {
+passive: false }); chip.addEventListener(“touchend”, onTouchEnd);
+
+return chip; }
+
+// ── Drag & Drop (mouse) ───────────────────────────────────────
+function onDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed
+= “move”; e.dataTransfer.setData(“text/plain”, this.dataset.index);
+setTimeout(() => this.classList.add(“dragging”), 0); }
+
+function onDragEnd() { this.classList.remove(“dragging”);
+document.querySelectorAll(“.drop-target-over”).forEach(el =>
+el.classList.remove(“drop-target-over”)); }
+
+function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect =
+“move”; this.classList.add(“drop-target-over”); }
+
+function onDrop(e, container) { e.preventDefault();
+container.classList.remove(“drop-target-over”); if (!dragSrcEl) return;
+
+// Find chip under cursor for ordering const target =
+e.target.closest(“.sentence-chip”); if (target && target !== dragSrcEl
+&& target.parentNode === container) { const rect =
+target.getBoundingClientRect(); const after = e.clientY > rect.top +
+rect.height / 2; container.insertBefore(dragSrcEl, after ?
+target.nextSibling : target); } else { container.appendChild(dragSrcEl);
+} dragSrcEl = null; }
+
+// ── Touch Drag ──────────────────────────────────────────────── let
+touchChip = null, touchClone = null, touchOffsetX = 0, touchOffsetY = 0;
+
+function onTouchStart(e) { touchChip = this; const touch = e.touches[0];
+const rect = this.getBoundingClientRect(); touchOffsetX =
+touch.clientX - rect.left; touchOffsetY = touch.clientY - rect.top;
+
+touchClone = this.cloneNode(true);
+touchClone.classList.add(“touch-clone”); touchClone.style.width =
+rect.width + “px”; touchClone.style.left = (touch.clientX -
+touchOffsetX) + “px”; touchClone.style.top = (touch.clientY -
+touchOffsetY) + “px”; document.body.appendChild(touchClone);
+this.classList.add(“dragging”); }
+
+function onTouchMove(e) { e.preventDefault(); const touch =
+e.touches[0]; if (touchClone) { touchClone.style.left = (touch.clientX -
+touchOffsetX) + “px”; touchClone.style.top = (touch.clientY -
+touchOffsetY) + “px”; } }
+
+function onTouchEnd(e) { if (touchClone) { touchClone.remove();
+touchClone = null; } if (!touchChip) return;
+touchChip.classList.remove(“dragging”);
+
+const touch = e.changedTouches[0]; const el =
+document.elementFromPoint(touch.clientX, touch.clientY); const pool =
+document.getElementById(“choice-pool”); const dropZone =
+document.getElementById(“drop-zone”);
+
+let container = null; if (el && (el === dropZone ||
+dropZone.contains(el))) container = dropZone; else if (el && (el ===
+pool || pool.contains(el))) container = pool;
+
+if (container) { const target = el.closest(“.sentence-chip”); if (target
+&& target !== touchChip && target.parentNode === container) {
+container.insertBefore(touchChip, target); } else {
+container.appendChild(touchChip); } } touchChip = null; }
+
+// ── Check Answer ──────────────────────────────────────────────
+function checkAnswer() { const game = activities[currentGame]; const
+dropZone = document.getElementById(“drop-zone”); const submitted =
+Array.from(dropZone.querySelectorAll(“.sentence-chip”));
+
+if (submitted.length === 0) { showFeedback(“Drag the sentences into the
+box first!”, “neutral”); return; }
+
+// Distractors should NOT be in the drop zone const distractorsInZone =
+submitted.filter(c => c.dataset.distractor === “true”); // Parts should
+all be in drop zone const partsInZone = submitted.filter(c =>
+c.dataset.distractor !== “true”); const correctParts = game.parts;
+
+// Check order let orderCorrect = partsInZone.length ===
+correctParts.length; if (orderCorrect) { partsInZone.forEach((chip, i)
+=> { if (chip.textContent !== correctParts[i].text) orderCorrect =
+false; }); }
+
+const noDistractors = distractorsInZone.length === 0; const
+allPartsPresent = partsInZone.length === correctParts.length;
+
+const perfect = orderCorrect && noDistractors && allPartsPresent; const
+partial = allPartsPresent && noDistractors && !orderCorrect;
+
+// Visual feedback on chips submitted.forEach(chip => {
+chip.classList.remove(“correct”, “incorrect”, “distractor-warning”); if
+(chip.dataset.distractor === “true”) {
+chip.classList.add(“distractor-warning”); } else { const idx =
+partsInZone.indexOf(chip); chip.classList.add(idx >= 0 &&
+chip.textContent === correctParts[idx]?.text ? “correct” : “incorrect”);
+} });
+
+let status, message; if (perfect) { status = “correct”; message = “🎉
+Perfect! You got the order exactly right and spotted the
+distractor(s).”; } else if (noDistractors && !orderCorrect) { status =
+“partial”; message = “✅ Good — you kept the distractors out! But check
+the order of your sentences.”; } else if (!noDistractors &&
+orderCorrect) { status = “partial”; message = “⚠️ The order is right,
+but there’s a sentence in there that doesn’t belong — can you spot it?”;
+} else { status = “incorrect”; message = “❌ Not quite. Check which
+sentences belong and what order they go in.”; }
+
+showFeedback(message, status); trackAttempt(status, submitted.map(c =>
+c.textContent));
+
+document.getElementById(“btn-check”).style.display = “none”;
+document.getElementById(“btn-retry”).style.display = “inline-flex”; }
+
+function showFeedback(message, type) { const fb =
+document.getElementById(“feedback”); fb.textContent = message;
+fb.className = “feedback” + type; }
+
+function retryActivity() { renderActivity(activities[currentGame]); }
+
+// ── Tracking ──────────────────────────────────────────────────
+function trackAttempt(status, details) { const payload = { Name:
+studentName, Game_ID: currentGame, Status: status, Details:
+details.join(” | “) };
+
+// Cogniti telemetry if (typeof InteractivesTelemetry !== “undefined”) {
+InteractivesTelemetry.track(“attempt”, payload); }
+
+// Google Sheet tracking const params = new URLSearchParams({ name:
+studentName, game_id: currentGame, status: status, details:
+details.join(” | “) });
+fetch(${TRACKING_URL}?${params.toString()}).catch(() => {}); }
+
+// ── Teacher Tab ───────────────────────────────────────────────
+function switchTab(tab) {
+document.getElementById(“tab-student”).classList.toggle(“active”, tab
+=== “student”);
+document.getElementById(“tab-teacher”).classList.toggle(“active”, tab
+=== “teacher”);
+document.getElementById(“panel-student”).classList.toggle(“hidden”, tab
+!== “student”);
+document.getElementById(“panel-teacher”).classList.toggle(“hidden”, tab
+!== “teacher”); if (tab === “teacher”) loadTeacherData(); }
+
+function promptTeacherPin() {
+document.getElementById(“pin-modal”).classList.remove(“hidden”);
+document.getElementById(“pin-input”).value = ““;
+document.getElementById(”pin-input”).focus();
+document.getElementById(“pin-error”).textContent = ““; }
+
+function closePinModal() {
+document.getElementById(“pin-modal”).classList.add(“hidden”); }
+
+function submitPin() { const entered =
+document.getElementById(“pin-input”).value.trim(); if (entered ===
+TEACHER_PIN) { closePinModal(); switchTab(“teacher”); } else {
+document.getElementById(“pin-error”).textContent = “Incorrect PIN. Try
+again.”; document.getElementById(“pin-input”).value = ““;
+document.getElementById(”pin-input”).focus(); } }
+
+function resetSession() { sessionStart = Date.now(); loadTeacherData();
 }
 
-// ─── TEACHER PANEL ──────────────────────────────────────────────────────────
-function startTeacherRefresh() {
-  if (state.teacherTimer) clearInterval(state.teacherTimer);
-  fetchTeacherRows();
-  state.teacherTimer = setInterval(function() {
-    if (state.tab === "teacher") fetchTeacherRows();
-    else { clearInterval(state.teacherTimer); state.teacherTimer = null; }
-  }, REFRESH_INTERVAL);
-}
+function loadTeacherData() { const container =
+document.getElementById(“teacher-results”); container.innerHTML = “
+Loading results…
+“; fetch(TRACKING_CSV_URL) .then(r => r.text()) .then(text => { const
+rows = parseCSV(text); const filtered = sessionStart ? rows.filter(r =>
+new Date(r[”Timestamp”]).getTime() >= sessionStart) : rows;
+renderTeacherTable(filtered); }) .catch(() => { container.innerHTML =”
+Could not load results.
+“; }); }
 
-function fetchTeacherRows() {
-  fetch(TRACKING_CSV_URL + "&t=" + Date.now())
-    .then(function(r) { return r.text(); })
-    .then(function(csv) {
-      var lines  = csv.trim().split("\n");
-      var parsed = [];
-      for (var i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        var cols = parseCSVRow(lines[i]);
-        var ts   = new Date(cols[0]).getTime() || 0;
-        if (ts >= state.sessionStart && cols[1]) {
-          parsed.push({ name: cols[1], status: cols[4], activity: cols[2] });
-        }
-      }
-      state.teacherRows = parsed;
-      if (state.tab === "teacher") render();
-    }).catch(function(){});
-}
+function renderTeacherTable(rows) { const container =
+document.getElementById(“teacher-results”); if (rows.length === 0) {
+container.innerHTML = “
+No results yet.
+“; return; } const headers = [”Timestamp”, ”Name”, ”Game_ID”, ”Attempt”,
+”Status”, ”Details”]; let html =”
 
-function buildTeacherPanel() {
-  var students = {};
-  state.teacherRows.forEach(function(r) {
-    if (!students[r.name]) students[r.name] = [];
-    students[r.name].push(r.status);
-  });
+“; headers.forEach(h => { html += <th>${h}</th>; }); html +=”
+“; rows.forEach(row => { html +=”
+“; headers.forEach(h => { html += <td>${row[h] || ""}</td>; }); html +=”
+“; }); html +=”
 
-  var studentNames = Object.keys(students);
-  var total        = studentNames.length;
-  var completed    = studentNames.filter(function(n) { return students[n].indexOf("completed") >= 0; }).length;
+“; container.innerHTML = html; }
 
-  var rows = studentNames.length === 0
-    ? [el("tr", {}, [el("td", { colSpan: "2", className: "no-results-msg" }, "Waiting for students to begin...")])]
-    : studentNames.map(function(name) {
-        var isDone = students[name].indexOf("completed") >= 0;
-        return el("tr", {}, [
-          el("td", { style: { fontWeight: "600" } }, name),
-          el("td", {}, [el("span", { className: "badge " + (isDone ? "badge-success" : "badge-warn") }, isDone ? "Finished" : "Working...")])
-        ]);
-      });
+// Auto-refresh teacher data setInterval(() => { const teacherPanel =
+document.getElementById(“panel-teacher”); if (teacherPanel &&
+!teacherPanel.classList.contains(“hidden”)) { loadTeacherData(); } },
+REFRESH_INTERVAL);
 
-  return el("div", { className: "app-wrapper" }, [
-    el("div", { className: "view-header" }, [
-      el("h2", { className: "game-title" }, "Session Progress"),
-      el("button", {
-        className: "btn-secondary",
-        onClick: function() {
-          state.sessionStart  = Date.now();
-          state.teacherRows   = [];
-          render();
-          startTeacherRefresh();
-        }
-      }, "Reset Session")
-    ]),
-    el("div", { className: "stats-grid" }, [
-      el("div", { className: "stat-card" }, [
-        el("div", { className: "stat-num" }, String(total)),
-        el("div", { className: "stat-label" }, "Active Students")
-      ]),
-      el("div", { className: "stat-card" }, [
-        el("div", { className: "stat-num stat-green" }, String(completed)),
-        el("div", { className: "stat-label" }, "Activities Finished")
-      ])
-    ]),
-    el("div", { className: "table-wrap" }, [
-      el("table", { className: "results-table" }, [
-        el("thead", {}, [el("tr", {}, [el("th", {}, "Student Name"), el("th", {}, "Status")])]),
-        el("tbody", {}, rows)
-      ])
-    ])
-  ]);
-}
+// ── Utilities ─────────────────────────────────────────────────
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i–) { const
+j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j],
+arr[i]]; } return arr; }
 
-// ─── BOOT ───────────────────────────────────────────────────────────────────
-render();
+function showError(msg) { showScreen(“screen-error”);
+document.getElementById(“error-message”).textContent = msg; }
