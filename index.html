@@ -1,29 +1,40 @@
 <!DOCTYPE html>
-Fix the Paragraph
-
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fix the Paragraph</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <!-- Modals -->
+  <div class="modal-backdrop" id="name-modal">
     <div class="modal-box">
-      <h2 id="name-modal-title" class="modal-heading">Fix the Paragraph</h2>
+      <h2 class="modal-heading">Fix the Paragraph</h2>
       <p class="modal-subtext">Enter your name to begin.</p>
       <input id="student-name" type="text" placeholder="Your name..." class="text-input" aria-label="Student name" />
       <button id="start-btn" class="btn-primary btn-full">Start</button>
     </div>
+  </div>
 
+  <div class="modal-backdrop hidden" id="hint-modal">
     <div class="modal-box">
-      <h2 id="hint-modal-title" class="modal-heading">💡 Hint</h2>
+      <h2 class="modal-heading">💡 Hint</h2>
       <p id="hint-text" class="modal-subtext"></p>
       <button id="hint-close-btn" class="btn-primary btn-full">Got it!</button>
     </div>
+  </div>
 
+  <div class="app-wrapper">
     <!-- Tabs -->
     <div class="tab-bar" role="tablist">
       <button id="tab-student" role="tab" aria-selected="true" class="tab-btn tab-active">📝 Student</button>
       <button id="tab-teacher" role="tab" aria-selected="false" class="tab-btn">🔒 Teacher</button>
     </div>
 
-    <!-- ===== STUDENT VIEW ===== -->
+    <!-- Student View -->
     <div id="view-student">
-
-      <!-- Header -->
       <div class="view-header">
         <div>
           <h1 id="game-title" class="game-title">Fix the Paragraph</h1>
@@ -35,65 +46,53 @@ Fix the Paragraph
         </div>
       </div>
 
-      <!-- Live Preview Panel -->
-      <div id="preview-panel" class="preview-panel">
+      <div class="preview-panel">
         <p class="section-label">Live Preview</p>
         <p id="preview-text" class="preview-text"></p>
       </div>
 
-      <!-- Drop Slots -->
       <div class="section-block">
         <p class="section-label">Arrange the sentences</p>
         <div id="slots-container" class="slots-container"></div>
       </div>
 
-      <!-- Sentence Pool -->
       <div class="section-block">
         <p class="section-label">Sentence pool</p>
         <div id="pool-container" class="pool-container"></div>
       </div>
 
-      <!-- Buttons -->
       <div class="btn-row">
         <button id="check-btn" class="btn-primary">✅ Check</button>
         <button id="hint-btn" class="btn-secondary">💡 Hint</button>
         <button id="reset-btn" class="btn-ghost">🔄 Reset</button>
       </div>
 
-      <!-- Feedback -->
       <div id="feedback-box" class="hidden feedback-box" role="alert" aria-live="polite"></div>
+    </div>
 
-    </div><!-- /view-student -->
-
-    <!-- ===== TEACHER VIEW ===== -->
+    <!-- Teacher View -->
     <div id="view-teacher" class="hidden">
-
-      <!-- PIN Gate -->
       <div id="teacher-pin-gate">
         <div class="pin-card">
           <h2 class="modal-heading">Teacher Access</h2>
           <p class="modal-subtext">Enter the PIN to continue.</p>
-          <input id="pin-input" type="password" maxlength="4" placeholder="••••"
-            class="text-input pin-input" aria-label="Teacher PIN" />
+          <input id="pin-input" type="password" maxlength="4" placeholder="••••" class="text-input pin-input" aria-label="Teacher PIN" />
           <button id="pin-submit-btn" class="btn-primary btn-full">Unlock</button>
           <p id="pin-error" class="error-msg hidden">Incorrect PIN. Try again.</p>
         </div>
       </div>
 
-      <!-- Teacher Dashboard -->
       <div id="teacher-dashboard" class="hidden">
         <div class="view-header">
           <h2 class="modal-heading">Teacher Dashboard</h2>
           <button id="reset-session-btn" class="btn-ghost btn-sm">🗑️ Reset Session</button>
         </div>
-
-        <!-- Teacher sub-tabs -->
+        
         <div class="tab-bar">
           <button id="ttab-results" class="tab-btn tab-active tab-sm">📊 Results</button>
           <button id="ttab-create" class="tab-btn tab-sm">➕ Create Activity</button>
         </div>
 
-        <!-- Results Panel -->
         <div id="tview-results">
           <div class="stats-grid">
             <div class="stat-card">
@@ -112,13 +111,7 @@ Fix the Paragraph
           <div class="table-wrap">
             <table class="results-table" aria-label="Student results">
               <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Activity</th>
-                  <th>Attempt</th>
-                  <th>Status</th>
-                  <th>Time</th>
-                </tr>
+                <tr><th>Name</th><th>Activity</th><th>Attempt</th><th>Status</th><th>Time</th></tr>
               </thead>
               <tbody id="results-tbody"></tbody>
             </table>
@@ -126,39 +119,18 @@ Fix the Paragraph
           <p id="no-results-msg" class="no-results-msg">No attempts yet this session.</p>
         </div>
 
-        <!-- Create Activity Panel -->
         <div id="tview-create" class="hidden">
           <div class="create-card">
             <h3 class="section-heading">Create / Edit Activity</h3>
             <p class="modal-subtext">Edit your Google Sheet directly, then paste the published CSV URL below and click Reload.</p>
             <label class="field-label" for="csv-url-input">Published CSV URL</label>
-            <input id="csv-url-input" type="url" placeholder="https://docs.google.com/spreadsheets/..."
-              class="text-input" />
+            <input id="csv-url-input" type="url" placeholder="https://docs.google.com/..." class="text-input" />
             <button id="reload-csv-btn" class="btn-primary">🔄 Reload Activities</button>
             <p id="csv-reload-msg" class="csv-msg hidden"></p>
-            <hr class="divider"/>
-            <h3 class="section-heading">Google Sheet Format</h3>
-            <p class="modal-subtext">Your sheet should have these columns:</p>
-            <div class="table-wrap">
-              <table class="results-table table-xs">
-                <thead>
-                  <tr>
-                    <th>Game_ID</th><th>Title</th><th>Instructions</th>
-                    <th>Sentence_1</th><th>Sentence_2</th><th>…</th>
-                    <th>Hint</th><th>If_Perfect_Go_To</th><th>If_Stuck_Go_To</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>para1</td><td>My Paragraph</td><td>Put in order…</td>
-                    <td>First sentence.</td><td>Second sentence.</td><td>…</td>
-                    <td>Think about topic sentences.</td><td>para2</td><td>para1b</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
           </div>
         </div>
-
-      </div><!-- /teacher-dashboard -->
-    </div><!-- /view-teacher -->
+      </div>
+    </div>
+  </div>
+</body>
+</html>
