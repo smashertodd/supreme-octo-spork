@@ -1,229 +1,377 @@
-/* ============================================== Fix the Paragraph —
-style.css ============================================== */
+// ================================================ // Fix the Paragraph
+— app.js // ================================================
 
-:root { –primary: #4f46e5; –primary-hover: #4338ca; –success: #10b981;
-–danger: #ef4444; –warn-bg: #fef3c7; –warn-text: #92400e; –bg: #f3f4f6;
-–surface: #ffffff; –border: #e5e7eb; –text: #1f2937; –muted: #6b7280; }
+const CSV_URL =
+‘https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCRcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv’;
+const TEACHER_PIN = ‘9999’; const TRACKING_URL =
+‘https://script.google.com/macros/s/AKfycbyL4Ws4DK4UH_VbTE_4ENW9vmy7WRKly71NfPLDm2CF3oeBf91jUOTkXuSJJWiWMEHQ/exec’;
 
-, ::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+// ── State ────────────────────────────────────── let activities = [];
+let currentActivity = null; let studentName = ’’; let attemptNumber = 0;
+let sessionStart = Date.now(); let trackingRows = [];
 
-body { font-family: ‘Segoe UI’, system-ui, sans-serif; background:
-var(–bg); color: var(–text); min-height: 100vh; }
+// ── DOM refs ─────────────────────────────────── const nameModal =
+document.getElementById(‘name-modal’); const hintModal =
+document.getElementById(‘hint-modal’); const studentNameInput =
+document.getElementById(‘student-name’); const startBtn =
+document.getElementById(‘start-btn’); const hintText =
+document.getElementById(‘hint-text’); const hintCloseBtn =
+document.getElementById(‘hint-close-btn’);
 
-/* —- NAV —- */ nav { background: var(–primary); color: white; display:
-flex; align-items: center; justify-content: space-between; padding: 0
-24px; height: 56px; box-shadow: 0 2px 8px rgba(0,0,0,0.15); } nav
-.nav-title { font-size: 20px; font-weight: 700; letter-spacing: -0.3px;
-} nav .nav-tabs { display: flex; gap: 6px; } nav .nav-tab { background:
-transparent; border: 2px solid rgba(255,255,255,0.4); color: white;
-padding: 6px 18px; border-radius: 20px; font-size: 14px; font-weight:
-600; cursor: pointer; transition: all 0.2s; } nav .nav-tab:hover {
-background: rgba(255,255,255,0.15); } nav .nav-tab.active { background:
-white; color: var(–primary); border-color: white; }
+const tabStudent = document.getElementById(‘tab-student’); const
+tabTeacher = document.getElementById(‘tab-teacher’); const viewStudent =
+document.getElementById(‘view-student’); const viewTeacher =
+document.getElementById(‘view-teacher’);
 
-/* —- SCREENS —- */ .screen { display: none; } .screen.active { display:
-block; }
+const gameTitle = document.getElementById(‘game-title’); const
+gameInstructions = document.getElementById(‘game-instructions’); const
+playerNameDisplay = document.getElementById(‘player-name-display’);
+const attemptDisplay = document.getElementById(‘attempt-display’); const
+previewText = document.getElementById(‘preview-text’); const
+slotsContainer = document.getElementById(‘slots-container’); const
+poolContainer = document.getElementById(‘pool-container’); const
+checkBtn = document.getElementById(‘check-btn’); const hintBtn =
+document.getElementById(‘hint-btn’); const resetBtn =
+document.getElementById(‘reset-btn’); const feedbackBox =
+document.getElementById(‘feedback-box’);
 
-/* —- NAME MODAL —- */ .modal-backdrop { position: fixed; inset: 0;
-background: rgba(0,0,0,0.55); display: flex; align-items: center;
-justify-content: center; z-index: 200; opacity: 0; pointer-events: none;
-transition: opacity 0.25s; } .modal-backdrop.open { opacity: 1;
-pointer-events: auto; } .modal-box { background: white; border-radius:
-16px; padding: 40px 36px; max-width: 420px; width: 92%; box-shadow: 0
-25px 50px rgba(0,0,0,0.2); transform: translateY(24px); transition:
-transform 0.25s; text-align: center; } .modal-backdrop.open .modal-box {
-transform: translateY(0); } .modal-box h2 { font-size: 24px;
-font-weight: 700; margin-bottom: 8px; color: var(–text); } .modal-box p
-{ color: var(–muted); margin-bottom: 20px; } .modal-box input { width:
-100%; padding: 12px 16px; border: 2px solid var(–border); border-radius:
-8px; font-size: 16px; outline: none; transition: border-color 0.2s;
-margin-bottom: 16px; } .modal-box input:focus { border-color:
-var(–primary); } .modal-box .hint-icon { font-size: 48px; margin-bottom:
-12px; } .modal-box .hint-body { font-size: 17px; line-height: 1.6;
-color: #374151; margin-bottom: 24px; } .modal-box .hint-label {
-font-size: 13px; font-weight: 700; color: #d97706; text-transform:
-uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+const teacherPinGate = document.getElementById(‘teacher-pin-gate’);
+const teacherDashboard = document.getElementById(‘teacher-dashboard’);
+const pinInput = document.getElementById(‘pin-input’); const
+pinSubmitBtn = document.getElementById(‘pin-submit-btn’); const pinError
+= document.getElementById(‘pin-error’);
 
-/* —- BUTTONS —- */ .btn { display: inline-flex; align-items: center;
-justify-content: center; gap: 6px; padding: 11px 24px; border-radius:
-8px; font-size: 15px; font-weight: 600; cursor: pointer; border: none;
-transition: all 0.18s; text-decoration: none; } .btn-primary {
-background: var(–primary); color: white; } .btn-primary:hover {
-background: var(–primary-hover); } .btn-success { background:
-var(–success); color: white; } .btn-success:hover { background: #059669;
-} .btn-danger { background: var(–danger); color: white; }
-.btn-danger:hover { background: #dc2626; } .btn-outline { background:
-transparent; color: var(–primary); border: 2px solid var(–primary); }
-.btn-outline:hover { background: var(–primary); color: white; }
-.btn-ghost { background: transparent; color: var(–muted); border: 2px
-solid var(–border); } .btn-ghost:hover { border-color: var(–primary);
-color: var(–primary); } .btn-full { width: 100%; } .btn-lg { padding:
-14px 32px; font-size: 17px; border-radius: 10px; }
+const ttabResults = document.getElementById(‘ttab-results’); const
+ttabCreate = document.getElementById(‘ttab-create’); const tviewResults
+= document.getElementById(‘tview-results’); const tviewCreate =
+document.getElementById(‘tview-create’);
 
-/* —- GAME SCREEN —- */ .game-wrapper { max-width: 860px; margin: 0
-auto; padding: 28px 20px; } .game-header { display: flex;
-justify-content: space-between; align-items: flex-start; margin-bottom:
-20px; gap: 16px; flex-wrap: wrap; } .game-header h1 { font-size: 22px;
-font-weight: 700; color: var(–text); } .student-badge { font-size: 13px;
-color: var(–muted); background: var(–border); padding: 5px 12px;
-border-radius: 20px; white-space: nowrap; } .student-badge span { color:
-var(–primary); font-weight: 700; }
+const statAttempts = document.getElementById(‘stat-attempts’); const
+statCorrect = document.getElementById(‘stat-correct’); const
+statIncorrect= document.getElementById(‘stat-incorrect’); const
+resultsTbody = document.getElementById(‘results-tbody’); const
+noResultsMsg = document.getElementById(‘no-results-msg’); const
+resetSessionBtn = document.getElementById(‘reset-session-btn’);
 
-/* —- DISTRACTOR WARNING —- */ .distractor-banner { background:
-var(–warn-bg); color: var(–warn-text); border: 1px solid #fbbf24;
-border-radius: 8px; padding: 10px 16px; font-weight: 600; font-size:
-14px; margin-bottom: 20px; display: none; } .distractor-banner.visible {
-display: block; }
+const csvUrlInput = document.getElementById(‘csv-url-input’); const
+reloadCsvBtn = document.getElementById(‘reload-csv-btn’); const
+csvReloadMsg = document.getElementById(‘csv-reload-msg’);
 
-/* —- LIVE PREVIEW —- */ .preview-panel { background: white; border: 2px
-solid var(–border); border-radius: 10px; padding: 20px 24px;
-margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-.preview-label { font-size: 11px; font-weight: 700; color: #9ca3af;
-text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 12px;
-} .preview-text { font-size: 17px; line-height: 2.1; color: #111827;
-min-height: 40px; } .flow-chunk { display: inline; border-radius: 4px;
-padding: 2px 6px; box-decoration-break: clone;
--webkit-box-decoration-break: clone; transition: background-color 0.5s
-ease; } .flow-blank { display: inline-block; color: #9ca3af;
-border-bottom: 2px dashed #d1d5db; padding: 0 20px; margin: 0 4px;
-font-style: italic; font-size: 14px; }
+// ── CSV Parser ───────────────────────────────── function
+parseCSV(text) { const lines = text.trim().split(‘’); if (lines.length <
+2) return []; const headers = splitCSVLine(lines[0]); return
+lines.slice(1).map(line => { const vals = splitCSVLine(line); const obj
+= {}; headers.forEach((h, i) => { obj[h.trim()] = (vals[i] ||
+’’).trim(); }); return obj; }).filter(r => r[‘Game_ID’]); }
 
-/* —- BOARD —- */ .board { display: flex; flex-direction: column; gap:
-10px; margin-bottom: 28px; } .board-row { display: flex; width: 100%;
-min-height: 62px; } .sem-label { width: 148px; flex-shrink: 0; border:
-2px solid #000; border-right: none; border-top-left-radius: 8px;
-border-bottom-left-radius: 8px; display: flex; align-items: center;
-justify-content: center; text-align: center; font-size: 13px;
-font-weight: 700; padding: 8px; transition: background-color 0.5s, color
-0.5s; } .drop-slot { flex-grow: 1; border: 2px dashed #cbd5e1;
-border-left: none; border-top-right-radius: 8px;
-border-bottom-right-radius: 8px; background: #f8fafc; padding: 6px;
-display: flex; align-items: center; min-height: 62px; transition:
-border-color 0.2s, background 0.2s; } .drop-slot.slot-filled {
-border-style: solid; border-color: #e2e8f0; background: white; }
-.drop-slot.slot-drag-over { border-color: var(–primary); background:
-#eef2ff; }
+function splitCSVLine(line) { const result = []; let cur = ’‘; let
+inQuotes = false; for (let i = 0; i < line.length; i++) { const ch =
+line[i]; if (ch ===’“‘) { inQuotes = !inQuotes; } else if (ch ===’,’ &&
+!inQuotes) { result.push(cur); cur = ’’; } else { cur += ch; } }
+result.push(cur); return result; }
 
-/* —- POOL —- */ .pool-header { text-align: center; font-size: 12px;
-font-weight: 700; color: var(–muted); text-transform: uppercase;
-letter-spacing: 0.07em; margin-bottom: 12px; } .pool-area { background:
-white; border: 2px solid var(–border); border-radius: 10px; padding:
-20px; min-height: 90px; display: flex; flex-wrap: wrap; gap: 10px;
-justify-content: center; margin-bottom: 24px; }
+function rowToActivity(row) { const sentences = []; for (let i = 1; i <=
+20; i++) { const s = row[Sentence_${i}]; if (s) sentences.push(s); }
+return { id: row[‘Game_ID’], title: row[‘Title’] || ‘Fix the Paragraph’,
+instructions: row[‘Instructions’] || ‘Drag the sentences into the
+correct order.’, sentences, hint: row[‘Hint’] || ’‘,
+ifPerfectGoTo:row[’If_Perfect_Go_To’] ||’‘, ifStuckGoTo:
+row[’If_Stuck_Go_To’] ||’’, }; }
 
-/* —- PART CARDS —- */ .part-card { background: white; border: 2px solid
-#e5e7eb; padding: 11px 18px; border-radius: 8px; cursor: grab;
-font-size: 15px; user-select: none; box-shadow: 0 2px 6px
-rgba(0,0,0,0.07); transition: transform 0.12s, box-shadow 0.12s,
-border-color 0.3s; display: flex; align-items: center; gap: 8px; }
-.part-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform:
-translateY(-1px); } .part-card:active { cursor: grabbing; transform:
-scale(0.97); } .part-card.distractor { border-color: #fca5a5; }
-.part-card.correct { border-color: var(–success) !important; }
-.part-card .card-tick { color: var(–success); font-weight: 700; display:
-none; } .part-card.correct .card-tick { display: inline; }
+// ── Load Activities ──────────────────────────── async function
+loadActivities(url) { const fetchUrl = url || CSV_URL; try { const res =
+await fetch(fetchUrl); if (!res.ok) throw new Error(‘Network error’);
+const text = await res.text(); const rows = parseCSV(text); activities =
+rows.map(rowToActivity).filter(a => a.sentences.length > 0); return
+true; } catch (e) { console.error(‘Failed to load CSV:’, e); return
+false; } }
 
-/* When card is in slot, make it take full width */ .drop-slot
-.part-card { width: 100%; cursor: grab; }
+function getActivityById(id) { return activities.find(a => a.id === id)
+|| activities[0] || null; }
 
-/* —- CHECK ANSWER AREA —- */ .check-area { text-align: center;
-margin-bottom: 40px; }
+function getActivityFromURL() { const params = new
+URLSearchParams(window.location.search); return params.get(‘game’) ||
+null; }
 
-/* —- TOAST —- */ .toast-container { position: fixed; bottom: 24px;
-left: 50%; transform: translateX(-50%); z-index: 500; display: flex;
-flex-direction: column; gap: 8px; align-items: center; } .toast {
-background: #1f2937; color: white; padding: 12px 24px; border-radius:
-8px; font-size: 14px; font-weight: 500; box-shadow: 0 8px 24px
-rgba(0,0,0,0.2); opacity: 0; transform: translateY(8px); transition: all
-0.3s; } .toast.show { opacity: 1; transform: translateY(0); }
-.toast.success { background: #065f46; } .toast.error { background:
-#991b1b; }
+// ── Init ─────────────────────────────────────── async function init()
+{ await loadActivities(); const gameId = getActivityFromURL();
+currentActivity = gameId ? getActivityById(gameId) : (activities[0] ||
+null); showNameModal(); }
 
-/* —- TEACHER SCREEN —- */ .teacher-wrapper { max-width: 860px; margin:
-0 auto; padding: 28px 20px; }
+// ── Name Modal ───────────────────────────────── function
+showNameModal() { nameModal.classList.remove(‘hidden’);
+nameModal.setAttribute(‘aria-hidden’, ‘false’);
+studentNameInput.focus(); }
 
-/* PIN Gate */ .pin-gate { max-width: 360px; margin: 60px auto;
-background: white; border-radius: 16px; padding: 40px; text-align:
-center; box-shadow: 0 8px 32px rgba(0,0,0,0.1); } .pin-gate h2 {
-font-size: 22px; font-weight: 700; margin-bottom: 8px; } .pin-gate p {
-color: var(–muted); margin-bottom: 20px; font-size: 15px; } .pin-gate
-input { width: 100%; padding: 12px; text-align: center; letter-spacing:
-6px; font-size: 22px; border: 2px solid var(–border); border-radius:
-8px; margin-bottom: 16px; outline: none; } .pin-gate input:focus {
-border-color: var(–primary); } .pin-error { color: var(–danger);
-font-size: 14px; margin-top: -8px; margin-bottom: 12px; display: none; }
+function hideNameModal() { nameModal.classList.add(‘hidden’);
+nameModal.setAttribute(‘aria-hidden’, ‘true’); }
 
-/* Teacher Sub-tabs */ .sub-tabs { display: flex; border-bottom: 2px
-solid var(–border); margin-bottom: 28px; gap: 0; } .sub-tab { padding:
-10px 24px; font-size: 15px; font-weight: 600; cursor: pointer;
-border-bottom: 3px solid transparent; margin-bottom: -2px; color:
-var(–muted); background: none; border-top: none; border-left: none;
-border-right: none; transition: color 0.2s; } .sub-tab.active { color:
-var(–primary); border-bottom-color: var(–primary); } .sub-panel {
-display: none; } .sub-panel.active { display: block; }
+startBtn.addEventListener(‘click’, () => { const name =
+studentNameInput.value.trim(); if (!name) { studentNameInput.focus();
+return; } studentName = name; hideNameModal(); startGame(); });
 
-/* Session Summary */ .traffic-light { border-radius: 12px; padding:
-20px 28px; display: flex; align-items: center; gap: 16px; margin-bottom:
-24px; } .traffic-light.green { background: #d1fae5; border: 2px solid
-#34d399; } .traffic-light.amber { background: #fef3c7; border: 2px solid
-#f59e0b; } .traffic-light.red { background: #fee2e2; border: 2px solid
-#f87171; } .tl-icon { font-size: 36px; } .tl-pct { font-size: 30px;
-font-weight: 800; } .tl-label { font-size: 14px; font-weight: 600;
-color: var(–muted); }
+studentNameInput.addEventListener(‘keydown’, e => { if (e.key ===
+‘Enter’) startBtn.click(); });
 
-.stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap:
-12px; margin-bottom: 24px; } .stat-card { background: white; border: 2px
-solid var(–border); border-radius: 10px; padding: 16px; text-align:
-center; } .stat-num { font-size: 32px; font-weight: 800; }
-.stat-num.purple { color: #7c3aed; } .stat-num.green { color:
-var(–success); } .stat-num.amber { color: #d97706; } .stat-desc {
-font-size: 13px; color: var(–muted); margin-top: 2px; }
+// ── Game ─────────────────────────────────────── function startGame()
+{ if (!currentActivity) { feedbackBox.textContent = ‘No activity loaded.
+Please check the CSV URL in Teacher settings.’;
+feedbackBox.classList.remove(‘hidden’); return; } attemptNumber++;
+playerNameDisplay.textContent = studentName; attemptDisplay.textContent
+= Attempt ${attemptNumber}; gameTitle.textContent =
+currentActivity.title; gameInstructions.textContent =
+currentActivity.instructions; feedbackBox.classList.add(‘hidden’);
+feedbackBox.textContent = ’’; buildBoard(); updatePreview(); }
 
-.student-list { display: flex; flex-direction: column; gap: 8px; }
-.student-row { background: white; border: 1px solid var(–border);
-border-radius: 8px; padding: 12px 16px; display: flex; justify-content:
-space-between; align-items: center; } .student-row .sname { font-weight:
-600; font-size: 15px; } .student-row .sdetail { font-size: 13px; color:
-var(–muted); } .badge { padding: 3px 10px; border-radius: 12px;
-font-size: 12px; font-weight: 700; } .badge-success { background:
-#d1fae5; color: #065f46; } .badge-warn { background: #fef3c7; color:
-#92400e; } .badge-neutral { background: #f3f4f6; color: #374151; }
+// ── Board ────────────────────────────────────── let draggedCard =
+null; let dragSource = null; // ‘pool’ or slot index
 
-.session-footer { margin-top: 20px; display: flex; justify-content:
-space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
-.refresh-note { font-size: 13px; color: var(–muted); }
+function buildBoard() { slotsContainer.innerHTML = ’‘;
+poolContainer.innerHTML =’’;
 
-/* Create Activity */ .create-form { background: white; border: 2px
-solid var(–border); border-radius: 12px; padding: 28px; } .create-form
-p.sub { color: var(–muted); font-size: 14px; margin-bottom: 20px; }
-.create-table { width: 100%; border-collapse: collapse; } .create-table
-th { text-align: left; font-size: 12px; font-weight: 700; color:
-var(–muted); text-transform: uppercase; letter-spacing: 0.06em; padding:
-0 8px 10px; } .create-table th:first-child { width: 36px; padding-left:
-0; } .create-table td { padding: 4px 6px; vertical-align: middle; }
-.create-table td:first-child { padding-left: 0; color: var(–muted);
-font-weight: 600; text-align: center; } .create-table input { width:
-100%; padding: 9px 12px; border: 2px solid var(–border); border-radius:
-6px; font-size: 14px; outline: none; transition: border-color 0.2s; }
-.create-table input:focus { border-color: var(–primary); } .create-table
-.del-btn { background: none; border: none; color: #f87171; font-size:
-18px; cursor: pointer; padding: 4px 8px; line-height: 1; } .create-table
-.del-btn:hover { color: var(–danger); } .create-actions { margin-top:
-20px; display: flex; gap: 10px; flex-wrap: wrap; }
+const shuffled = […currentActivity.sentences].sort(() => Math.random() -
+0.5);
 
-/* Generated link output */ .link-output { background: #f0fdf4; border:
-2px solid #86efac; border-radius: 8px; padding: 16px 20px; margin-top:
-20px; word-break: break-all; font-size: 14px; line-height: 1.6; display:
-none; } .link-output.visible { display: block; } .link-output strong {
-display: block; margin-bottom: 6px; color: #065f46; } .link-output a {
-color: var(–primary); }
+// Create slots currentActivity.sentences.forEach((_, i) => { const slot
+= document.createElement(‘div’); slot.className = ‘drop-slot’;
+slot.dataset.index = i; slot.setAttribute(‘aria-label’, Slot ${i + 1});
+addSlotDragListeners(slot); slotsContainer.appendChild(slot); });
 
-/* —- COMPLETION STATE —- */ .board-row.completed .sem-label {
-border-color: transparent; } .board-row.completed .drop-slot {
-border-color: transparent; background: transparent; }
-.board-row.completed .part-card { border-color: transparent !important;
-box-shadow: none; font-weight: 600; }
+// Create cards in pool shuffled.forEach(sentence => { const card =
+createCard(sentence); poolContainer.appendChild(card); }); }
 
-/* —- RESPONSIVE —- */ @media (max-width: 600px) { .sem-label { width:
-100px; font-size: 11px; } .stats-grid { grid-template-columns: 1fr 1fr;
-} nav .nav-title { font-size: 16px; } }
+function createCard(sentence) { const card =
+document.createElement(‘div’); card.className = ‘part-card’;
+card.draggable = true; card.textContent = sentence;
+card.setAttribute(‘role’, ‘button’); card.setAttribute(‘tabindex’, ‘0’);
+card.setAttribute(‘aria-grabbed’, ‘false’); addCardDragListeners(card);
+addCardClickListener(card); return card; }
+
+function addCardDragListeners(card) { card.addEventListener(‘dragstart’,
+e => { draggedCard = card; dragSource = card.parentElement;
+card.setAttribute(‘aria-grabbed’, ‘true’); e.dataTransfer.effectAllowed
+= ‘move’; }); card.addEventListener(‘dragend’, () => { draggedCard =
+null; dragSource = null; card.setAttribute(‘aria-grabbed’, ‘false’); });
+}
+
+function addCardClickListener(card) { card.addEventListener(‘click’, ()
+=> handleCardClick(card)); card.addEventListener(‘keydown’, e => { if
+(e.key === ‘Enter’ || e.key === ’ ’) { e.preventDefault();
+handleCardClick(card); } }); }
+
+let selectedCard = null;
+
+function handleCardClick(card) { const parent = card.parentElement;
+const isInSlot = parent.classList.contains(‘drop-slot’); const isInPool
+= parent === poolContainer;
+
+if (selectedCard === null) { // Select this card selectedCard = card;
+card.classList.add(‘selected’); return; }
+
+if (selectedCard === card) { // Deselect selectedCard = null;
+card.classList.remove(‘selected’); return; }
+
+// Move selectedCard to target const targetIsSlot =
+parent.classList.contains(‘drop-slot’); const targetIsPool = parent ===
+poolContainer;
+
+if (targetIsSlot) { if (parent.querySelector(‘.part-card’)) { // Swap
+const existingCard = parent.querySelector(‘.part-card’); const srcParent
+= selectedCard.parentElement; srcParent.appendChild(existingCard);
+parent.appendChild(selectedCard); } else {
+parent.appendChild(selectedCard); } } else if (targetIsPool) {
+poolContainer.appendChild(selectedCard); } else if (isInSlot ||
+isInPool) { // Clicked another card — swap selection
+selectedCard.classList.remove(‘selected’); selectedCard = card;
+card.classList.add(‘selected’); return; }
+
+selectedCard.classList.remove(‘selected’); selectedCard = null;
+updateSlotStates(); updatePreview(); }
+
+function addSlotDragListeners(slot) { slot.addEventListener(‘dragover’,
+e => { e.preventDefault(); slot.classList.add(‘slot-drag-over’); });
+slot.addEventListener(‘dragleave’, () => {
+slot.classList.remove(‘slot-drag-over’); });
+slot.addEventListener(‘drop’, e => { e.preventDefault();
+slot.classList.remove(‘slot-drag-over’); if (!draggedCard) return;
+
+    const existingCard = slot.querySelector('.part-card');
+    if (existingCard && existingCard !== draggedCard) {
+      // Send existing card back to source
+      dragSource.appendChild(existingCard);
+    }
+    slot.appendChild(draggedCard);
+    updateSlotStates();
+    updatePreview();
+
+}); }
+
+// Pool also accepts drops (return card)
+poolContainer.addEventListener(‘dragover’, e => e.preventDefault());
+poolContainer.addEventListener(‘drop’, e => { e.preventDefault(); if
+(!draggedCard) return; poolContainer.appendChild(draggedCard);
+updateSlotStates(); updatePreview(); });
+
+function updateSlotStates() { const slots =
+slotsContainer.querySelectorAll(‘.drop-slot’); slots.forEach(slot => {
+if (slot.querySelector(‘.part-card’)) {
+slot.classList.add(‘slot-filled’); } else {
+slot.classList.remove(‘slot-filled’); } }); }
+
+// ── Preview ──────────────────────────────────── function
+updatePreview() { const slots =
+slotsContainer.querySelectorAll(‘.drop-slot’); const parts = [];
+slots.forEach(slot => { const card = slot.querySelector(‘.part-card’);
+parts.push(card ? card.textContent : ’___‘); }); previewText.textContent
+= parts.join(’ ’); }
+
+// ── Check ──────────────────────────────────────
+checkBtn.addEventListener(‘click’, checkAnswer);
+
+function checkAnswer() { if (!currentActivity) return; const slots =
+Array.from(slotsContainer.querySelectorAll(‘.drop-slot’)); const answers
+= slots.map(s => { const c = s.querySelector(‘.part-card’); return c ?
+c.textContent : ’’; });
+
+const correct = currentActivity.sentences; let allFilled =
+answers.every(a => a !== ’‘); if (!allFilled) { showFeedback(’Please
+fill all slots before checking.’, ‘warn’); return; }
+
+let correctCount = 0; answers.forEach((a, i) => { if (a === correct[i])
+correctCount++; });
+
+const isPerfect = correctCount === correct.length; const status =
+isPerfect ? ‘Correct’ : ‘Incorrect’; const details =
+${correctCount}/${correct.length} correct;
+
+track(studentName, currentActivity.id, attemptNumber, status, details);
+recordResult(studentName, currentActivity.id, attemptNumber, status,
+details);
+
+if (isPerfect) {
+showFeedback(✅ Perfect! All ${correct.length} sentences in the right order.,
+‘success’); if (currentActivity.ifPerfectGoTo) { setTimeout(() =>
+navigateTo(currentActivity.ifPerfectGoTo), 2000); } } else {
+showFeedback(❌ ${details}. Keep trying!, ‘error’); if (attemptNumber >=
+3 && currentActivity.ifStuckGoTo) { setTimeout(() =>
+navigateTo(currentActivity.ifStuckGoTo), 2000); } } }
+
+function navigateTo(gameId) { const activity = getActivityById(gameId);
+if (!activity) return; currentActivity = activity; attemptNumber = 0;
+startGame(); }
+
+// ── Hint ───────────────────────────────────────
+hintBtn.addEventListener(‘click’, () => { if (!currentActivity ||
+!currentActivity.hint) return; hintText.textContent =
+currentActivity.hint; hintModal.classList.remove(‘hidden’);
+hintModal.setAttribute(‘aria-hidden’, ‘false’); hintCloseBtn.focus();
+});
+
+hintCloseBtn.addEventListener(‘click’, () => {
+hintModal.classList.add(‘hidden’); hintModal.setAttribute(‘aria-hidden’,
+‘true’); });
+
+// ── Reset ──────────────────────────────────────
+resetBtn.addEventListener(‘click’, () => { buildBoard();
+updatePreview(); feedbackBox.classList.add(‘hidden’); });
+
+// ── Feedback ─────────────────────────────────── function
+showFeedback(msg, type) { feedbackBox.textContent = msg;
+feedbackBox.className = feedback-box feedback-${type};
+feedbackBox.classList.remove(‘hidden’); }
+
+// ── Tabs ───────────────────────────────────────
+tabStudent.addEventListener(‘click’, () => {
+tabStudent.classList.add(‘tab-active’);
+tabStudent.setAttribute(‘aria-selected’, ‘true’);
+tabTeacher.classList.remove(‘tab-active’);
+tabTeacher.setAttribute(‘aria-selected’, ‘false’);
+viewStudent.classList.remove(‘hidden’);
+viewTeacher.classList.add(‘hidden’); });
+
+tabTeacher.addEventListener(‘click’, () => {
+tabTeacher.classList.add(‘tab-active’);
+tabTeacher.setAttribute(‘aria-selected’, ‘true’);
+tabStudent.classList.remove(‘tab-active’);
+tabStudent.setAttribute(‘aria-selected’, ‘false’);
+viewTeacher.classList.remove(‘hidden’);
+viewStudent.classList.add(‘hidden’); // Reset PIN gate each visit
+teacherPinGate.classList.remove(‘hidden’);
+teacherDashboard.classList.add(‘hidden’); pinInput.value = ’‘;
+pinError.classList.add(’hidden’); });
+
+// ── PIN ────────────────────────────────────────
+pinSubmitBtn.addEventListener(‘click’, checkPin);
+pinInput.addEventListener(‘keydown’, e => { if (e.key === ‘Enter’)
+checkPin(); });
+
+function checkPin() { if (pinInput.value === TEACHER_PIN) {
+teacherPinGate.classList.add(‘hidden’);
+teacherDashboard.classList.remove(‘hidden’); refreshDashboard(); } else
+{ pinError.classList.remove(‘hidden’); pinInput.value = ’’;
+pinInput.focus(); } }
+
+// ── Teacher Sub-tabs ───────────────────────────
+ttabResults.addEventListener(‘click’, () => {
+ttabResults.classList.add(‘tab-active’);
+ttabCreate.classList.remove(‘tab-active’);
+tviewResults.classList.remove(‘hidden’);
+tviewCreate.classList.add(‘hidden’); });
+
+ttabCreate.addEventListener(‘click’, () => {
+ttabCreate.classList.add(‘tab-active’);
+ttabResults.classList.remove(‘tab-active’);
+tviewCreate.classList.remove(‘hidden’);
+tviewResults.classList.add(‘hidden’); });
+
+// ── Session Reset ──────────────────────────────
+resetSessionBtn.addEventListener(‘click’, () => { if (confirm(‘Reset
+session? This will clear all results shown for this session.’)) {
+sessionStart = Date.now(); refreshDashboard(); } });
+
+// ── Tracking ─────────────────────────────────── function track(name,
+gameId, attempt, status, details) { if (typeof InteractivesTelemetry !==
+‘undefined’) { try { InteractivesTelemetry.track({ name, gameId,
+attempt, status, details }); } catch(e) {} } // Also send to Google
+Sheets const payload = { Timestamp: new Date().toISOString(), Name:
+name, Game_ID: gameId, Attempt: attempt, Status: status, Details:
+details }; fetch(TRACKING_URL, { method: ‘POST’, mode: ‘no-cors’,
+headers: { ‘Content-Type’: ‘application/json’ }, body:
+JSON.stringify(payload) }).catch(() => {}); }
+
+function recordResult(name, gameId, attempt, status, details) {
+trackingRows.push({ timestamp: Date.now(), name, gameId, attempt,
+status, details }); }
+
+// ── Dashboard ────────────────────────────────── function
+refreshDashboard() { const rows = trackingRows.filter(r =>
+r.timestamp >= sessionStart); const total = rows.length; const correct =
+rows.filter(r => r.status === ‘Correct’).length; const wrong =
+rows.filter(r => r.status === ‘Incorrect’).length;
+
+statAttempts.textContent = total; statCorrect.textContent = correct;
+statIncorrect.textContent= wrong;
+
+resultsTbody.innerHTML = ’‘; if (rows.length === 0) {
+noResultsMsg.classList.remove(’hidden’); } else {
+noResultsMsg.classList.add(‘hidden’); rows.slice().reverse().forEach(r
+=> { const tr = document.createElement(‘tr’); const time = new
+Date(r.timestamp).toLocaleTimeString([], { hour: ‘2-digit’, minute:
+‘2-digit’ }); tr.innerHTML =
+<td>${r.name}</td>         <td>${r.gameId}</td>         <td>${r.attempt}</td>         <td><span class="badge ${r.status === 'Correct' ? 'badge-success' : 'badge-warn'}">${r.status}</span></td>         <td>${time}</td>;
+resultsTbody.appendChild(tr); }); } }
+
+// ── CSV Reload ─────────────────────────────────
+reloadCsvBtn.addEventListener(‘click’, async () => { const url =
+csvUrlInput.value.trim(); if (!url) { showCsvMsg(‘Please enter a CSV
+URL.’, ‘error’); return; } showCsvMsg(‘Loading…’, ’‘); const ok = await
+loadActivities(url); if (ok) {
+showCsvMsg(✅ Loaded ${activities.length} activit${activities.length === 1 ? 'y' : 'ies'}.,
+’success’); } else { showCsvMsg(‘❌ Failed to load. Check the URL and
+try again.’, ‘error’); } });
+
+function showCsvMsg(msg, type) { csvReloadMsg.textContent = msg;
+csvReloadMsg.className = csv-msg ${type ? 'csv-msg-' + type : ''};
+csvReloadMsg.classList.remove(‘hidden’); }
+
+// ── Start ────────────────────────────────────── init();
