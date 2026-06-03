@@ -30,7 +30,7 @@
       </div>
       
       <!-- Loading -->
-      <div id="screen-loading" class="screen hidden">
+      <div id="screen-loading" class="screen">
         <div class="card center-card">
           <div class="spinner" aria-label="Loading"></div>
           <p class="subtitle loading-text">Loading activities…</p>
@@ -38,7 +38,7 @@
       </div>
 
       <!-- Library -->
-      <div id="screen-library" class="screen hidden">
+      <div id="screen-library" class="screen">
         <div class="card">
           <h2 class="section-heading">Choose an Activity</h2>
           <div id="library-list" class="library-list"></div>
@@ -46,7 +46,7 @@
       </div>
 
       <!-- Activity -->
-      <div id="screen-activity" class="screen hidden">
+      <div id="screen-activity" class="screen">
         <div class="card">
           <div class="activity-header">
             <h2 id="activity-title" class="section-heading"></h2>
@@ -61,13 +61,13 @@
           <div id="feedback" class="feedback" role="alert" aria-live="polite"></div>
           <div class="action-row">
             <button id="btn-check" class="btn btn-primary">Check my answer</button>
-            <button id="btn-retry" class="btn btn-secondary hidden">Try again</button>
+            <button id="btn-retry" class="btn btn-secondary" style="display: none;">Try again</button>
           </div>
         </div>
       </div>
 
       <!-- Error -->
-      <div id="screen-error" class="screen hidden">
+      <div id="screen-error" class="screen">
         <div class="card center-card">
           <p class="error-icon" aria-hidden="true">⚠️</p>
           <p id="error-message" class="subtitle"></p>
