@@ -384,7 +384,7 @@ function checkAnswer() {
 function showFeedback(message, type) {
   const fb = document.getElementById("feedback");
   fb.textContent = message;
-  fb.className = "feedback feedback" + type;
+  fb.className = "feedback " + type;
 }
 
 function retryActivity() {
