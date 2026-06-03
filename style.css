@@ -67,7 +67,8 @@ body::before {
   font-size: clamp(2rem, 5vw, 3.2rem);
   font-weight: 900;
   letter-spacing: -0.03em;
-  line-height: 1.1;
+  line-height: 1.2;
+  padding-bottom: 0.1em;
   background: var(--grad-main);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -318,9 +319,9 @@ body::before {
 
 /* ── Feedback ─────────────────────────────────────────────── */
 .feedback { font-size: 1rem; font-weight: 600; min-height: 1.5rem; margin-top: 0.75rem; margin-bottom: 1rem; }
-.feedbackcorrect { color: #4ade80; }
-.feedbackincorrect { color: #fb7185; }
-.feedbackpartial { color: #facc15; }
+.feedback.correct { color: #4ade80; }
+.feedback.incorrect { color: #fb7185; }
+.feedback.partial { color: #facc15; }
 
 /* ── Screens ──────────────────────────────────────────────── */
 .screen { display: none; }
