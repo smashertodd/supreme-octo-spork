@@ -52,7 +52,11 @@
             <h2 id="activity-title" class="section-heading"></h2>
             <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
           </div>
-          <p class="instruction" id="game-instructions">Drag the sentences into the correct order. Watch out — one might not belong!</p>
+          <p class="instruction" id="game-instructions"></p>
+          
+          <!-- Overall Hint will inject here if it exists -->
+          <div id="overall-hint-injection-point"></div>
+
           <div class="zone-label">Sentences</div>
           <div id="choice-pool" class="sentence-pool drop-target" aria-label="Sentence pool"></div>
           <div class="drop-arrow" aria-hidden="true">↓ drag here ↓</div>
