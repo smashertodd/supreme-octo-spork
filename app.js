@@ -4,7 +4,7 @@
 
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
-const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
+const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK4UH_VbTE_4ENW9vmy7WRKly71NfPLDm2CF3oeBf91UOTkXuSJJWiWMEHQ/exec";
 const TEACHER_PIN = "9999";
 const REFRESH_INTERVAL = 15000;
 
@@ -14,7 +14,8 @@ let activities = {};
 let currentGame = null; 
 let sessionStart = null;
 let dragSrcEl = null;
-let hintsUsed = []; // Tracks which hints the student clicks
+let hintsUsed = []; 
+let attemptCount = 0; // Tracks how many times they click "Check my answer"
 
 // ── Boot ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
@@ -129,7 +130,7 @@ function buildActivities(rows) {
     }
     
     if (row["Title"]) activities[id].title = row["Title"];
-    if (row["Overall_Hint"]) activities[id].overallHint = row["Overall_Hint"]; // Catches the new column
+    if (row["Overall_Hint"]) activities[id].overallHint = row["Overall_Hint"]; 
     
     const item = { text: row["Text"], label: row["Label"], hint: row["Hint"] };
     if (type === "distractor") {
@@ -165,13 +166,17 @@ function showLibrary() {
 function startActivity(gameId) {
   currentGame = gameId;
   const game = activities[gameId];
+  
+  // Reset counters for a new activity
+  hintsUsed = [];
+  attemptCount = 0; 
+  
   renderActivity(game);
   showScreen("screen-activity");
 }
 
 function renderActivity(game) {
   document.getElementById("activity-title").textContent = game.title;
-  hintsUsed = []; // Reset hints when activity starts
   
   // Dynamic Instructions
   const instructions = document.getElementById("game-instructions");
@@ -194,7 +199,7 @@ function renderActivity(game) {
     document.getElementById("btn-overall-hint").addEventListener("click", () => {
       document.getElementById("overall-hint-text").classList.remove("hidden");
       document.getElementById("btn-overall-hint").style.display = "none";
-      hintsUsed.push("Overall Hint"); // Log that they clicked it
+      hintsUsed.push("Overall Hint"); 
     });
   }
   
@@ -260,7 +265,7 @@ function createChip(item, index) {
       e.preventDefault();
       e.stopPropagation();
       hintText.classList.toggle('hidden');
-      hintsUsed.push(hintName); // Log that they clicked it
+      hintsUsed.push(hintName); 
     };
     
     hintBtn.addEventListener('click', toggleHint);
@@ -286,7 +291,7 @@ function onDrop(e, container) {
 
 let touchChip = null, touchClone = null, touchOffsetX = 0, touchOffsetY = 0;
 function onTouchStart(e) {
-  if(e.target.closest('.chip-hint-btn')) return; // Ignore drag if they are clicking the hint button
+  if(e.target.closest('.chip-hint-btn')) return; 
   touchChip = this; const touch = e.touches[0]; const rect = this.getBoundingClientRect();
   touchOffsetX = touch.clientX - rect.left; touchOffsetY = touch.clientY - rect.top;
   touchClone = this.cloneNode(true); touchClone.classList.add("touch-clone"); touchClone.style.position = "fixed"; touchClone.style.zIndex = "1000"; touchClone.style.width = rect.width + "px"; touchClone.style.left = (touch.clientX - touchOffsetX) + "px"; touchClone.style.top = (touch.clientY - touchOffsetY) + "px"; document.body.appendChild(touchClone);
@@ -312,6 +317,8 @@ function checkAnswer() {
   
   if (submitted.length === 0) { showFeedback("Drag the sentences into the box first!", "neutral"); return; }
   
+  attemptCount++; // Increase the attempt count
+  
   const distractorsInZone = submitted.filter(c => c.dataset.distractor === "true");
   const partsInZone = submitted.filter(c => c.dataset.distractor !== "true");
   const correctParts = game.parts;
@@ -321,7 +328,6 @@ function checkAnswer() {
   
   const noDistractors = distractorsInZone.length === 0;
   const allPartsPresent = partsInZone.length === correctParts.length;
-  
   const perfect = orderCorrect && noDistractors && allPartsPresent;
   
   submitted.forEach(chip => {
@@ -338,22 +344,49 @@ function checkAnswer() {
   
   showFeedback(message, status);
   
-  // Package up the details and hints for the Google Sheet
-  let finalDetails = submitted.map(c => c.dataset.originalText);
+  // --- Create the Clean Summary for the Teacher Tab ---
+  let summaryDetails = [];
+  
+  // 1. Log the Attempt
+  summaryDetails.push(`Attempt ${attemptCount}`);
+  
+  // 2. Log Distractor Usage (only if the game actually has distractors)
+  if (game.distractors.length > 0) {
+    if (distractorsInZone.length > 0) {
+      summaryDetails.push(`⚠️ Distractors included: ${distractorsInZone.length}`);
+    } else {
+      summaryDetails.push(`✅ No distractors included`);
+    }
+  }
+
+  // 3. Log Hints Used
   if (hintsUsed.length > 0) {
-    // Remove duplicates so we don't spam the teacher if they clicked it 5 times
-    const uniqueHints = [...new Set(hintsUsed)];
-    finalDetails.push("👉 HINTS USED: " + uniqueHints.join(", "));
+    const uniqueHints = [...new Set(hintsUsed)]; // Remove duplicates
+    summaryDetails.push(`💡 Hints used: ${uniqueHints.join(", ")}`);
+  } else {
+    summaryDetails.push(`🧠 No hints used`);
   }
   
-  trackAttempt(status, finalDetails);
+  trackAttempt(status, summaryDetails);
   
   document.getElementById("btn-check").style.display = "none";
   document.getElementById("btn-retry").style.display = "inline-flex";
 }
 
 function showFeedback(message, type) { const fb = document.getElementById("feedback"); fb.textContent = message; fb.className = "feedback " + type; }
-function retryActivity() { renderActivity(activities[currentGame]); }
+
+function retryActivity() { 
+  // We do not reset the attemptCount or hintsUsed here, so they carry over to the next attempt!
+  // But we DO need to re-render the board, so we temporarily store them.
+  let currentAttempts = attemptCount;
+  let currentHints = [...hintsUsed];
+  
+  renderActivity(activities[currentGame]); 
+  
+  // Restore them after the render clears them
+  attemptCount = currentAttempts;
+  hintsUsed = currentHints;
+}
 
 // ── Tracking ──────────────────────────────────────────────────
 function trackAttempt(status, details) {
