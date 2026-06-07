@@ -46,53 +46,38 @@
       </div>
 
       <!-- Activity -->
-      <div id="screen-activity" class="screen">
-        <div class="card">
-          <div class="activity-header">
-            <h2 id="activity-title" class="section-heading"></h2>
-            <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
+    <!-- Activity Screen -->
+    <div id="screen-activity" class="screen">
+      <div class="card">
+        <div class="activity-header">
+          <h2 id="activity-title" class="section-heading">Activity Title</h2>
+          <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
+        </div>
+        
+        <p class="instruction" id="game-instructions"></p>
+        
+        <!-- Overall Hint will inject here -->
+        <div id="overall-hint-container"></div> 
+        
+        <!-- Side-by-side Workspace -->
+        <div class="workspace">
+          <div class="panel-left">
+            <h3>Choices</h3>
+            <div id="choice-pool" class="pool"></div>
           </div>
-          <p class="instruction" id="game-instructions"></p>
-          
-          <!-- Overall Hint will inject here if it exists -->
-          <div id="overall-hint-injection-point"></div>
-
-          <div class="zone-label">Sentences</div>
-          <div id="choice-pool" class="sentence-pool drop-target" aria-label="Sentence pool"></div>
-          <div class="drop-arrow" aria-hidden="true">↓ drag here ↓</div>
-          <div class="zone-label">Your paragraph</div>
-          <div id="drop-zone" class="drop-zone drop-target" aria-label="Drop zone"></div>
-          <div id="feedback" class="feedback" role="alert" aria-live="polite"></div>
-          <div class="action-row">
-            <button id="btn-check" class="btn btn-primary">Check my answer</button>
-            <button id="btn-retry" class="btn btn-secondary" style="display: none;">Try again</button>
+          <div class="panel-right">
+            <h3>Paragraph Labels</h3>
+            <div id="drop-zone" class="pool drop-zone-slots"></div>
           </div>
         </div>
-      </div>
-
-      <!-- Error -->
-      <div id="screen-error" class="screen">
-        <div class="card center-card">
-          <p class="error-icon" aria-hidden="true">⚠️</p>
-          <p id="error-message" class="subtitle"></p>
+        
+        <div class="activity-footer">
+          <button id="btn-check" class="btn primary">Check Answer</button>
+          <button id="btn-retry" class="btn secondary" style="display:none;">Retry</button>
+          <div id="feedback" class="feedback"></div>
         </div>
       </div>
     </div>
-
-    <!-- Teacher Panel -->
-    <div id="panel-teacher" class="hidden">
-      <div class="card" id="teacher-panel">
-        <div class="teacher-header">
-          <h2>Student Results</h2>
-          <button id="btn-reset-session" class="btn btn-ghost btn-sm">Reset session</button>
-        </div>
-        <p class="subtitle small">Auto-refreshes every 15 seconds.</p>
-        <div id="results-table-wrap">
-          <div id="teacher-results"></div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- PIN Modal -->
   <div id="pin-modal" class="hidden">
@@ -108,6 +93,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=4"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>
