@@ -136,10 +136,11 @@ function loadLibrary() {
 
 function buildActivities(rows) {
   activities = {};
-  let lastTitle = ""; // Gives the app "memory"
+  let lastTitle = ""; 
+  let lastStatus = ""; // Adds memory for the status column
 
   rows.forEach(originalRow => {
-    // 1. Bulletproof Headers: Makes all headers lowercase and removes extra spaces
+    // 1. Bulletproof Headers
     const row = {};
     for (let key in originalRow) {
       if (key) {
@@ -147,6 +148,48 @@ function buildActivities(rows) {
         row[safeKey] = originalRow[key];
       }
     }
+
+    // 2. Read and remember the title
+    let rowTitle = (row["title"] || "").trim();
+    if (rowTitle) {
+      lastTitle = rowTitle;
+    }
+    let currentTitle = lastTitle;
+
+    if (!currentTitle) return; // Skip if no title
+
+    // 3. Read and remember the status
+    let rowStatus = (row["status"] || "").trim().toLowerCase();
+    if (rowStatus) {
+      lastStatus = rowStatus;
+    }
+    let currentStatus = lastStatus;
+
+    if (currentStatus !== "active") return; // Skip if turned off
+
+    // Skip totally blank rows
+    if (!(row["text"] || "").trim()) return;
+
+    // 4. Build the activity
+    const type = (row["type"] || "").trim().toLowerCase();
+
+    if (!activities[currentTitle]) {
+      activities[currentTitle] = { title: currentTitle, parts: [], distractors: [], overallHint: "" };
+    }
+    
+    if (row["overall_hint"]) {
+      activities[currentTitle].overallHint = row["overall_hint"];
+    }
+
+    const item = { text: row["text"], label: row["label"], hint: row["hint"] };
+    
+    if (type === "distractor") {
+      activities[currentTitle].distractors.push(item);
+    } else {
+      activities[currentTitle].parts.push(item);
+    }
+  });
+}
 
     // 2. Read and remember the title FIRST
     let currentTitle = (row["title"] || "").trim();
