@@ -9,7 +9,7 @@
 <body>
   <div id="app">
     <h1 id="app-title">Fix the Paragraph</h1>
-    
+
     <div id="tab-bar">
       <button id="tab-student" class="tab-btn active">Student</button>
       <button id="tab-teacher" class="tab-btn">Teacher</button>
@@ -28,7 +28,7 @@
           <button id="btn-start" class="btn btn-primary">Start</button>
         </div>
       </div>
-      
+
       <!-- Loading -->
       <div id="screen-loading" class="screen">
         <div class="card center-card">
@@ -45,39 +45,64 @@
         </div>
       </div>
 
-      <!-- Activity -->
-    <!-- Activity Screen -->
-    <div id="screen-activity" class="screen">
-      <div class="card">
-        <div class="activity-header">
-          <h2 id="activity-title" class="section-heading">Activity Title</h2>
-          <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
-        </div>
-        
-        <p class="instruction" id="game-instructions"></p>
-        
-        <!-- Overall Hint will inject here -->
-        <div id="overall-hint-container"></div> 
-        
-        <!-- Side-by-side Workspace -->
-        <div class="workspace">
-          <div class="panel-left">
-            <h3>Choices</h3>
-            <div id="choice-pool" class="pool"></div>
+      <!-- Activity Screen -->
+      <div id="screen-activity" class="screen">
+        <div class="card">
+          <div class="activity-header">
+            <h2 id="activity-title" class="section-heading">Activity Title</h2>
+            <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
           </div>
-          <div class="panel-right">
-            <h3>Paragraph Labels</h3>
-            <div id="drop-zone" class="pool drop-zone-slots"></div>
+
+          <p class="instruction" id="game-instructions"></p>
+
+          <!-- Overall Hint will inject here -->
+          <div id="overall-hint-container"></div>
+
+          <!-- Side-by-side Workspace -->
+          <div class="workspace">
+            <div class="panel-left">
+              <h3>Choices</h3>
+              <div id="choice-pool" class="pool"></div>
+            </div>
+            <div class="panel-right">
+              <h3>Paragraph Labels</h3>
+              <div id="drop-zone" class="pool drop-zone-slots"></div>
+            </div>
           </div>
-        </div>
-        
-        <div class="activity-footer">
-          <button id="btn-check" class="btn primary">Check Answer</button>
-          <button id="btn-retry" class="btn secondary" style="display:none;">Retry</button>
-          <div id="feedback" class="feedback"></div>
+
+          <div class="activity-footer">
+            <button id="btn-check" class="btn primary">Check Answer</button>
+            <button id="btn-retry" class="btn secondary" style="display:none;">Retry</button>
+            <div id="feedback" class="feedback"></div>
+          </div>
         </div>
       </div>
-    </div>
+      
+      <!-- Error Screen -->
+      <div id="screen-error" class="screen">
+        <div class="card center-card">
+          <h2 style="color: #e74c3c;">Oops!</h2>
+          <p id="error-message">Something went wrong.</p>
+          <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 15px;">Refresh Page</button>
+        </div>
+      </div>
+
+    </div> <!-- End Student Panel -->
+
+    <!-- Teacher Panel -->
+    <div id="panel-teacher" class="hidden">
+      <div class="card">
+        <div class="teacher-header">
+          <h2>Teacher Dashboard</h2>
+          <button id="btn-reset-session" class="btn btn-secondary btn-sm">Refresh Current Session</button>
+        </div>
+        <div id="teacher-results" class="results-container">
+          <p>Loading results...</p>
+        </div>
+      </div>
+    </div> <!-- End Teacher Panel -->
+
+  </div> <!-- End App -->
 
   <!-- PIN Modal -->
   <div id="pin-modal" class="hidden">
@@ -93,6 +118,7 @@
     </div>
   </div>
 
-  <script src="app.js?v=5"></script>
+  <!-- Using ?v=6 to force the browser to clear the crash cache -->
+  <script src="app.js?v=6"></script>
 </body>
 </html>
