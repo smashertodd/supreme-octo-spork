@@ -196,3 +196,18 @@ body::before {
   display: block; font-size: 0.85em; color: #0056b3;
   margin-top: 5px; background: #e9ecef; padding: 5px; border-radius: 4px;
 }
+/* =========================================
+   UI TWEAKS: WIDER LAYOUT & READABLE TEXT
+   ========================================= */
+
+/* 1. Widen the app to use the empty screen space */
+#app {
+  max-width: 1400px !important; /* Expands it horizontally */
+  width: 95% !important;
+}
+
+/* 2. Make the text on the drag-and-drop cards dark and legible */
+.sentence-chip, .chip-text {
+  color: #111827 !important; /* Dark slate/almost black */
+  font-weight: 500; /* Makes the text slightly thicker for reading */
+}
