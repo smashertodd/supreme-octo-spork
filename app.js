@@ -4,7 +4,7 @@
 
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
-const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
+const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec"; // <-- MAKE SURE IT ENDS IN /exec
 const TEACHER_PIN = "9999";
 const REFRESH_INTERVAL = 15000;
 
@@ -15,7 +15,7 @@ let currentGame = null;
 let sessionStart = null;
 let dragSrcEl = null;
 let hintsUsed = []; 
-let attemptCount = 0; // Tracks how many times they click "Check my answer"
+let attemptCount = 0; 
 
 // ── Boot ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
@@ -167,7 +167,6 @@ function startActivity(gameId) {
   currentGame = gameId;
   const game = activities[gameId];
   
-  // Reset counters for a new activity
   hintsUsed = [];
   attemptCount = 0; 
   
@@ -178,7 +177,6 @@ function startActivity(gameId) {
 function renderActivity(game) {
   document.getElementById("activity-title").textContent = game.title;
   
-  // Dynamic Instructions
   const instructions = document.getElementById("game-instructions");
   if (game.distractors.length > 0) {
     instructions.textContent = "Drag the sentences into the correct order. Watch out — one might not belong!";
@@ -186,7 +184,6 @@ function renderActivity(game) {
     instructions.textContent = "Drag the sentences into the correct order to build your paragraph.";
   }
 
-  // Inject Overall Hint if it exists
   const hintContainer = document.getElementById("overall-hint-injection-point");
   hintContainer.innerHTML = "";
   if (game.overallHint) {
@@ -276,7 +273,6 @@ function createChip(item, index) {
   return chip;
 }
 
-// ── Drag & Drop ───────────────────────────────────────────────
 function onDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("text/plain", this.dataset.index); setTimeout(() => this.classList.add("dragging"), 0); }
 function onDragEnd() { this.classList.remove("dragging"); document.querySelectorAll(".drop-target-over").forEach(el => el.classList.remove("drop-target-over")); }
 function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; this.classList.add("drop-target-over"); }
@@ -317,7 +313,7 @@ function checkAnswer() {
   
   if (submitted.length === 0) { showFeedback("Drag the sentences into the box first!", "neutral"); return; }
   
-  attemptCount++; // Increase the attempt count
+  attemptCount++; 
   
   const distractorsInZone = submitted.filter(c => c.dataset.distractor === "true");
   const partsInZone = submitted.filter(c => c.dataset.distractor !== "true");
@@ -344,30 +340,21 @@ function checkAnswer() {
   
   showFeedback(message, status);
   
-  // --- Create the Clean Summary for the Teacher Tab ---
   let summaryDetails = [];
-  
-  // 1. Log the Attempt
-  summaryDetails.push(`Attempt ${attemptCount}`);
-  
-  // 2. Log Distractor Usage (only if the game actually has distractors)
   if (game.distractors.length > 0) {
-    if (distractorsInZone.length > 0) {
-      summaryDetails.push(`⚠️ Distractors included: ${distractorsInZone.length}`);
-    } else {
-      summaryDetails.push(`✅ No distractors included`);
-    }
+    if (distractorsInZone.length > 0) { summaryDetails.push(`⚠️ Distractors included: ${distractorsInZone.length}`); } 
+    else { summaryDetails.push(`✅ No distractors included`); }
   }
 
-  // 3. Log Hints Used
   if (hintsUsed.length > 0) {
-    const uniqueHints = [...new Set(hintsUsed)]; // Remove duplicates
+    const uniqueHints = [...new Set(hintsUsed)];
     summaryDetails.push(`💡 Hints used: ${uniqueHints.join(", ")}`);
   } else {
     summaryDetails.push(`🧠 No hints used`);
   }
   
-  trackAttempt(status, summaryDetails);
+  // Now passing attemptCount explicitly!
+  trackAttempt(status, attemptCount, summaryDetails);
   
   document.getElementById("btn-check").style.display = "none";
   document.getElementById("btn-retry").style.display = "inline-flex";
@@ -376,23 +363,21 @@ function checkAnswer() {
 function showFeedback(message, type) { const fb = document.getElementById("feedback"); fb.textContent = message; fb.className = "feedback " + type; }
 
 function retryActivity() { 
-  // We do not reset the attemptCount or hintsUsed here, so they carry over to the next attempt!
-  // But we DO need to re-render the board, so we temporarily store them.
   let currentAttempts = attemptCount;
   let currentHints = [...hintsUsed];
   
   renderActivity(activities[currentGame]); 
   
-  // Restore them after the render clears them
   attemptCount = currentAttempts;
   hintsUsed = currentHints;
 }
 
 // ── Tracking ──────────────────────────────────────────────────
-function trackAttempt(status, details) {
+function trackAttempt(status, attempt, details) {
   const params = new URLSearchParams({
     name: studentName,
     game_id: currentGame,
+    attempt: attempt, // <-- Now mapping the attempt number separately!
     status: status,
     details: details.join(" | ")
   });
@@ -423,13 +408,12 @@ function loadTeacherData() {
   const container = document.getElementById("teacher-results");
   container.innerHTML = "<p>Loading results...</p>";
   
-  // Adding a timestamp to bust the 5-minute Google cache
   fetch(TRACKING_CSV_URL + "&t=" + Date.now())
     .then(r => r.text())
     .then(text => {
       const rows = parseCSV(text);
       const filtered = sessionStart ? rows.filter(r => new Date(r["Timestamp"]).getTime() >= sessionStart) : rows;
-      renderTeacherTable(filtered.reverse()); // Put newest at the top
+      renderTeacherTable(filtered.reverse());
     })
     .catch(() => { container.innerHTML = "<p>Could not load results.</p>"; });
 }
@@ -438,7 +422,8 @@ function renderTeacherTable(rows) {
   const container = document.getElementById("teacher-results");
   if (rows.length === 0) { container.innerHTML = "<p>No results yet.</p>"; return; }
   
-  const headers = ["Timestamp", "Name", "Game_ID", "Status", "Details"];
+  // Make sure Attempt is listed here so the table draws it correctly
+  const headers = ["Timestamp", "Name", "Game_ID", "Attempt", "Status", "Details"];
   let html = `<table id="results-table"><thead><tr>`;
   headers.forEach(h => { html += `<th>${h}</th>`; });
   html += `</tr></thead><tbody>`;
