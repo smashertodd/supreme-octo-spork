@@ -1,5 +1,5 @@
 // ============================================================
-// Fix the Paragraph — app.js (v11)
+// Fix the Paragraph — app.js (v13)
 // ============================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -105,7 +105,7 @@ function splitCSVLine(line) {
   return result;
 }
 
-// ── Library Loading (UPDATED) ─────────────────────────────────
+// ── Library Loading ───────────────────────────────────────────
 function loadLibrary() {
   showScreen("screen-loading");
   
@@ -169,41 +169,6 @@ function buildActivities(rows) {
 
     // Skip totally blank rows
     if (!(row["text"] || "").trim()) return;
-
-    // 4. Build the activity
-    const type = (row["type"] || "").trim().toLowerCase();
-
-    if (!activities[currentTitle]) {
-      activities[currentTitle] = { title: currentTitle, parts: [], distractors: [], overallHint: "" };
-    }
-    
-    if (row["overall_hint"]) {
-      activities[currentTitle].overallHint = row["overall_hint"];
-    }
-
-    const item = { text: row["text"], label: row["label"], hint: row["hint"] };
-    
-    if (type === "distractor") {
-      activities[currentTitle].distractors.push(item);
-    } else {
-      activities[currentTitle].parts.push(item);
-    }
-  });
-}
-
-    // 2. Read and remember the title FIRST
-    let currentTitle = (row["title"] || "").trim();
-    if (currentTitle) {
-      lastTitle = currentTitle;
-    } else {
-      currentTitle = lastTitle;
-    }
-
-    if (!currentTitle) return; // Skip if no title is found at all
-
-    // 3. Check if the row is actually active for the students
-    const status = (row["status"] || "").trim().toLowerCase();
-    if (status !== "active") return;
 
     // 4. Build the activity
     const type = (row["type"] || "").trim().toLowerCase();
