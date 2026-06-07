@@ -130,13 +130,10 @@ function loadLibrary() {
 
 function buildActivities(rows) {
   activities = {};
-  let lastTitle = ""; // Gives the app "memory" so teachers can leave cells blank
+  let lastTitle = ""; // Gives the app "memory"
 
   rows.forEach(row => {
-    const status = (row["Status"] || "").toLowerCase(); 
-    if (status !== "active") return;
-
-    // Use Title as the unique ID, and remember it for blank rows below it
+    // 1. Read and remember the title FIRST (even if the row is turned "off")
     let currentTitle = (row["Title"] || "").trim();
     if (currentTitle) {
       lastTitle = currentTitle;
@@ -145,7 +142,12 @@ function buildActivities(rows) {
     }
 
     if (!currentTitle) return; // Skip if no title is found at all
+
+    // 2. Check if the row is actually active for the students
+    const status = (row["Status"] || "").toLowerCase(); 
+    if (status !== "active") return;
     
+    // 3. Build the activity
     const type = (row["Type"] || "").toLowerCase(); 
     
     if (!activities[currentTitle]) { 
