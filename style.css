@@ -211,3 +211,8 @@ body::before {
   color: #111827 !important; /* Dark slate/almost black */
   font-weight: 500; /* Makes the text slightly thicker for reading */
 }
+/* Fix hint text visibility */
+.overall-hint-text, .chip-hint-text {
+    color: #111827 !important; /* Dark grey/black text */
+    font-weight: 500;
+}
