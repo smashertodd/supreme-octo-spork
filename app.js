@@ -1,7 +1,7 @@
 // ============================================================
 // Fix the Paragraph — app.js (v6)
 // ============================================================
-const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
+const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/function buildActivities(rows)2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
 const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
 
@@ -130,25 +130,35 @@ function loadLibrary() {
 
 function buildActivities(rows) {
   activities = {};
+  let lastTitle = ""; // Gives the app "memory" so teachers can leave cells blank
+
   rows.forEach(row => {
     const status = (row["Status"] || "").toLowerCase(); 
     if (status !== "active") return;
-    const id = row["Game_ID"]; 
-    const type = (row["Type"] || "").toLowerCase(); 
-    if (!id) return;
-    
-    if (!activities[id]) { 
-      activities[id] = { title: row["Title"] || id, parts: [], distractors: [], overallHint: "" }; 
+
+    // Use Title as the unique ID, and remember it for blank rows below it
+    let currentTitle = (row["Title"] || "").trim();
+    if (currentTitle) {
+      lastTitle = currentTitle;
+    } else {
+      currentTitle = lastTitle;
     }
 
-    if (row["Title"]) activities[id].title = row["Title"];
-    if (row["Overall_Hint"]) activities[id].overallHint = row["Overall_Hint"];
+    if (!currentTitle) return; // Skip if no title is found at all
+    
+    const type = (row["Type"] || "").toLowerCase(); 
+    
+    if (!activities[currentTitle]) { 
+      activities[currentTitle] = { title: currentTitle, parts: [], distractors: [], overallHint: "" }; 
+    }
+
+    if (row["Overall_Hint"]) activities[currentTitle].overallHint = row["Overall_Hint"];
 
     const item = { text: row["Text"], label: row["Label"], hint: row["Hint"] };
     if (type === "distractor") { 
-      activities[id].distractors.push(item); 
+      activities[currentTitle].distractors.push(item); 
     } else { 
-      activities[id].parts.push(item); 
+      activities[currentTitle].parts.push(item); 
     }
   });
 }
