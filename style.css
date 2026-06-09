@@ -216,3 +216,51 @@ body::before {
     color: #111827 !important; /* Dark grey/black text */
     font-weight: 500;
 }
+/* --- NEW: PARAGRAPH LAYOUT & INLINE DROPZONES --- */
+
+/* The blank boxes that sit inside the paragraph */
+.inline-dropzone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 160px;
+    min-height: 36px;
+    border: 2px dashed #9ca3af;
+    background-color: #f9fafb;
+    border-radius: 6px;
+    vertical-align: middle;
+    margin: 0 6px;
+    padding: 0 4px;
+    transition: all 0.2s ease;
+}
+
+/* Hover state when dragging a label over it */
+.inline-dropzone.drag-over {
+    border-color: #3b82f6;
+    background-color: #eff6ff;
+}
+
+/* The locked-in green state for correct answers */
+.inline-dropzone.correct {
+    border-color: #22c55e !important;
+    background-color: #dcfce7 !important;
+    pointer-events: none; /* Locks the box so it can't be clicked or dragged anymore */
+}
+
+/* Overriding the default label styles when it is dropped inside the paragraph */
+.inline-dropzone .sentence-chip {
+    margin: 0 !important;
+    width: 100%;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 4px !important;
+    font-size: 0.95em;
+    cursor: default !important;
+}
+
+/* Make the text dark green when correct */
+.inline-dropzone.correct .sentence-chip {
+    color: #166534 !important;
+    font-weight: 700 !important;
+}
