@@ -1,9 +1,11 @@
 // ============================================================
-// Fix the Paragraph — app.js (v13)
+// Fix the Paragraph — app.js (v15 - Inline Layout & Partial Reset)
 // ============================================================
+
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
 const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
+
 const TEACHER_PIN = "9999";
 const REFRESH_INTERVAL = 15000;
 
@@ -19,13 +21,12 @@ let attemptCount = 0;
 // ── Boot ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   showScreen("screen-name");
-  
-  // A safe way to add button listeners without crashing
+
   const safeAdd = (id, event, handler) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, handler);
   };
-  
+
   safeAdd("btn-start", "click", handleNameSubmit);
   safeAdd("btn-check", "click", checkAnswer);
   safeAdd("btn-retry", "click", retryActivity);
@@ -35,16 +36,14 @@ document.addEventListener("DOMContentLoaded", () => {
   safeAdd("btn-pin-submit", "click", submitPin);
   safeAdd("btn-pin-cancel", "click", closePinModal);
   safeAdd("btn-reset-session", "click", resetSession);
-  
-  // Safely handling the Enter key for typing a name
+
   const nameInput = document.getElementById("input-name");
   if (nameInput) {
     nameInput.addEventListener("keydown", e => {
       if (e.key === "Enter") handleNameSubmit();
     });
   }
-  
-  // Safely handling the Enter key for typing the PIN
+
   const pinInput = document.getElementById("pin-input");
   if (pinInput) {
     pinInput.addEventListener("keydown", e => {
@@ -108,10 +107,8 @@ function splitCSVLine(line) {
 // ── Library Loading ───────────────────────────────────────────
 function loadLibrary() {
   showScreen("screen-loading");
-  
-  // Cache buster guarantees the newest Google Sheet version
   const cacheBuster = "&t=" + new Date().getTime();
-  
+
   fetch(LIBRARY_CSV_URL + cacheBuster)
     .then(r => r.text())
     .then(text => {
@@ -136,53 +133,39 @@ function loadLibrary() {
 
 function buildActivities(rows) {
   activities = {};
-  let lastTitle = ""; 
-  let lastStatus = ""; // Adds memory for the status column
-
+  let lastTitle = "";
+  let lastStatus = ""; 
   rows.forEach(originalRow => {
-    // 1. Bulletproof Headers
     const row = {};
     for (let key in originalRow) {
       if (key) {
-        let safeKey = key.trim().toLowerCase().replace(/ /g, "_"); 
+        let safeKey = key.trim().toLowerCase().replace(/ /g, "_");
         row[safeKey] = originalRow[key];
       }
     }
-
-    // 2. Read and remember the title
+    
     let rowTitle = (row["title"] || "").trim();
-    if (rowTitle) {
-      lastTitle = rowTitle;
-    }
+    if (rowTitle) lastTitle = rowTitle;
     let currentTitle = lastTitle;
-
-    if (!currentTitle) return; // Skip if no title
-
-    // 3. Read and remember the status
+    if (!currentTitle) return; 
+    
     let rowStatus = (row["status"] || "").trim().toLowerCase();
-    if (rowStatus) {
-      lastStatus = rowStatus;
-    }
+    if (rowStatus) lastStatus = rowStatus;
     let currentStatus = lastStatus;
-
-    if (currentStatus !== "active") return; // Skip if turned off
-
-    // Skip totally blank rows
-    if (!(row["text"] || "").trim()) return;
-
-    // 4. Build the activity
+    if (currentStatus !== "active") return; 
+    
+    if (!(row["text"] || "").trim() && !(row["label"] || "").trim()) return;
+    
     const type = (row["type"] || "").trim().toLowerCase();
-
     if (!activities[currentTitle]) {
       activities[currentTitle] = { title: currentTitle, parts: [], distractors: [], overallHint: "" };
     }
-    
+
     if (row["overall_hint"]) {
       activities[currentTitle].overallHint = row["overall_hint"];
     }
-
     const item = { text: row["text"], label: row["label"], hint: row["hint"] };
-    
+
     if (type === "distractor") {
       activities[currentTitle].distractors.push(item);
     } else {
@@ -196,19 +179,18 @@ function showLibrary() {
   const list = document.getElementById("library-list");
   if (!list) return;
   list.innerHTML = "";
-
   Object.entries(activities).forEach(([id, game]) => {
     const card = document.createElement("button");
     card.className = "activity-card";
     const distractorCount = game.distractors.length;
     const distractorText = distractorCount ? `+ ${distractorCount} distractor${distractorCount > 1 ? "s" : ""}` : "";
-    card.innerHTML = `<span class="card-title">${game.title}</span><span class="card-meta">${game.parts.length} sentences ${distractorText}</span>`;
+    card.innerHTML = `<span class="card-title">${game.title}</span><span class="card-meta">${game.parts.length} parts ${distractorText}</span>`;
     card.addEventListener("click", () => startActivity(id));
     list.appendChild(card);
   });
 }
 
-// ── Activity (Side-by-Side) ───────────────────────────────────
+// ── Activity Rendering (Inline Paragraph Layout) ──────────────
 function startActivity(gameId) {
   currentGame = gameId;
   const game = activities[gameId];
@@ -222,16 +204,14 @@ function renderActivity(game) {
   document.getElementById("activity-title").textContent = game.title;
   const hasDistractors = game.distractors.length > 0;
   const instructions = document.getElementById("game-instructions");
-
   if (hasDistractors) {
-    instructions.textContent = "Drag the sentences into the correct label boxes. Watch out — one might be a distractor!";
+    instructions.textContent = "Drag the labels into the correct spaces. Watch out — there are distractors!";
   } else {
-    instructions.textContent = "Drag the sentences into the correct label boxes to build your paragraph.";
+    instructions.textContent = "Drag the labels into the correct spaces to complete the text.";
   }
-
+  
   const hintContainer = document.getElementById("overall-hint-container");
   hintContainer.innerHTML = "";
-
   if (game.overallHint) {
     hintContainer.innerHTML = `
       <button id="btn-overall-hint" class="btn-overall-hint">💡 Need a hint?</button>
@@ -243,35 +223,51 @@ function renderActivity(game) {
       hintsUsed.push("Overall Hint");
     });
   }
-  
-  const allSentences = [
+
+  const allLabels = [
     ...game.parts.map(p => ({ ...p, isDistractor: false })),
     ...game.distractors.map(d => ({ ...d, isDistractor: true }))
   ];
-  shuffle(allSentences);
-  
+  shuffle(allLabels);
+
+  // 1. Build the Choice Pool (The Bank on the left)
   const pool = document.getElementById("choice-pool");
   pool.innerHTML = "";
-  allSentences.forEach((item, i) => {
+  allLabels.forEach((item, i) => {
     const chip = createChip(item, i);
     pool.appendChild(chip);
   });
-  
-  const dropZone = document.getElementById("drop-zone");
-  dropZone.innerHTML = "";
-  game.parts.forEach((part, i) => {
-    const slot = document.createElement("div");
-    slot.className = "drop-slot";
-    const labelText = part.label ? part.label : `Sentence ${i + 1}`;
-    slot.innerHTML = `<div class="slot-label">${labelText}</div><div class="slot-content" data-slot-index="${i}"></div>`;
-    dropZone.appendChild(slot);
-    const slotContent = slot.querySelector('.slot-content');
-    slotContent.addEventListener("dragover", onDragOver);
-    slotContent.addEventListener("drop", e => onDropIntoSlot(e, slotContent));
-  });
-  
   pool.addEventListener("dragover", onDragOver);
   pool.addEventListener("drop", e => onDropIntoPool(e, pool));
+
+  // 2. Build the Paragraph Drop Zone (The text on the right)
+  const dropZone = document.getElementById("drop-zone");
+  dropZone.innerHTML = "";
+  
+  const p = document.createElement('p');
+  p.style.lineHeight = "2.5"; // Gives room for the dropped boxes
+  p.style.fontSize = "1.1rem";
+
+  game.parts.forEach((part, i) => {
+    if (part.text.includes('________')) {
+      const textParts = part.text.split('________');
+      p.appendChild(document.createTextNode(textParts[0]));
+
+      const inlineSlot = document.createElement('span');
+      inlineSlot.className = "inline-dropzone";
+      inlineSlot.dataset.answer = part.label; // The correct answer
+      inlineSlot.addEventListener("dragover", onDragOver);
+      inlineSlot.addEventListener("drop", e => onDropIntoSlot(e, inlineSlot));
+
+      p.appendChild(inlineSlot);
+      p.appendChild(document.createTextNode(textParts[1] + ' '));
+    } else {
+      p.appendChild(document.createTextNode(part.text + ' '));
+    }
+  });
+  
+  dropZone.appendChild(p);
+
   document.getElementById("feedback").textContent = "";
   document.getElementById("feedback").className = "feedback";
   document.getElementById("btn-check").style.display = "inline-flex";
@@ -279,35 +275,53 @@ function renderActivity(game) {
 }
 
 function createChip(item, index) {
+  const chipContainer = document.createElement("div");
+  chipContainer.className = "chip-container";
+  chipContainer.style.display = "flex";
+  chipContainer.style.alignItems = "center";
+  chipContainer.style.gap = "8px";
+  chipContainer.style.marginBottom = "8px";
+
   const chip = document.createElement("div");
   chip.className = "sentence-chip";
   chip.draggable = true;
   chip.dataset.index = index;
   chip.dataset.distractor = item.isDistractor ? "true" : "false";
-  chip.dataset.originalText = item.text;
-
-  let innerHTML = `<span class="chip-text">${item.text}</span>`;
-  if (item.hint) {
-    innerHTML += `<button class="chip-hint-btn" title="Click for a hint">💡</button><div class="chip-hint-text hidden">${item.hint}</div>`;
-  }
-  chip.innerHTML = innerHTML;
+  chip.dataset.label = item.label; // Store the label for checking
+  
+  // The chip displays the LABEL, not the whole sentence
+  const displayText = item.label ? item.label : "Label missing";
+  chip.innerHTML = `<span class="chip-text">${displayText}</span>`;
   chip.addEventListener("dragstart", onDragStart);
   chip.addEventListener("dragend", onDragEnd);
-  
+
+  chipContainer.appendChild(chip);
+
   if (item.hint) {
-    const hintBtn = chip.querySelector('.chip-hint-btn');
-    const hintText = chip.querySelector('.chip-hint-text');
-    const hintName = item.label ? `Hint (${item.label})` : `Hint (Sentence)`;
+    const hintBtn = document.createElement("button");
+    hintBtn.className = "chip-hint-btn";
+    hintBtn.title = "Click for a hint";
+    hintBtn.innerHTML = "💡";
+    
+    const hintText = document.createElement("div");
+    hintText.className = "chip-hint-text hidden";
+    hintText.textContent = item.hint;
+    
     hintBtn.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
       hintText.classList.toggle('hidden');
-      hintsUsed.push(hintName);
+      hintsUsed.push(`Hint (${item.label})`);
     });
+    
+    chipContainer.appendChild(hintBtn);
+    chipContainer.appendChild(hintText);
   }
-  return chip;
+  
+  return chipContainer;
 }
 
+// ── Drag & Drop Handlers ─────────────────────────────────────
 function onDragStart(e) {
   dragSrcEl = this;
   e.dataTransfer.effectAllowed = "move";
@@ -317,20 +331,40 @@ function onDragStart(e) {
 function onDragEnd() {
   this.classList.remove("dragging");
   document.querySelectorAll(".drop-target-over").forEach(el => el.classList.remove("drop-target-over"));
+  document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
 }
 
 function onDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = "move";
-  this.classList.add("drop-target-over");
+  if (this.classList.contains("inline-dropzone")) {
+      this.classList.add("drag-over");
+  } else {
+      this.classList.add("drop-target-over");
+  }
 }
 
 function onDropIntoSlot(e, slotContent) {
   e.preventDefault();
-  slotContent.classList.remove("drop-target-over");
+  slotContent.classList.remove("drag-over");
   if (!dragSrcEl) return;
+  
+  // Don't drop on locked correct answers
+  if (slotContent.classList.contains("correct")) return;
+
+  // If slot already has an item, send the old item back to the pool
   if (slotContent.children.length > 0) {
-    document.getElementById('choice-pool').appendChild(slotContent.children[0]);
+    const oldChip = slotContent.children[0];
+    // Find its original container to put it back neatly
+    const poolContainers = document.querySelectorAll("#choice-pool .chip-container");
+    let placedBack = false;
+    poolContainers.forEach(container => {
+        if (container.children.length === 0 || (container.children[0].tagName === 'BUTTON')) {
+            container.prepend(oldChip);
+            placedBack = true;
+        }
+    });
+    if(!placedBack) document.getElementById('choice-pool').appendChild(oldChip);
   }
   slotContent.appendChild(dragSrcEl);
   dragSrcEl = null;
@@ -340,85 +374,113 @@ function onDropIntoPool(e, pool) {
   e.preventDefault();
   pool.classList.remove("drop-target-over");
   if (!dragSrcEl) return;
-  pool.appendChild(dragSrcEl);
+  
+  // Find an empty container to put it in, or just append it
+  const containers = pool.querySelectorAll(".chip-container");
+  let placed = false;
+  for (let c of containers) {
+      if (c.querySelectorAll('.sentence-chip').length === 0) {
+          c.prepend(dragSrcEl);
+          placed = true;
+          break;
+      }
+  }
+  if (!placed) pool.appendChild(dragSrcEl);
   dragSrcEl = null;
 }
 
-// ── Check Answer ──────────────────────────────────────────────
+// ── Check Answer (Partial Reset Logic) ────────────────────────
 function checkAnswer() {
   const game = activities[currentGame];
-  const dropZone = document.getElementById("drop-zone");
-  const slots = Array.from(dropZone.querySelectorAll(".slot-content"));
-  const hasDistractors = game.distractors.length > 0;
-  let emptyCount = 0;
+  const dropzones = document.querySelectorAll(".inline-dropzone");
   let correctCount = 0;
+  let emptyCount = 0;
   let distractorCount = 0;
+  let mistakesMade = false;
   let summaryDetails = [];
-  
-  slots.forEach((slot, i) => {
-    const chip = slot.querySelector(".sentence-chip");
-    if (!chip) { emptyCount++; return; }
-    chip.classList.remove("correct", "incorrect", "distractor-warning");
-    
+
+  attemptCount++;
+
+  dropzones.forEach(zone => {
+    if (zone.classList.contains("correct")) {
+        correctCount++; // Already locked in from previous attempt
+        return; 
+    }
+
+    const chip = zone.querySelector(".sentence-chip");
+    if (!chip) { 
+        emptyCount++; 
+        return; 
+    }
+
+    // Check Distractor
     if (chip.dataset.distractor === "true") {
       distractorCount++;
-      chip.classList.add("distractor-warning");
-    } else {
-      if (chip.dataset.originalText === game.parts[i].text) {
-        correctCount++;
-        chip.classList.add("correct");
-      } else {
-        chip.classList.add("incorrect");
-      }
+      mistakesMade = true;
+      bounceBackToPool(chip);
+    } 
+    // Check Match
+    else if (chip.dataset.label === zone.dataset.answer) {
+      correctCount++;
+      zone.classList.add("correct");
+      chip.draggable = false;
+      chip.style.cursor = "default";
+      chip.style.backgroundColor = "transparent";
+      chip.style.border = "none";
+      chip.style.boxShadow = "none";
+      chip.style.color = "#166534";
+      chip.style.fontWeight = "bold";
+    } 
+    // Incorrect Match
+    else {
+      mistakesMade = true;
+      bounceBackToPool(chip);
     }
   });
-  
-  if (emptyCount === slots.length) {
-    showFeedback("Drag the sentences into the boxes first!", "neutral");
-    return;
-  }
-  
-  attemptCount++;
-  const perfect = (correctCount === slots.length) && (distractorCount === 0);
+
+  // Calculate Status
+  const totalSlots = dropzones.length;
   let status, message;
-  
-  if (perfect) {
+
+  if (correctCount === totalSlots) {
     status = "correct";
-    message = "🎉 Perfect! You matched all the sentences to the correct labels.";
+    message = "🎉 Perfect! You have correctly structured the text.";
+    document.getElementById("btn-check").style.display = "none";
+    document.getElementById("btn-retry").style.display = "inline-flex";
+  } else if (mistakesMade) {
+    status = "incorrect";
+    message = `⚠️ Incorrect labels were returned to the left. You have locked in ${correctCount} correct answer(s). Keep trying!`;
   } else if (emptyCount > 0) {
     status = "partial";
-    message = "⚠️ You have empty boxes! Fill all the labels before checking.";
-  } else if (hasDistractors && distractorCount === 0 && correctCount < slots.length) {
-    status = "partial";
-    message = "✅ Good — you left the distractor out! But check your label matches.";
-  } else if (hasDistractors && distractorCount > 0) {
-    status = "incorrect";
-    message = "⚠️ You have a distractor in there. Check your labels carefully!";
-  } else {
-    status = "incorrect";
-    message = "❌ Not quite right. Check which sentences match which labels.";
-  }
-  
-  showFeedback(message, status);
-  
-  if (hasDistractors) {
-    if (distractorCount > 0) {
-      summaryDetails.push(`⚠️ Distractors included: ${distractorCount}`);
-    } else {
-      summaryDetails.push(`✅ No distractors included`);
-    }
+    message = `You have locked in ${correctCount} correct answer(s). Fill the empty spaces!`;
   }
 
+  showFeedback(message, status);
+
+  // Tracking Details
+  summaryDetails.push(`Score: ${correctCount}/${totalSlots}`);
+  if (distractorCount > 0) summaryDetails.push(`⚠️ Fell for distractors`);
+  
   if (hintsUsed.length > 0) {
     const uniqueHints = [...new Set(hintsUsed)];
     summaryDetails.push(`💡 Hints used: ${uniqueHints.join(", ")}`);
   } else {
     summaryDetails.push(`🧠 No hints used`);
   }
-  
+
   trackAttempt(status, attemptCount, summaryDetails);
-  document.getElementById("btn-check").style.display = "none";
-  document.getElementById("btn-retry").style.display = "inline-flex";
+}
+
+// Helper function to return chips neatly to the bank
+function bounceBackToPool(chip) {
+    const poolContainers = document.querySelectorAll("#choice-pool .chip-container");
+    for (let c of poolContainers) {
+        if (c.querySelectorAll('.sentence-chip').length === 0) {
+            c.prepend(chip);
+            return;
+        }
+    }
+    document.getElementById("choice-pool").appendChild(chip);
 }
 
 function showFeedback(message, type) {
@@ -455,7 +517,6 @@ function switchTab(tab) {
   if(tabTeacher) tabTeacher.classList.toggle("active", tab === "teacher");
   if(panelStudent) panelStudent.classList.toggle("hidden", tab !== "student");
   if(panelTeacher) panelTeacher.classList.toggle("hidden", tab !== "teacher");
-
   if (tab === "teacher") loadTeacherData();
 }
 
