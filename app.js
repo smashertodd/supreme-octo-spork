@@ -8,8 +8,8 @@ const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_
 const TEACHER_PIN = "9999";
 const REFRESH_INTERVAL = 15000;
 
-// Pastel colours for mapping labels to dropped sentences
-const COLORS = ['#fecaca', '#bfdbfe', '#bbf7d0', '#fef08a', '#e9d5ff', '#fed7aa', '#fbcfe8', '#99f6e4', '#d9f99d', '#bae6fd'];
+// Vibrant tones that match the purple/pink/blue aesthetic
+const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
 
 // ── State ────────────────────────────────────────────────────
 let studentName = "";
