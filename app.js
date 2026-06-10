@@ -1,5 +1,5 @@
 // ============================================================
-// Fix the Paragraph — app.js (v17 - Dual Mode: Paragraph & Gap Fill)
+// Fix the Paragraph — app.js (v18 - Smart Data Parsing)
 // ============================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -18,7 +18,7 @@ let sessionStart = null;
 let dragSrcEl = null;
 let hintsUsed = [];
 let attemptCount = 0;
-let isGapFillMode = false; // NEW: Tracks if current game is Gap Fill
+let isGapFillMode = false;
 
 // ── Inject CSS Automatically ──────────────────────────────────
 function injectStyles() {
@@ -26,7 +26,6 @@ function injectStyles() {
   const style = document.createElement('style');
   style.id = 'paragraph-builder-styles';
   style.innerHTML = `
-    /* Legend & Paragraph Builder Styles */
     .legend-box { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
     .legend-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 6px; font-weight: 600; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); }
     .hint-btn-small { background: rgba(255,255,255,0.7); border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
@@ -40,7 +39,7 @@ function injectStyles() {
     .sentence-chip.in-paragraph { display: inline; padding: 4px 8px; border-radius: 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; }
     .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
 
-    /* NEW: Gap Fill Specific Styles */
+    /* Gap Fill Specific Styles */
     .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
     .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed #94a3b8; background: #f8fafc; border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
     .gap-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.05); }
@@ -114,7 +113,7 @@ function splitCSVLine(line) {
   result.push(current); return result;
 }
 
-// ── Library Loading ───────────────────────────────────────────
+// ── Library Loading & Smart Parsing ───────────────────────────
 function loadLibrary() {
   showScreen("screen-loading");
   fetch(LIBRARY_CSV_URL + "&t=" + new Date().getTime())
@@ -128,32 +127,51 @@ function loadLibrary() {
     })
     .catch((e) => { console.error(e); showError("Couldn't load activities."); });
 }
+
 function buildActivities(rows) {
-  activities = {}; let lastTitle = ""; let lastStatus = "";
+  activities = {}; 
+  let lastTitle = ""; 
+  let lastStatus = "";
+
   rows.forEach(originalRow => {
     const row = {};
     for (let key in originalRow) if (key) row[key.trim().toLowerCase().replace(/ /g, "_")] = originalRow[key];
 
+    // 1. Inherit Title (so you only type it once)
     let rowTitle = (row["title"] || "").trim();
     if (rowTitle) lastTitle = rowTitle;
     let currentTitle = lastTitle;
-    if (!currentTitle) return;
+    if (!currentTitle) return; // Skip if no title exists yet
 
+    // 2. Inherit "active" Status
     let rowStatus = (row["status"] || "").trim().toLowerCase();
-    if (rowStatus) lastStatus = rowStatus;
-    if (lastStatus !== "active") return;
+    if (rowStatus === 'active' || rowStatus === 'inactive') {
+        lastStatus = rowStatus;
+    }
+    if (lastStatus !== "active") return; // Skip if game is inactive
 
-    if (!(row["text"] || "").trim() && type !== "distractor") return; // Keep distractors with blank text
+    // 3. Check if it's a Distractor (looks in both Type and Status columns)
+    let rowType = (row["type"] || "").trim().toLowerCase();
+    let isDistractor = (rowType === "distractor" || rowStatus === "distractor");
 
-    const type = (row["type"] || "").trim().toLowerCase();
+    // 4. Check text (Empty text is only allowed for distractors)
+    let textContent = (row["text"] || "").trim();
+    if (!textContent && !isDistractor) return;
+
+    // 5. Build the activity
     if (!activities[currentTitle]) activities[currentTitle] = { title: currentTitle, parts: [], distractors: [], overallHint: "" };
     if (row["overall_hint"]) activities[currentTitle].overallHint = row["overall_hint"];
 
-    const item = { text: row["text"], label: row["label"], hint: row["hint"] };
-    if (type === "distractor") activities[currentTitle].distractors.push(item);
-    else activities[currentTitle].parts.push(item);
+    const item = { text: textContent, label: row["label"], hint: row["hint"] };
+    
+    if (isDistractor) {
+        activities[currentTitle].distractors.push(item);
+    } else {
+        activities[currentTitle].parts.push(item);
+    }
   });
 }
+
 function showLibrary() {
   showScreen("screen-library");
   const list = document.getElementById("library-list");
@@ -172,7 +190,7 @@ function showLibrary() {
 function startActivity(gameId) {
   currentGame = gameId; hintsUsed = []; attemptCount = 0;
   
-  // DUAL MODE CHECK: Are there '___' blanks in the text?
+  // DUAL MODE CHECK
   const gameData = activities[gameId];
   isGapFillMode = gameData.parts.some(p => p.text && p.text.includes('___'));
   
@@ -182,7 +200,6 @@ function startActivity(gameId) {
 function renderActivity(game) {
   document.getElementById("activity-title").textContent = game.title;
   
-  // Dynamic Instructions based on Mode & Distractors
   let instructions = isGapFillMode ? "Drag the correct words/phrases into the gaps." : "Drag the text parts into the correct spaces to build the paragraph.";
   if (game.distractors.length > 0) instructions += " Watch out for distractors!";
   document.getElementById("game-instructions").textContent = instructions;
@@ -213,10 +230,8 @@ function renderActivity(game) {
     chip.dataset.answerIndex = item.answerIndex;
     chip.dataset.isDistractor = item.isDistractor;
     
-    // In Gap Fill, we drag the label (linkers). In Paragraph builder, we drag the text.
     chip.textContent = isGapFillMode ? (item.label || "[Missing]") : item.text;
     
-    // Assign vibrant colours to the pool items in Gap Fill mode
     if (isGapFillMode) {
       chip.dataset.color = COLORS[index % COLORS.length];
       chip.style.backgroundColor = chip.dataset.color;
@@ -234,7 +249,6 @@ function renderActivity(game) {
   dropZone.innerHTML = "";
   
   if (isGapFillMode) {
-      // ── GAP FILL LAYOUT ──
       const gapFillBox = document.createElement("div");
       gapFillBox.className = "gap-fill-box";
       
@@ -247,7 +261,6 @@ function renderActivity(game) {
                   gapFillBox.appendChild(span);
               }
               if (sIdx < segments.length - 1) {
-                  // Add the gap slot
                   const slot = document.createElement("span");
                   slot.className = "gap-slot dropzone";
                   slot.dataset.expectedIndex = i; 
@@ -255,7 +268,6 @@ function renderActivity(game) {
                   slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
                   gapFillBox.appendChild(slot);
                   
-                  // Add Hint button directly after the slot
                   if (part.hint) {
                       const hBtn = document.createElement("button");
                       hBtn.className = "hint-btn-inline";
@@ -266,13 +278,11 @@ function renderActivity(game) {
                   }
               }
           });
-          gapFillBox.appendChild(document.createTextNode(" ")); // Space between sentences
+          gapFillBox.appendChild(document.createTextNode(" ")); 
       });
       dropZone.appendChild(gapFillBox);
       
   } else {
-      // ── PARAGRAPH BUILDER LAYOUT ──
-      // 2a. The Legend Box
       const legendBox = document.createElement("div");
       legendBox.className = "legend-box";
       const legendTitle = document.createElement("div");
@@ -299,13 +309,12 @@ function renderActivity(game) {
       });
       dropZone.appendChild(legendBox);
       
-      // 2b. The Paragraph Builder
       const paraBuilder = document.createElement("div");
       paraBuilder.className = "paragraph-builder";
 
       game.parts.forEach((part, i) => {
         const slot = document.createElement("div");
-        slot.className = "paragraph-slot dropzone"; // Note the 'dropzone' class
+        slot.className = "paragraph-slot dropzone"; 
         slot.dataset.expectedIndex = i;
         slot.dataset.color = COLORS[i % COLORS.length];
         slot.addEventListener("dragover", onDragOver);
@@ -358,12 +367,11 @@ function updateSlotLayouts() {
       chip.classList.add('in-paragraph');
       chip.classList.remove('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
       
-      // Adapt styling based on Mode
       if (isGapFillMode) {
           chip.classList.add('gap-chip');
-          chip.style.backgroundColor = chip.dataset.color || '#e2e8f0'; // Uses its pool color
+          chip.style.backgroundColor = chip.dataset.color || '#e2e8f0'; 
       } else {
-          chip.style.backgroundColor = slot.dataset.color; // Uses slot's legend color
+          chip.style.backgroundColor = slot.dataset.color; 
       }
     } else {
       slot.classList.remove('filled');
@@ -374,7 +382,7 @@ function updateSlotLayouts() {
     chip.classList.remove('in-paragraph', 'locked', 'gap-chip');
     chip.classList.add('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
     if (isGapFillMode && chip.dataset.color) {
-        chip.style.backgroundColor = chip.dataset.color; // Restore assigned color
+        chip.style.backgroundColor = chip.dataset.color; 
     } else {
         chip.style.backgroundColor = '';
     }
