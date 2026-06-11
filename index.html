@@ -4,17 +4,127 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fix the Paragraph</title>
-    <!-- Tailwind CSS for styling -->
+    <!-- Tailwind CSS for structural styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
     <style>
+        /* Base Styles & Dark Mode */
         body { 
-            background: linear-gradient(135deg, #4c1d95, #1e3a8a); 
+            background-color: #0f172a; /* Deep Navy/Slate background */
+            color: #f8fafc; 
+            font-family: 'Outfit', sans-serif;
             min-height: 100vh; 
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+        }
+
+        /* Neon & Glass Panels */
+        .bg-white, .bg-slate-50, .bg-slate-100 {
+            background-color: #1e293b !important; 
+            border-color: #334155 !important;
+            color: #f8fafc !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 0 15px rgba(236, 72, 153, 0.1) !important;
+        }
+        
+        .text-slate-800, .text-slate-700 {
+            color: #f8fafc !important;
+        }
+
+        /* Typography */
+        h1, h2, h3 {
+            color: #f9a8d4 !important; /* Pastel Pink */
+            text-shadow: 0 0 10px rgba(249, 168, 212, 0.3);
+        }
+
+        /* Glowing Buttons */
+        button {
+            background: linear-gradient(135deg, #ec4899, #8b5cf6) !important;
+            border: none !important;
+            color: white !important;
+            box-shadow: 0 0 15px rgba(236, 72, 153, 0.4) !important;
+            transition: all 0.3s ease !important;
+            font-weight: 600 !important;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        button:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 0 25px rgba(236, 72, 153, 0.6) !important;
+        }
+
+        /* Custom Neon Scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0f172a; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ec4899; 
+            border-radius: 5px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #f472b6; 
+        }
+
+        /* Draggable Chips (Pastel background, dark text) */
+        .draggable-chip {
+            color: #0f172a !important; /* Forces dark text on the pastel backgrounds */
+            font-weight: 800 !important;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+            border: 2px solid rgba(255, 255, 255, 0.2) !important;
+            transition: transform 0.2s, box-shadow 0.2s !important;
+        }
+        .draggable-chip:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.4) !important;
+        }
+
+        /* Drop Zones */
+        .drop-zone {
+            background-color: rgba(30, 41, 59, 0.5) !important; 
+            border: 2px dashed #64748b !important;
+            transition: all 0.3s ease;
+        }
+        .drop-zone.drag-over {
+            border-color: #f9a8d4 !important; 
+            background-color: rgba(249, 168, 212, 0.1) !important;
+            box-shadow: inset 0 0 10px rgba(249, 168, 212, 0.2) !important;
+        }
+        .drop-zone-active {
+            border-color: #8b5cf6 !important;
+            background-color: rgba(139, 92, 246, 0.1) !important;
+        }
+        
+        /* Correct/Incorrect Borders */
+        .border-green-500 {
+            border-color: #4ade80 !important;
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.3) !important;
+        }
+        .border-red-500 {
+            border-color: #f87171 !important;
+            box-shadow: 0 0 15px rgba(248, 113, 113, 0.3) !important;
+        }
+
+        /* Inputs */
+        input[type="text"], input[type="password"] {
+            background-color: #1e293b !important;
+            border: 2px solid #334155 !important;
+            color: white !important;
+        }
+        input[type="text"]:focus, input[type="password"]:focus {
+            border-color: #f9a8d4 !important;
+            outline: none !important;
+            box-shadow: 0 0 10px rgba(249, 168, 212, 0.3) !important;
         }
     </style>
 </head>
 <body>
-    <div id="app"></div>
-    <script src="app.js?v=29"></script>
+    <div id="app" class="p-4 md:p-8"></div>
+    <script src="app.js?v=30"></script>
 </body>
 </html>
