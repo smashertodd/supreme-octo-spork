@@ -4,127 +4,106 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fix the Paragraph</title>
-    <!-- Tailwind CSS for structural styling -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- PapaParse for CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     
     <style>
-        /* Base Styles & Dark Mode */
-        body { 
-            background-color: #0f172a; /* Deep Navy/Slate background */
-            color: #f8fafc; 
-            font-family: 'Outfit', sans-serif;
-            min-height: 100vh; 
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden;
+        /* 1. RESTORE THE BEAUTIFUL SUNRISE GRADIENT */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+            background: linear-gradient(135deg, #ce0058, #182b78) !important;
+            color: #1e293b !important; /* Dark text for readability */
+            min-height: 100vh !important;
         }
 
-        /* Neon & Glass Panels */
-        .bg-white, .bg-slate-50, .bg-slate-100 {
-            background-color: #1e293b !important; 
-            border-color: #334155 !important;
-            color: #f8fafc !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 0 15px rgba(236, 72, 153, 0.1) !important;
-        }
-        
-        .text-slate-800, .text-slate-700 {
-            color: #f8fafc !important;
-        }
-
-        /* Typography */
-        h1, h2, h3 {
-            color: #f9a8d4 !important; /* Pastel Pink */
-            text-shadow: 0 0 10px rgba(249, 168, 212, 0.3);
-        }
-
-        /* Glowing Buttons */
-        button {
-            background: linear-gradient(135deg, #ec4899, #8b5cf6) !important;
+        /* 2. RESTORE THE WHITE TRANSLUCENT PANELS */
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95) !important;
             border: none !important;
-            color: white !important;
-            box-shadow: 0 0 15px rgba(236, 72, 153, 0.4) !important;
-            transition: all 0.3s ease !important;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
+            color: #1e293b !important;
+            border-radius: 12px !important;
+        }
+
+        /* 3. FORCE THE WIDE LAYOUT */
+        #app .max-w-4xl, #app .max-w-5xl {
+            max-width: 1400px !important;
+            width: 95% !important;
+            margin: 0 auto !important;
+        }
+        #app .lg\:col-span-2 {
+            grid-column: span 2 / span 2 !important; /* Ensures text area gets plenty of room */
+        }
+
+        /* 4. FIX DRAG AND DROP SNAPPING (Stops the awkward floating!) */
+        .gap-dropzone {
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-width: 120px !important;
+            min-height: 36px !important;
+            border: 2px dashed #94a3b8 !important;
+            margin: 0 6px !important;
+            vertical-align: middle !important; /* This is the magic fix for inline gaps */
+            border-radius: 6px !important;
+            background: rgba(255, 255, 255, 0.5) !important;
+        }
+        .gap-dropzone.over {
+            border-color: #3b82f6 !important;
+            background: rgba(59, 130, 246, 0.1) !important;
+            transform: scale(1.02) !important;
+        }
+        .gap-dropzone.filled {
+            border: none !important;
+            background: transparent !important;
+            min-width: auto !important;
+            min-height: auto !important;
+            padding: 0 !important;
+            margin: 0 4px !important;
+        }
+
+        /* 5. BEAUTIFUL SPECTRUM CHIPS WITH DARK TEXT */
+        .draggable-chip, .dropped-chip {
+            color: #000000 !important; /* Ensures dark text on pastel colors */
             font-weight: 600 !important;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
         }
-        button:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 0 25px rgba(236, 72, 153, 0.6) !important;
-        }
-
-        /* Custom Neon Scrollbar */
-        ::-webkit-scrollbar {
-            width: 10px;
-            height: 10px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a; 
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #ec4899; 
-            border-radius: 5px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #f472b6; 
-        }
-
-        /* Draggable Chips (Pastel background, dark text) */
         .draggable-chip {
-            color: #0f172a !important; /* Forces dark text on the pastel backgrounds */
-            font-weight: 800 !important;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
-            border: 2px solid rgba(255, 255, 255, 0.2) !important;
-            transition: transform 0.2s, box-shadow 0.2s !important;
+            border-radius: 8px !important; /* Softens the square choice buttons */
         }
-        .draggable-chip:hover {
-            transform: translateY(-2px) !important;
-            box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.4) !important;
-        }
-
-        /* Drop Zones */
-        .drop-zone {
-            background-color: rgba(30, 41, 59, 0.5) !important; 
-            border: 2px dashed #64748b !important;
-            transition: all 0.3s ease;
-        }
-        .drop-zone.drag-over {
-            border-color: #f9a8d4 !important; 
-            background-color: rgba(249, 168, 212, 0.1) !important;
-            box-shadow: inset 0 0 10px rgba(249, 168, 212, 0.2) !important;
-        }
-        .drop-zone-active {
-            border-color: #8b5cf6 !important;
-            background-color: rgba(139, 92, 246, 0.1) !important;
+        .dropped-chip {
+            display: inline-block !important;
+            padding: 4px 12px !important;
+            border-radius: 16px !important; /* Pill shape for dropped answers */
+            white-space: nowrap !important;
+            vertical-align: middle !important;
+            cursor: grab !important;
         }
         
-        /* Correct/Incorrect Borders */
-        .border-green-500 {
-            border-color: #4ade80 !important;
-            box-shadow: 0 0 15px rgba(74, 222, 128, 0.3) !important;
+        /* Fix text colors against the white panels vs gradient background */
+        h1, h2, h3, p, span, div {
+            color: inherit; 
         }
-        .border-red-500 {
-            border-color: #f87171 !important;
-            box-shadow: 0 0 15px rgba(248, 113, 113, 0.3) !important;
+        /* Keep main title white against the gradient background */
+        .text-3xl.font-bold.text-center.mb-8, 
+        h1.text-3xl {
+            color: #ffffff !important;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
         }
-
-        /* Inputs */
-        input[type="text"], input[type="password"] {
-            background-color: #1e293b !important;
-            border: 2px solid #334155 !important;
-            color: white !important;
-        }
-        input[type="text"]:focus, input[type="password"]:focus {
-            border-color: #f9a8d4 !important;
-            outline: none !important;
-            box-shadow: 0 0 10px rgba(249, 168, 212, 0.3) !important;
-        }
+        .text-white { color: #ffffff !important; }
     </style>
 </head>
 <body>
-    <div id="app" class="p-4 md:p-8"></div>
-    <script src="app.js?v=30"></script>
+    <div id="app">
+        <!-- Loading Spinner -->
+        <div class="flex justify-center items-center h-screen">
+            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
+        </div>
+    </div>
+    
+    <!-- Load app.js (Bumping to v31 to instantly clear your cache) -->
+    <script src="app.js?v=31"></script>
 </body>
 </html>
