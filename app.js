@@ -1,5 +1,5 @@
 // =========================================================================
-// Fix the Paragraph — app.js (v22 - Sticky Sidebar & Auto-Width Boxes)
+// Fix the Paragraph — app.js (v23 - Sticky Sidebar & Auto-Width Layout)
 // =========================================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -50,24 +50,33 @@ function injectStyles() {
     /* Loading Spinner Animation */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    /* NEW: V22 Sticky Pool, Auto-Width Chips, Gap Row Bleed Style */
-    #choice-pool { 
-        min-height: 150px; 
-        padding-bottom: 20px; 
-        position: sticky; 
-        top: 2rem; 
-        align-self: start; 
-        max-height: 85vh; 
-        overflow-y: auto; 
-    }
+    /* NEW: V23 Dynamic Layout Fixes */
+    #choice-pool { min-height: 150px; padding-bottom: 20px; }
+    .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
     
     .sentence-chip:not(.in-paragraph) { 
         display: block; 
         width: fit-content; 
         max-width: 100%; 
     }
+
+    /* Override the 50/50 split and make the left panel beautifully sticky */
+    @media (min-width: 768px) {
+        .activity-grid-layout {
+            grid-template-columns: 320px 1fr !important; /* Left gets 320px, Right gets ALL remaining space */
+            align-items: start !important; /* STOPS the left box from stretching, allowing it to stick */
+        }
+    }
     
-    .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
+    .sticky-left-panel {
+        position: -webkit-sticky !important;
+        position: sticky !important;
+        top: 2rem !important;
+        height: max-content !important;
+        max-height: 85vh;
+        overflow-y: auto;
+        scrollbar-width: thin;
+    }
   `;
   document.head.appendChild(style);
 }
@@ -380,6 +389,19 @@ function renderActivity(game) {
   document.getElementById("feedback").className = "feedback";
   document.getElementById("btn-check").style.display = "inline-flex";
   document.getElementById("btn-retry").style.display = "none";
+  
+  // =======================================================
+  // V23: APPLY STICKY LEFT PANEL & GRID WIDTH OVERRIDE
+  // =======================================================
+  const poolEl = document.getElementById("choice-pool");
+  if (poolEl && poolEl.parentElement) {
+      // 1. Target the left white box and make it sticky
+      poolEl.parentElement.classList.add("sticky-left-panel");
+      
+      // 2. Target the main grid and force the 320px vs 1fr split
+      const gridEl = poolEl.parentElement.parentElement;
+      if (gridEl) gridEl.classList.add("activity-grid-layout");
+  }
 }
 
 // ── Drag & Drop Handlers ─────────────────────────────────────
