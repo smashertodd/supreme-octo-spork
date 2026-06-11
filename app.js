@@ -1,5 +1,5 @@
 // =========================================================================
-// Fix the Paragraph — app.js (v24 - Brute Force Sticky & Auto-Width)
+// Fix the Paragraph — app.js (v25 - Sticky Scroll Silver Bullet)
 // =========================================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -50,7 +50,7 @@ function injectStyles() {
     /* Loading Spinner Animation */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    /* NEW: V24 Brute Force Layout Fixes */
+    /* NEW: V25 Brute Force Layout Fixes */
     #choice-pool { min-height: 150px; padding-bottom: 20px; }
     .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
     
@@ -72,10 +72,14 @@ function injectStyles() {
     #left-sticky-column {
         position: -webkit-sticky !important;
         position: sticky !important;
-        top: 2rem !important;
-        max-height: 85vh !important;
+        top: 20px !important;
+        /* THE SILVER BULLET FIXES BELOW: */
+        align-self: start !important; 
+        height: max-content !important; 
+        max-height: calc(100vh - 40px) !important;
         overflow-y: auto !important;
         scrollbar-width: thin;
+        z-index: 10 !important;
     }
   `;
   document.head.appendChild(style);
@@ -391,7 +395,7 @@ function renderActivity(game) {
   document.getElementById("btn-retry").style.display = "none";
   
   // =======================================================
-  // V24: BRUTE FORCE STICKY LEFT PANEL & WIDTH
+  // V25: BRUTE FORCE STICKY LEFT PANEL & WIDTH
   // =======================================================
   const poolEl = document.getElementById("choice-pool");
   if (poolEl && poolEl.parentElement) {
