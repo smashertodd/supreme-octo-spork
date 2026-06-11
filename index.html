@@ -4,106 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fix the Paragraph</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- PapaParse for CSV -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
-    
     <style>
-        /* 1. RESTORE THE BEAUTIFUL SUNRISE GRADIENT */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-            background: linear-gradient(135deg, #ce0058, #182b78) !important;
-            color: #1e293b !important; /* Dark text for readability */
-            min-height: 100vh !important;
-        }
-
-        /* 2. RESTORE THE WHITE TRANSLUCENT PANELS */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.95) !important;
-            border: none !important;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15) !important;
-            color: #1e293b !important;
-            border-radius: 12px !important;
-        }
-
-        /* 3. FORCE THE WIDE LAYOUT */
-        #app .max-w-4xl, #app .max-w-5xl {
-            max-width: 1400px !important;
-            width: 95% !important;
-            margin: 0 auto !important;
-        }
-        #app .lg\:col-span-2 {
-            grid-column: span 2 / span 2 !important; /* Ensures text area gets plenty of room */
-        }
-
-        /* 4. FIX DRAG AND DROP SNAPPING (Stops the awkward floating!) */
-        .gap-dropzone {
-            display: inline-flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            min-width: 120px !important;
-            min-height: 36px !important;
-            border: 2px dashed #94a3b8 !important;
-            margin: 0 6px !important;
-            vertical-align: middle !important; /* This is the magic fix for inline gaps */
-            border-radius: 6px !important;
-            background: rgba(255, 255, 255, 0.5) !important;
-        }
-        .gap-dropzone.over {
-            border-color: #3b82f6 !important;
-            background: rgba(59, 130, 246, 0.1) !important;
-            transform: scale(1.02) !important;
-        }
-        .gap-dropzone.filled {
-            border: none !important;
-            background: transparent !important;
-            min-width: auto !important;
-            min-height: auto !important;
-            padding: 0 !important;
-            margin: 0 4px !important;
-        }
-
-        /* 5. BEAUTIFUL SPECTRUM CHIPS WITH DARK TEXT */
-        .draggable-chip, .dropped-chip {
-            color: #000000 !important; /* Ensures dark text on pastel colors */
-            font-weight: 600 !important;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-        }
-        .draggable-chip {
-            border-radius: 8px !important; /* Softens the square choice buttons */
-        }
-        .dropped-chip {
-            display: inline-block !important;
-            padding: 4px 12px !important;
-            border-radius: 16px !important; /* Pill shape for dropped answers */
-            white-space: nowrap !important;
-            vertical-align: middle !important;
-            cursor: grab !important;
-        }
-        
-        /* Fix text colors against the white panels vs gradient background */
-        h1, h2, h3, p, span, div {
-            color: inherit; 
-        }
-        /* Keep main title white against the gradient background */
-        .text-3xl.font-bold.text-center.mb-8, 
-        h1.text-3xl {
-            color: #ffffff !important;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3) !important;
-        }
-        .text-white { color: #ffffff !important; }
+        /* Prevent unwanted horizontal scrolling */
+        body { overflow-x: hidden; }
     </style>
 </head>
-<body>
+<!-- Restored your beautiful dark purple/slate background! -->
+<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen text-slate-100 font-sans">
     <div id="app">
-        <!-- Loading Spinner -->
-        <div class="flex justify-center items-center h-screen">
-            <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-white"></div>
-        </div>
+        <!-- App engine injects here -->
     </div>
-    
-    <!-- Load app.js (Bumping to v31 to instantly clear your cache) -->
-    <script src="app.js?v=31"></script>
+    <!-- Cache buster updated -->
+    <script src="app.js?v=35"></script>
 </body>
 </html>
