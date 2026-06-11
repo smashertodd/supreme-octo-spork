@@ -1,446 +1,816 @@
-// =========================================================================
-// Fix the Paragraph — app.js (v28 - The DOM Crawler Sticky Fix)
-// =========================================================================
-const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
-const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
-const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
-const TEACHER_PIN = "@pple";
-const REFRESH_INTERVAL = 15000;
-
-// Vibrant tones that match the purple/pink/blue aesthetic
+const LIBRARY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv';
+const TRACKING_URL = 'https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec';
+const TEACHER_PIN = '@pple';
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
 
-// ── State ────────────────────────────────────────────────────
-let studentName = "";
-let activities = {};
-let currentGame = null;
-let sessionStart = null;
-let dragSrcEl = null;
-let hintsUsed = [];
+let activities = [];
+let currentActivity = null;
+let isTeacher = false;
+let studentName = '';
 let attemptCount = 0;
-let isGapFillMode = false;
+let isGapFill = false;
 
-// ── Inject CSS Automatically ──────────────────────────────────
-function injectStyles() {
-  if (document.getElementById('paragraph-builder-styles')) return;
-  const style = document.createElement('style');
-  style.id = 'paragraph-builder-styles';
-  style.innerHTML = `
-    .legend-box { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
-    .legend-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 6px; font-weight: 600; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); }
-    .hint-btn-small { background: rgba(255,255,255,0.7); border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
-    .hint-btn-small:hover { background: #fff; transform: scale(1.1); }
-    .paragraph-builder { line-height: 2.2; font-size: 1.1rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; }
-    .paragraph-slot { display: inline-block; min-width: 140px; height: 1.8rem; vertical-align: middle; margin: 4px; border: 2px dashed #cbd5e1; background: #f1f5f9; border-radius: 4px; transition: all 0.2s; }
-    .paragraph-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.02); }
-    .paragraph-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
-    .sentence-chip.in-paragraph { display: inline; padding: 4px 8px; border-radius: 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; }
-    .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
-    
-    /* Gap Fill Specific Styles */
-    .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
-    .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed #94a3b8; background: #f8fafc; border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
-    .gap-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.05); }
-    .gap-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
-    .gap-chip { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 600; color: #0f172a !important; cursor: pointer; transition: background 0.2s; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: none !important; margin: 0 !important; }
-    .gap-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
-    .hint-btn-inline { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 4px; vertical-align: middle; transition: transform 0.2s; padding: 0; }
-    .hint-btn-inline:hover { transform: scale(1.2); }
-    
-    /* Loading Spinner Animation */
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    
-    /* NEW: V28 Brute Force Layout Fixes */
-    #choice-pool { min-height: 150px; padding-bottom: 20px; }
-    .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
-    
-    .sentence-chip:not(.in-paragraph) { 
-        display: block; 
-        width: fit-content; 
-        max-width: 100%; 
+// DOM Crawler: Force remove hidden overflows on page load
+function forceRemoveOverflows() {
+    let currentElement = document.getElementById('app');
+    while (currentElement && currentElement !== document.body) {
+        currentElement.style.setProperty('overflow', 'visible', 'important');
+        currentElement.style.setProperty('overflow-y', 'visible', 'important');
+        currentElement = currentElement.parentElement;
     }
-
-    /* Brute Force IDs to override standard HTML templates */
-    @media (min-width: 768px) {
-        #main-activity-grid {
-            display: grid !important;
-            grid-template-columns: 320px 1fr !important;
-            align-items: start !important;
-        }
-    }
-    
-    #left-sticky-column {
-        position: -webkit-sticky !important;
-        position: sticky !important;
-        top: 24px !important;
-        align-self: start !important; 
-        height: auto !important; 
-        max-height: calc(100vh - 48px) !important;
-        overflow-y: auto !important;
-        scrollbar-width: thin;
-        z-index: 100 !important;
-    }
-  `;
-  document.head.appendChild(style);
+    document.body.style.setProperty('overflow-y', 'auto', 'important');
+    document.documentElement.style.setProperty('overflow-y', 'auto', 'important');
 }
 
-// ── Boot ─────────────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
-  try {
-      const mobileFixScript = document.createElement('script');
-      mobileFixScript.src = "https://unpkg.com/drag-drop-touch";
-      document.head.appendChild(mobileFixScript);
-  } catch (e) { console.log("Mobile fix skipped", e); }
+// Inject CSS for UI updates and brute-force grid/sticky layout
+const style = document.createElement('style');
+style.textContent = `
+    /* Brute Force Layout Rules */
+    #main-activity-grid {
+        display: grid !important;
+        grid-template-columns: 320px 1fr !important;
+        gap: 1.5rem !important;
+        align-items: start !important;
+    }
+    #left-sticky-column {
+        position: sticky !important;
+        top: 2rem !important;
+        align-self: start !important;
+        height: max-content !important;
+        max-height: 90vh;
+        overflow-y: auto;
+    }
+    
+    @media (max-width: 768px) {
+        #main-activity-grid {
+            grid-template-columns: 1fr !important;
+        }
+        #left-sticky-column {
+            position: relative !important;
+            top: 0 !important;
+            max-height: none;
+            overflow-y: visible;
+        }
+    }
 
-  injectStyles();
-  showScreen("screen-name");
+    /* Standard App Styles */
+    .draggable-chip {
+        cursor: grab;
+        user-select: none;
+        touch-action: none;
+        width: fit-content;
+        max-width: 100%;
+        display: inline-block;
+    }
+    .draggable-chip:active { cursor: grabbing; }
+    .drop-zone { min-height: 3rem; transition: all 0.3s ease; }
+    .drop-zone.drag-over { background-color: #f3f4f6; border-color: #9ca3af; }
+    .drop-zone-active { border-color: #3b82f6 !important; background-color: #eff6ff !important; }
+    
+    .loading-spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 20px auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+`;
+document.head.appendChild(style);
 
-  const safeAdd = (id, event, handler) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
-  };
-
-  safeAdd("btn-start", "click", handleNameSubmit);
-  safeAdd("btn-check", "click", checkAnswer);
-  safeAdd("btn-retry", "click", retryActivity);
-  safeAdd("btn-library", "click", () => showLibrary());
-  safeAdd("tab-student", "click", () => switchTab("student"));
-  safeAdd("tab-teacher", "click", () => promptTeacherPin());
-  safeAdd("btn-pin-submit", "click", submitPin);
-  safeAdd("btn-pin-cancel", "click", closePinModal);
-  safeAdd("btn-reset-session", "click", resetSession);
-
-  const nameInput = document.getElementById("input-name");
-  if (nameInput) nameInput.addEventListener("keydown", e => { if (e.key === "Enter") handleNameSubmit(); });
-  
-  const pinInput = document.getElementById("pin-input");
-  if (pinInput) pinInput.addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
+document.addEventListener('DOMContentLoaded', () => {
+    forceRemoveOverflows();
+    checkRole();
 });
 
-// ── Screens & CSV Parsing ────────────────────────────────────
-function showScreen(id) {
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  const el = document.getElementById(id);
-  if (el) el.classList.add("active");
-}
-
-function handleNameSubmit() {
-  const input = document.getElementById("input-name");
-  if (!input) return;
-  const name = input.value.trim();
-  if (!name) { input.classList.add("error"); input.placeholder = "Please enter your name"; return; }
-  input.classList.remove("error");
-  studentName = name;
-  loadLibrary();
-}
-
-function parseCSV(text) {
-  const rows = []; const lines = text.split(/\r?\n/);
-  if (lines.length === 0) return rows;
-  const headers = splitCSVLine(lines[0]);
-  for (let i = 1; i < lines.length; i++) {
-    if (!lines[i].trim()) continue;
-    const values = splitCSVLine(lines[i]); const row = {};
-    headers.forEach((h, idx) => { row[h.trim()] = (values[idx] || "").trim(); });
-    rows.push(row);
-  }
-  return rows;
-}
-
-function splitCSVLine(line) {
-  const result = []; let current = ""; let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === '"') { if (inQuotes && line[i + 1] === '"') { current += '"'; i++; } else { inQuotes = !inQuotes; } }
-    else if (ch === "," && !inQuotes) { result.push(current); current = ""; }
-    else { current += ch; }
-  }
-  result.push(current); return result;
-}
-
-// ── Library Loading & Smart Parsing ───────────────────────────
-function loadLibrary() {
-  showScreen("screen-loading");
-  const loadingScreen = document.getElementById("screen-loading");
-  if (loadingScreen) {
-      loadingScreen.innerHTML = `
-          <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 60vh;">
-              <div style="border: 5px solid #e2e8f0; border-top-color: #d8b4fe; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
-              <h2 style="color: #334155; font-size: 1.5rem; font-weight: 600;">Loading Activities...</h2>
-          </div>
-      `;
-  }
-
-  fetch(LIBRARY_CSV_URL + "&t=" + new Date().getTime())
-    .then(r => r.text())
-    .then(text => {
-      buildActivities(parseCSV(text));
-      const activeGames = Object.keys(activities);
-      if (activeGames.length === 0) { showError("No active activities found."); return; }
-      if (activeGames.length === 1) startActivity(activeGames[0]);
-      else showLibrary();
-    })
-    .catch((e) => { console.error(e); showError("Couldn't load activities."); });
-}
-
-function buildActivities(rows) {
-  activities = {};
-  let lastTitle = "";
-  let lastStatus = "";
-
-  rows.forEach(originalRow => {
-    const row = {};
-    for (let key in originalRow) if (key) row[key.trim().toLowerCase().replace(/ /g, "_")] = originalRow[key];
-
-    let rowTitle = (row["title"] || "").trim();
-    if (rowTitle) lastTitle = rowTitle;
-    let currentTitle = lastTitle;
-    if (!currentTitle) return;
-
-    let rowStatus = (row["status"] || "").trim().toLowerCase();
-    if (rowStatus === 'active' || rowStatus === 'inactive') { lastStatus = rowStatus; }
-    if (lastStatus !== "active") return;
-
-    let rowType = (row["type"] || "").trim().toLowerCase();
-    let isDistractor = (rowType === "distractor" || rowStatus === "distractor");
-
-    let textContent = (row["text"] || "").trim();
-    if (!textContent && !isDistractor) return;
-
-    if (!activities[currentTitle]) activities[currentTitle] = { title: currentTitle, parts: [], distractors: [], overallHint: "" };
-    if (row["overall_hint"]) activities[currentTitle].overallHint = row["overall_hint"];
-
-    const item = { text: textContent, label: row["label"], hint: row["hint"] };
-    if (isDistractor) { activities[currentTitle].distractors.push(item); }
-    else { activities[currentTitle].parts.push(item); }
-  });
-}
-
-function showLibrary() {
-  showScreen("screen-library");
-  const list = document.getElementById("library-list");
-  if (!list) return;
-  list.innerHTML = "";
-  Object.entries(activities).forEach(([id, game]) => {
-    const card = document.createElement("button"); card.className = "activity-card";
-    const distractorText = game.distractors.length ? "+ " + game.distractors.length + " distractor(s)" : "";
-    card.innerHTML = "<span class='card-title'>" + game.title + "</span><span class='card-meta'>" + game.parts.length + " parts " + distractorText + "</span>";
-    card.addEventListener("click", () => startActivity(id));
-    list.appendChild(card);
-  });
-}
-
-// ── UI Rendering: The Builder ─────────────────────────────────
-function startActivity(gameId) {
-  currentGame = gameId; hintsUsed = []; attemptCount = 0;
-  const gameData = activities[gameId];
-  isGapFillMode = gameData.parts.some(p => p.text && p.text.includes('___'));
-  renderActivity(gameData);
-  showScreen("screen-activity");
-}
-
-function renderActivity(game) {
-  document.getElementById("activity-title").textContent = game.title;
-  let instructions = isGapFillMode ? "Drag the correct words/phrases into the gaps." : "Drag the text parts into the correct spaces to build the paragraph.";
-  if (game.distractors.length > 0) instructions += " Watch out for distractors!";
-  document.getElementById("game-instructions").textContent = instructions;
-
-  const hintContainer = document.getElementById("overall-hint-container");
-  hintContainer.innerHTML = game.overallHint ? "<button id='btn-overall-hint' class='btn-overall-hint'>💡 Need an overall hint?</button><div id='overall-hint-text' class='overall-hint-text hidden'>" + game.overallHint + "</div>" : "";
-  if (game.overallHint) {
-    document.getElementById("btn-overall-hint").addEventListener("click", () => {
-      document.getElementById("overall-hint-text").classList.remove("hidden");
-      document.getElementById("btn-overall-hint").style.display = "none";
-      hintsUsed.push("Overall Hint");
-    });
-  }
-
-  // Build Left Pool
-  const allSentences = [
-    ...game.parts.map((p, i) => ({ ...p, isDistractor: false, answerIndex: i })),
-    ...game.distractors.map(d => ({ ...d, isDistractor: true, answerIndex: -1 }))
-  ];
-  shuffle(allSentences);
-
-  const pool = document.getElementById("choice-pool");
-  pool.innerHTML = "";
-  allSentences.forEach((item, index) => {
-    const chip = document.createElement("div");
-    chip.className = "sentence-chip bg-white border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
-    chip.draggable = true;
-    chip.dataset.answerIndex = item.answerIndex;
-    chip.dataset.isDistractor = item.isDistractor;
-    chip.textContent = isGapFillMode ? (item.label || "[Missing]") : item.text;
-    
-    if (isGapFillMode) {
-      chip.dataset.color = COLORS[index % COLORS.length];
-      chip.style.backgroundColor = chip.dataset.color;
-    }
-    
-    chip.addEventListener("dragstart", onDragStart);
-    chip.addEventListener("dragend", onDragEnd);
-    pool.appendChild(chip);
-  });
-  pool.addEventListener("dragover", onDragOver);
-  pool.addEventListener("drop", e => onDropIntoPool(e, pool));
-
-  // Build Right Zone
-  const dropZone = document.getElementById("drop-zone");
-  dropZone.innerHTML = "";
-
-  if (isGapFillMode) {
-      const gapFillBox = document.createElement("div");
-      gapFillBox.className = "gap-fill-box";
-      gapFillBox.style.display = "flex"; gapFillBox.style.flexDirection = "column"; gapFillBox.style.gap = "8px";
-
-      game.parts.forEach((part, i) => {
-          const rowDiv = document.createElement("div");
-          rowDiv.className = "gap-row";
-          const segments = (part.text || "").split('___');
-          
-          segments.forEach((seg, sIdx) => {
-              if (seg) { const span = document.createElement("span"); span.textContent = seg; rowDiv.appendChild(span); }
-              if (sIdx < segments.length - 1) {
-                  const slot = document.createElement("span"); slot.className = "gap-slot dropzone"; slot.dataset.expectedIndex = i;
-                  slot.addEventListener("dragover", onDragOver); slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
-                  rowDiv.appendChild(slot);
-                  if (part.hint) {
-                      const hBtn = document.createElement("button"); hBtn.className = "hint-btn-inline"; hBtn.innerHTML = "💡";
-                      hBtn.onclick = () => { alert("Hint:\n\n" + part.hint); hintsUsed.push("Hint (Gap " + (i+1) + ")"); };
-                      rowDiv.appendChild(hBtn);
-                  }
-              }
-          });
-          gapFillBox.appendChild(rowDiv);
-      });
-      dropZone.appendChild(gapFillBox);
-  } else {
-      const legendBox = document.createElement("div"); legendBox.className = "legend-box";
-      const legendTitle = document.createElement("div"); legendTitle.className = "w-full text-sm uppercase font-bold text-gray-500 mb-1"; legendTitle.textContent = "Paragraph Structure:"; legendBox.appendChild(legendTitle);
-
-      game.parts.forEach((part, i) => {
-        const tag = document.createElement("div"); tag.className = "legend-tag"; tag.style.backgroundColor = COLORS[i % COLORS.length]; tag.textContent = (i + 1) + ". " + (part.label || "Part " + (i + 1));
-        if (part.hint) {
-          const hintBtn = document.createElement("button"); hintBtn.className = "hint-btn-small"; hintBtn.innerHTML = "💡";
-          hintBtn.onclick = () => { alert("Hint for " + part.label + ":\n\n" + part.hint); hintsUsed.push("Hint (" + part.label + ")"); }; tag.appendChild(hintBtn);
+function checkRole() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('role') === 'teacher') {
+        const pin = prompt('Enter Teacher PIN:');
+        if (pin === TEACHER_PIN) {
+            isTeacher = true;
+            initTeacherView();
+        } else {
+            alert('Incorrect PIN');
+            window.location.search = '';
         }
-        legendBox.appendChild(tag);
-      });
-      dropZone.appendChild(legendBox);
-
-      const paraBuilder = document.createElement("div"); paraBuilder.className = "paragraph-builder";
-      game.parts.forEach((part, i) => {
-        const slot = document.createElement("div"); slot.className = "paragraph-slot dropzone"; slot.dataset.expectedIndex = i; slot.dataset.color = COLORS[i % COLORS.length];
-        slot.addEventListener("dragover", onDragOver); slot.addEventListener("drop", e => onDropIntoSlot(e, slot)); paraBuilder.appendChild(slot);
-      });
-      dropZone.appendChild(paraBuilder);
-  }
-
-  document.getElementById("feedback").textContent = ""; document.getElementById("feedback").className = "feedback";
-  document.getElementById("btn-check").style.display = "inline-flex"; document.getElementById("btn-retry").style.display = "none";
-  
-  // =======================================================
-  // V28: THE DOM CRAWLER (Guaranteed to un-break sticky)
-  // =======================================================
-  const poolEl = document.getElementById("choice-pool");
-  if (poolEl && poolEl.parentElement) {
-      const parentBlock = poolEl.parentElement;
-      parentBlock.id = "left-sticky-column";
-      if (parentBlock.parentElement) parentBlock.parentElement.id = "main-activity-grid";
-      
-      // Hunt down and destroy any parent 'overflow: hidden' rules
-      let ancestor = parentBlock.parentElement;
-      while (ancestor && ancestor !== document.documentElement) {
-          ancestor.style.setProperty('overflow', 'visible', 'important');
-          ancestor.style.setProperty('overflow-x', 'visible', 'important');
-          ancestor.style.setProperty('overflow-y', 'visible', 'important');
-          ancestor = ancestor.parentElement;
-      }
-  }
-}
-
-// ── Drag & Drop Handlers ─────────────────────────────────────
-function onDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = "move"; setTimeout(() => this.classList.add("opacity-50"), 0); }
-function onDragEnd() { this.classList.remove("opacity-50"); document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over")); updateSlotLayouts(); }
-function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (this.classList.contains("dropzone")) this.classList.add("drag-over"); }
-function onDropIntoSlot(e, slot) { e.preventDefault(); slot.classList.remove("drag-over"); if (!dragSrcEl || slot.classList.contains("correct")) return; if (slot.children.length > 0) document.getElementById("choice-pool").appendChild(slot.children[0]); slot.appendChild(dragSrcEl); }
-function onDropIntoPool(e, pool) { e.preventDefault(); if (dragSrcEl) pool.appendChild(dragSrcEl); }
-
-// ── Dynamic Styling Update ────────────────────────────────────
-function updateSlotLayouts() {
-  document.querySelectorAll('.dropzone').forEach(slot => {
-    const row = slot.closest('.gap-row');
-    if (slot.children.length > 0) {
-      slot.classList.add('filled'); const chip = slot.children[0]; chip.classList.add('in-paragraph'); chip.classList.remove('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
-      if (isGapFillMode) {
-          chip.classList.add('gap-chip'); chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
-          if (row) { row.style.backgroundColor = chip.dataset.color; row.style.color = '#000'; }
-      } else { chip.style.backgroundColor = slot.dataset.color; }
     } else {
-      slot.classList.remove('filled');
-      if (isGapFillMode && row) { row.style.backgroundColor = 'transparent'; row.style.color = 'inherit'; }
+        initStudentAuth();
     }
-  });
-
-  document.querySelectorAll('#choice-pool .sentence-chip').forEach(chip => {
-    chip.classList.remove('in-paragraph', 'locked', 'gap-chip'); chip.classList.add('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
-    if (isGapFillMode && chip.dataset.color) { chip.style.backgroundColor = chip.dataset.color; } else { chip.style.backgroundColor = ''; }
-    chip.style.outline = 'none';
-  });
 }
 
-// ── Check Answer ──────────────────────────────────────────────
-function checkAnswer() {
-  const slots = document.querySelectorAll(".dropzone");
-  let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
-  attemptCount++;
-
-  slots.forEach((slot, i) => {
-    const chip = slot.querySelector(".sentence-chip");
-    if (!chip) { emptyCount++; return; }
-    if (chip.classList.contains("locked")) { correctCount++; return; }
-
-    const expected = slot.dataset.expectedIndex; const actual = chip.dataset.answerIndex; const isDistractor = chip.dataset.isDistractor === "true";
-    if (isDistractor) { distractorCount++; mistakesMade = true; document.getElementById("choice-pool").appendChild(chip); } 
-    else if (expected === actual) { correctCount++; chip.classList.add("locked"); chip.draggable = false; } 
-    else { mistakesMade = true; document.getElementById("choice-pool").appendChild(chip); }
-  });
-
-  updateSlotLayouts();
-  
-  const totalSlots = slots.length; let status, message;
-  if (correctCount === totalSlots) { status = "correct"; message = isGapFillMode ? "🎉 Perfect! You filled the gaps correctly." : "🎉 Perfect! You built the paragraph correctly."; document.getElementById("btn-check").style.display = "none"; document.getElementById("btn-retry").style.display = "inline-flex"; } 
-  else if (mistakesMade) { status = "incorrect"; message = "⚠️ Incorrect parts were sent back to the left. You locked in " + correctCount + " correct answer(s). Keep trying!"; } 
-  else if (emptyCount > 0) { status = "partial"; message = "Fill the remaining empty spaces! You have " + correctCount + " locked in."; }
-
-  const fb = document.getElementById("feedback"); if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
-  let details = ["Score: " + correctCount + "/" + totalSlots]; if (distractorCount > 0) details.push("⚠️ Fell for distractors"); details.push(hintsUsed.length > 0 ? "💡 Hints: " + [...new Set(hintsUsed)].join(", ") : "🧠 No hints used");
-  trackAttempt(status, attemptCount, details);
+function initStudentAuth() {
+    const app = document.getElementById('app');
+    app.innerHTML = `
+        <div class="max-w-md mx-auto bg-white rounded-xl shadow-lg p-8 mt-20 text-center">
+            <h1 class="text-3xl font-bold text-gray-800 mb-6">Fix the Paragraph</h1>
+            <input type="text" id="studentName" placeholder="Enter your full name" 
+                   class="w-full p-3 border-2 border-gray-300 rounded-lg mb-4 text-lg focus:border-blue-500 focus:outline-none">
+            <button onclick="startStudent()" 
+                    class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg text-lg transition duration-200">
+                Start Activity
+            </button>
+        </div>
+    `;
 }
 
-function retryActivity() { let cA = attemptCount; let cH = [...hintsUsed]; renderActivity(activities[currentGame]); attemptCount = cA; hintsUsed = cH; }
+async function startStudent() {
+    const nameInput = document.getElementById('studentName').value.trim();
+    if (!nameInput) {
+        alert('Please enter your name');
+        return;
+    }
+    studentName = nameInput;
+    
+    const app = document.getElementById('app');
+    app.innerHTML = `
+        <div class="max-w-md mx-auto mt-20 text-center">
+            <div class="loading-spinner"></div>
+            <p class="text-white text-xl mt-4">Loading activities...</p>
+        </div>
+    `;
+    
+    await loadActivities();
+    renderActivityList();
+}
 
-// ── Tracking & Teacher Tab ────────────────────────────────────
-function trackAttempt(status, attempt, details) { const params = new URLSearchParams({ name: studentName, game_id: currentGame, attempt: attempt, status: status, details: details.join(" | ") }); fetch(TRACKING_URL + "?" + params.toString(), { mode: 'no-cors' }).catch(() => {}); }
-function switchTab(tab) {
-  const tabS = document.getElementById("tab-student"); const tabT = document.getElementById("tab-teacher"); const pS = document.getElementById("panel-student"); const pT = document.getElementById("panel-teacher");
-  if(tabS) tabS.classList.toggle("active", tab === "student"); if(tabT) tabT.classList.toggle("active", tab === "teacher"); if(pS) pS.classList.toggle("hidden", tab !== "student"); if(pT) pT.classList.toggle("hidden", tab !== "teacher");
-  if (tab === "teacher") loadTeacherData();
+async function loadActivities() {
+    try {
+        const response = await fetch(LIBRARY_CSV_URL);
+        const csvText = await response.text();
+        activities = parseCSV(csvText);
+    } catch (error) {
+        console.error('Error loading activities:', error);
+        alert('Failed to load activities. Please refresh the page.');
+    }
 }
-function promptTeacherPin() { const modal = document.getElementById("pin-modal"); const input = document.getElementById("pin-input"); if (modal) modal.classList.remove("hidden"); if (input) { input.value = ""; input.focus(); } }
-function closePinModal() { const modal = document.getElementById("pin-modal"); if(modal) modal.classList.add("hidden"); }
-function submitPin() { const input = document.getElementById("pin-input"); if (!input) return; if (input.value.trim() === TEACHER_PIN) { closePinModal(); switchTab("teacher"); } else { document.getElementById("pin-error").textContent = "Incorrect PIN."; input.value = ""; input.focus(); } }
-function resetSession() { sessionStart = Date.now(); loadTeacherData(); }
-function loadTeacherData() {
-  const container = document.getElementById("teacher-results"); if(!container) return; container.innerHTML = "<p>Loading results...</p>";
-  fetch(TRACKING_CSV_URL + "&t=" + Date.now()).then(r => r.text()).then(text => { const rows = parseCSV(text); const filtered = sessionStart ? rows.filter(r => new Date(r["Timestamp"]).getTime() >= sessionStart) : rows; renderTeacherTable(filtered.reverse()); }).catch(() => { container.innerHTML = "<p>Could not load results.</p>"; });
-}
-function renderTeacherTable(rows) {
-  const container = document.getElementById("teacher-results"); if (!container) return; if (rows.length === 0) { container.innerHTML = "<p>No results yet.</p>"; return; }
-  const headers = ["Timestamp", "Name", "Game_ID", "Attempt", "Status", "Details"]; let html = "<table id='results-table'><thead><tr>"; headers.forEach(h => { html += "<th>" + h + "</th>"; }); html += "</tr></thead><tbody>"; rows.forEach(row => { html += "<tr>"; headers.forEach(h => { html += "<td>" + (row[h] || "") + "</td>"; }); html += "</tr>"; }); html += "</tbody></table>"; container.innerHTML = html;
-}
-setInterval(() => { const t = document.getElementById("panel-teacher"); if (t && !t.classList.contains("hidden")) loadTeacherData(); }, REFRESH_INTERVAL);
 
-// ── Utils ────────────────────────────────────────────────────
-function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
-function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
+function parseCSV(csv) {
+    const lines = csv.split('\n');
+    const headers = lines[0].split(',').map(h => h.trim());
+    const parsedActivities = [];
+    let currentAct = null;
+    let currentTitle = '';
+    let currentType = '';
+    let currentOverallHint = '';
+
+    for (let i = 1; i < lines.length; i++) {
+        if (!lines[i].trim()) continue;
+        
+        const row = parseCSVRow(lines[i]);
+        const rowData = {};
+        headers.forEach((header, index) => {
+            rowData[header] = row[index] ? row[index].trim() : '';
+        });
+
+        if (rowData.Title && rowData.Title !== currentTitle) {
+            currentTitle = rowData.Title;
+            currentType = rowData.Type || '';
+            currentOverallHint = rowData.Overall_Hint || '';
+            currentAct = {
+                title: currentTitle,
+                type: currentType,
+                overallHint: currentOverallHint,
+                data: []
+            };
+            parsedActivities.push(currentAct);
+        }
+
+        if (currentAct && (rowData.Text || rowData.Label)) {
+            currentAct.data.push(rowData);
+        }
+    }
+    return parsedActivities.filter(a => a.data.length > 0);
+}
+
+function parseCSVRow(row) {
+    const result = [];
+    let insideQuotes = false;
+    let currentValue = '';
+
+    for (let i = 0; i < row.length; i++) {
+        const char = row[i];
+        if (char === '"') {
+            if (insideQuotes && row[i+1] === '"') {
+                currentValue += '"';
+                i++;
+            } else {
+                insideQuotes = !insideQuotes;
+            }
+        } else if (char === ',' && !insideQuotes) {
+            result.push(currentValue);
+            currentValue = '';
+        } else {
+            currentValue += char;
+        }
+    }
+    result.push(currentValue);
+    return result;
+}
+
+function renderActivityList() {
+    forceRemoveOverflows();
+    const app = document.getElementById('app');
+    let html = `
+        <div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-8 mt-10">
+            <h2 class="text-2xl font-bold mb-6 text-gray-800">Available Activities</h2>
+            <div class="grid gap-4">
+    `;
+
+    activities.forEach((activity, index) => {
+        html += `
+            <button onclick="startActivity(${index})" 
+                    class="text-left p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition duration-200">
+                <div class="font-bold text-xl text-gray-800">${activity.title}</div>
+                <div class="text-sm text-gray-500 mt-1">${activity.type}</div>
+            </button>
+        `;
+    });
+
+    html += `</div></div>`;
+    app.innerHTML = html;
+}
+
+function startActivity(index) {
+    currentActivity = activities[index];
+    attemptCount = 0;
+    
+    isGapFill = currentActivity.data.some(row => row.Text && row.Text.includes('___'));
+
+    const app = document.getElementById('app');
+    
+    let html = `
+        <div class="max-w-6xl mx-auto mt-6 relative h-full">
+            <!-- Header -->
+            <div class="mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-3xl font-bold text-pink-500">${currentActivity.title}</h2>
+                    <button onclick="renderActivityList()" class="px-4 py-2 bg-slate-700 text-white rounded hover:bg-slate-600 transition">← All activities</button>
+                </div>
+                <p class="text-slate-300">
+                    ${isGapFill ? 'Drag the correct words/phrases into the gaps. Watch out for distractors!' : 'Drag the paragraph parts into the correct structural order. Watch out for distractors!'}
+                </p>
+                ${currentActivity.overallHint ? `<button onclick="alert('Overall Hint: ${currentActivity.overallHint.replace(/'/g, "\\'")}')" class="mt-4 px-4 py-2 bg-yellow-200 text-yellow-800 rounded font-bold hover:bg-yellow-300 shadow">💡 Need an overall hint?</button>` : ''}
+            </div>
+
+            <!-- ID TARGETED GRID CONTAINER -->
+            <div id="main-activity-grid">
+                
+                <!-- LEFT COLUMN (STICKY TARGET) -->
+                <div id="left-sticky-column" class="bg-slate-50 rounded-xl shadow-lg p-6 border-2 border-slate-200">
+                    <h3 class="font-bold text-lg mb-4 text-slate-800 text-center">Choices</h3>
+                    <div id="choices-container" class="flex flex-col gap-3 items-center">
+                        <!-- Choices injected here -->
+                    </div>
+                </div>
+
+                <!-- RIGHT COLUMN -->
+                <div class="bg-slate-50 rounded-xl shadow-lg p-6 border-2 border-slate-200">
+                    <h3 class="font-bold text-lg mb-4 text-slate-800">Paragraph Labels</h3>
+                    <div id="paragraph-container" class="bg-white p-6 rounded-lg border-2 border-slate-100 min-h-[400px]">
+                        <!-- Content injected here -->
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Fixed Check Button -->
+            <div class="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 bg-opacity-90 border-t border-slate-700 flex justify-center z-50">
+                <button onclick="checkAnswers()" class="px-8 py-3 bg-pink-500 text-white font-bold rounded-lg text-lg hover:bg-pink-600 shadow-lg transition">Check Answer</button>
+            </div>
+        </div>
+    `;
+
+    app.innerHTML = html;
+    forceRemoveOverflows();
+
+    if (isGapFill) {
+        renderGapFill();
+    } else {
+        renderParagraphBuilder();
+    }
+
+    renderChoices();
+}
+
+function renderChoices() {
+    const container = document.getElementById('choices-container');
+    container.innerHTML = '';
+    
+    let choices = [];
+    if (isGapFill) {
+        choices = currentActivity.data.map(row => ({
+            text: row.Label || row.Text || '[Missing]', 
+            type: row.Status === 'Distractor' ? 'distractor' : 'correct'
+        }));
+    } else {
+        choices = currentActivity.data.map(row => ({
+            text: row.Text,
+            type: row.Status === 'Distractor' ? 'distractor' : 'correct'
+        }));
+    }
+
+    choices = choices.sort(() => Math.random() - 0.5);
+
+    choices.forEach((choice, index) => {
+        const color = COLORS[index % COLORS.length];
+        const div = document.createElement('div');
+        div.className = 'draggable-chip p-3 rounded-lg shadow font-medium text-slate-800 text-center border-2 border-transparent';
+        div.style.backgroundColor = color;
+        div.draggable = true;
+        div.dataset.text = choice.text;
+        div.innerText = choice.text;
+        container.appendChild(div);
+    });
+
+    setupDragAndDrop();
+}
+
+function renderParagraphBuilder() {
+    const container = document.getElementById('paragraph-container');
+    container.innerHTML = '';
+    
+    const parts = currentActivity.data.filter(row => row.Status !== 'Distractor');
+
+    parts.forEach((part, index) => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'flex gap-4 mb-4 items-stretch';
+        
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'w-48 bg-slate-100 p-3 rounded-lg font-bold text-slate-700 flex flex-col justify-center items-center text-center border-2 border-slate-200';
+        labelDiv.innerHTML = `
+            ${part.Label || `Part ${index + 1}`}
+            ${part.Hint ? `<button class="mt-2 text-xl hover:scale-110 transition" onclick="alert('Hint: ${part.Hint.replace(/'/g, "\\'")}')">💡</button>` : ''}
+        `;
+
+        const dropZone = document.createElement('div');
+        dropZone.className = 'drop-zone flex-1 border-2 border-dashed border-gray-300 rounded-lg p-3 bg-slate-50 flex items-center justify-center';
+        dropZone.dataset.expected = part.Text;
+        dropZone.dataset.index = index;
+
+        rowDiv.appendChild(labelDiv);
+        rowDiv.appendChild(dropZone);
+        container.appendChild(rowDiv);
+    });
+}
+
+function renderGapFill() {
+    const container = document.getElementById('paragraph-container');
+    container.innerHTML = '';
+
+    const parts = currentActivity.data.filter(row => row.Status !== 'Distractor');
+    
+    // Check if the Type column contains "categorise" or "categorize"
+    const isCategorisation = currentActivity.type && 
+        (currentActivity.type.toLowerCase().includes('categorise') || 
+         currentActivity.type.toLowerCase().includes('categorize'));
+
+    if (isCategorisation) {
+        // CATEGORISATION MODE (Blocky Layout with colour-bleed)
+        container.className = 'flex flex-col gap-3';
+        
+        parts.forEach((part, index) => {
+            const partDiv = document.createElement('div');
+            partDiv.className = 'gap-fill-part p-3 rounded transition-colors duration-300';
+            partDiv.dataset.index = index;
+
+            let html = part.Text.replace('___', `<span class="drop-zone inline-block w-32 h-8 border-2 border-dashed border-gray-400 bg-white align-middle mx-2" data-expected="${part.Label}" data-index="${index}"></span>`);
+            
+            if (part.Hint) {
+                html += ` <button class="hint-btn ml-2 text-xl" onclick="alert('Hint: ${part.Hint.replace(/'/g, "\\'")}')">💡</button>`;
+            }
+
+            partDiv.innerHTML = html;
+            container.appendChild(partDiv);
+        });
+    } else {
+        // STANDARD GAP-FILL MODE (Inline paragraph layout, no colour bleed)
+        container.className = 'text-lg leading-loose';
+        let fullHtml = '<p class="inline-block">';
+
+        parts.forEach((part, index) => {
+            let partText = part.Text;
+            let replacedText = partText.replace('___', `<span class="drop-zone inline-block w-32 h-8 border-2 border-dashed border-gray-400 bg-white align-middle mx-2" data-expected="${part.Label}" data-index="${index}"></span>`);
+
+            if (part.Hint) {
+                 replacedText += `<button class="hint-btn text-xl ml-1 mr-2" onclick="alert('Hint: ${part.Hint.replace(/'/g, "\\'")}')">💡</button>`;
+            }
+
+            fullHtml += replacedText + ' ';
+        });
+
+        fullHtml += '</p>';
+        container.innerHTML = fullHtml;
+    }
+
+    setupDragAndDrop();
+}
+
+function updateGapColors() {
+    if (!isGapFill) return;
+    const parts = document.querySelectorAll('.gap-fill-part');
+    parts.forEach(part => {
+        const dropZone = part.querySelector('.drop-zone');
+        if (dropZone && dropZone.children.length > 0) {
+            const chip = dropZone.children[0];
+            part.style.backgroundColor = chip.style.backgroundColor;
+        } else {
+            part.style.backgroundColor = 'transparent';
+        }
+    });
+}
+
+function setupDragAndDrop() {
+    const chips = document.querySelectorAll('.draggable-chip');
+    const dropZones = document.querySelectorAll('.drop-zone');
+    const choicesContainer = document.getElementById('choices-container');
+
+    chips.forEach(chip => {
+        // Desktop Drag
+        chip.addEventListener('dragstart', handleDragStart);
+        chip.addEventListener('dragend', handleDragEnd);
+        
+        // Mobile Touch
+        chip.addEventListener('touchstart', handleTouchStart, {passive: false});
+        chip.addEventListener('touchmove', handleTouchMove, {passive: false});
+        chip.addEventListener('touchend', handleTouchEnd);
+    });
+
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragover', handleDragOver);
+        zone.addEventListener('dragleave', handleDragLeave);
+        zone.addEventListener('drop', handleDrop);
+    });
+
+    // Allow dragging back to choices container
+    choicesContainer.addEventListener('dragover', e => e.preventDefault());
+    choicesContainer.addEventListener('drop', e => {
+        e.preventDefault();
+        const data = e.dataTransfer.getData('text/plain');
+        const chip = document.querySelector(`[data-text="${data.replace(/"/g, '\\"')}"]`);
+        if (chip && chip.parentElement !== choicesContainer) {
+            choicesContainer.appendChild(chip);
+            updateGapColors();
+        }
+    });
+}
+
+// --- DESKTOP DRAG HANDLERS ---
+function handleDragStart(e) {
+    e.dataTransfer.setData('text/plain', e.target.dataset.text);
+    e.target.style.opacity = '0.5';
+}
+
+function handleDragEnd(e) {
+    e.target.style.opacity = '1';
+    document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    const zone = e.currentTarget;
+    zone.classList.remove('drag-over');
+    
+    const data = e.dataTransfer.getData('text/plain');
+    const chip = document.querySelector(`[data-text="${data.replace(/"/g, '\\"')}"]`);
+    
+    if (chip) {
+        if (zone.children.length > 0) {
+            document.getElementById('choices-container').appendChild(zone.children[0]);
+        }
+        zone.innerHTML = '';
+        zone.appendChild(chip);
+        updateGapColors();
+    }
+}
+
+// --- MOBILE TOUCH HANDLERS ---
+let activeTouchChip = null;
+let touchStartX = 0;
+let touchStartY = 0;
+let originalParent = null;
+let originalNextSibling = null;
+
+function handleTouchStart(e) {
+    if (e.target.draggable === false) return;
+    activeTouchChip = e.target;
+    const touch = e.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+    
+    originalParent = activeTouchChip.parentElement;
+    originalNextSibling = activeTouchChip.nextSibling;
+
+    const rect = activeTouchChip.getBoundingClientRect();
+    activeTouchChip.style.width = rect.width + 'px';
+    activeTouchChip.style.height = rect.height + 'px';
+    activeTouchChip.style.position = 'fixed';
+    activeTouchChip.style.zIndex = '1000';
+    activeTouchChip.style.left = rect.left + 'px';
+    activeTouchChip.style.top = rect.top + 'px';
+    activeTouchChip.style.opacity = '0.8';
+}
+
+function handleTouchMove(e) {
+    if (!activeTouchChip) return;
+    e.preventDefault(); 
+    const touch = e.touches[0];
+    const dx = touch.clientX - touchStartX;
+    const dy = touch.clientY - touchStartY;
+    
+    const rect = activeTouchChip.getBoundingClientRect();
+    activeTouchChip.style.left = (rect.left + dx) + 'px';
+    activeTouchChip.style.top = (rect.top + dy) + 'px';
+    
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+
+    // Highlight drop zones
+    document.querySelectorAll('.drop-zone').forEach(zone => {
+        const zoneRect = zone.getBoundingClientRect();
+        if (touch.clientX >= zoneRect.left && touch.clientX <= zoneRect.right &&
+            touch.clientY >= zoneRect.top && touch.clientY <= zoneRect.bottom) {
+            zone.classList.add('drop-zone-active');
+        } else {
+            zone.classList.remove('drop-zone-active');
+        }
+    });
+}
+
+function handleTouchEnd(e) {
+    if (!activeTouchChip) return;
+    
+    const touch = e.changedTouches[0];
+    let droppedInZone = false;
+
+    document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.classList.remove('drop-zone-active');
+        const zoneRect = zone.getBoundingClientRect();
+        
+        if (touch.clientX >= zoneRect.left && touch.clientX <= zoneRect.right &&
+            touch.clientY >= zoneRect.top && touch.clientY <= zoneRect.bottom) {
+            
+            if (zone.children.length > 0) {
+                document.getElementById('choices-container').appendChild(zone.children[0]);
+            }
+            
+            activeTouchChip.style.position = 'static';
+            activeTouchChip.style.width = 'fit-content';
+            activeTouchChip.style.height = 'auto';
+            activeTouchChip.style.opacity = '1';
+            zone.innerHTML = '';
+            zone.appendChild(activeTouchChip);
+            droppedInZone = true;
+        }
+    });
+
+    if (!droppedInZone) {
+        // Return to choices container if dropped outside
+        activeTouchChip.style.position = 'static';
+        activeTouchChip.style.width = 'fit-content';
+        activeTouchChip.style.height = 'auto';
+        activeTouchChip.style.opacity = '1';
+        document.getElementById('choices-container').appendChild(activeTouchChip);
+    }
+
+    activeTouchChip = null;
+    updateGapColors();
+}
+
+function checkAnswers() {
+    attemptCount++;
+    let allCorrect = true;
+    let missingAnswers = false;
+    let details = [];
+
+    if (isGapFill) {
+        const dropZones = document.querySelectorAll('.drop-zone');
+        dropZones.forEach(zone => {
+            if (zone.children.length === 0) {
+                missingAnswers = true;
+                zone.classList.add('border-red-500');
+            } else {
+                const chip = zone.children[0];
+                const expected = zone.dataset.expected;
+                const actual = chip.dataset.text;
+                
+                details.push(`Gap ${parseInt(zone.dataset.index)+1}: ${actual === expected ? 'Correct' : 'Incorrect'}`);
+
+                if (actual === expected) {
+                    chip.style.backgroundColor = '#86efac'; 
+                    chip.draggable = false;
+                    zone.classList.remove('border-gray-400', 'border-dashed', 'border-red-500');
+                    zone.classList.add('border-green-500', 'border-solid');
+                } else {
+                    allCorrect = false;
+                    zone.classList.add('border-red-500');
+                    // Return incorrect chip to choices container
+                    document.getElementById('choices-container').appendChild(chip);
+                }
+            }
+        });
+        updateGapColors();
+    } else {
+        const dropZones = document.querySelectorAll('.drop-zone');
+        dropZones.forEach((zone, index) => {
+            if (zone.children.length === 0) {
+                missingAnswers = true;
+                zone.classList.add('border-red-500');
+            } else {
+                const chip = zone.children[0];
+                const expected = zone.dataset.expected;
+                const actual = chip.dataset.text;
+                
+                details.push(`Part ${index+1}: ${actual === expected ? 'Correct' : 'Incorrect'}`);
+
+                if (actual === expected) {
+                    chip.style.backgroundColor = '#86efac';
+                    chip.draggable = false;
+                    zone.classList.remove('border-gray-300', 'border-dashed', 'border-red-500');
+                    zone.classList.add('border-green-500', 'border-solid');
+                } else {
+                    allCorrect = false;
+                    zone.classList.add('border-red-500');
+                    // Return incorrect chip to choices container
+                    document.getElementById('choices-container').appendChild(chip);
+                }
+            }
+        });
+    }
+
+    if (missingAnswers) {
+        alert('Please fill all slots before checking!');
+        return;
+    }
+
+    const status = allCorrect ? 'Completed' : 'Attempted';
+    
+    // SEND DATA TO TRACKING SHEET
+    fetch(TRACKING_URL, {
+        method: 'POST',
+        mode: 'no-cors',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: studentName,
+            gameId: currentActivity.title,
+            attempt: attemptCount,
+            status: status,
+            details: details.join(' | ')
+        })
+    }).catch(err => console.error('Tracking Error:', err));
+
+    if (allCorrect) {
+        alert(`Congratulations! You completed the activity in ${attemptCount} attempt(s)!`);
+        renderActivityList();
+    } else {
+        alert('Some answers are incorrect. Incorrect items have been returned to the choices box. Try again!');
+    }
+}
+
+// ==========================================
+// TEACHER DASHBOARD LOGIC
+// ==========================================
+function initTeacherView() {
+    const app = document.getElementById('app');
+    app.innerHTML = `
+        <div class="max-w-6xl mx-auto p-8">
+            <div class="flex justify-between items-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-800">Teacher Dashboard</h1>
+                <div class="text-sm text-gray-500 flex items-center gap-4">
+                    <span id="last-refresh">Last updated: Just now</span>
+                    <button onclick="fetchTeacherData()" class="px-4 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition">
+                        Force Refresh
+                    </button>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
+                    <h3 class="text-gray-500 font-medium mb-2">Total Students</h3>
+                    <div id="stat-students" class="text-3xl font-bold text-blue-600">-</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
+                    <h3 class="text-gray-500 font-medium mb-2">Total Attempts</h3>
+                    <div id="stat-attempts" class="text-3xl font-bold text-pink-500">-</div>
+                </div>
+                <div class="bg-white p-6 rounded-xl shadow border border-gray-100">
+                    <h3 class="text-gray-500 font-medium mb-2">Completion Rate</h3>
+                    <div id="stat-completion" class="text-3xl font-bold text-green-500">-</div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow overflow-hidden border border-gray-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 border-b border-gray-200">
+                                <th class="p-4 font-semibold">Time</th>
+                                <th class="p-4 font-semibold">Student Name</th>
+                                <th class="p-4 font-semibold">Activity Title</th>
+                                <th class="p-4 font-semibold text-center">Attempt</th>
+                                <th class="p-4 font-semibold text-center">Status</th>
+                                <th class="p-4 font-semibold">Details</th>
+                            </tr>
+                        </thead>
+                        <tbody id="teacher-table-body" class="divide-y divide-gray-100">
+                            <tr><td colspan="6" class="p-8 text-center text-gray-400">Loading student data...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
+
+    fetchTeacherData();
+    setInterval(fetchTeacherData, 15000); 
+}
+
+async function fetchTeacherData() {
+    const TRACKING_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv';
+    
+    try {
+        const response = await fetch(TRACKING_CSV_URL + '&t=' + new Date().getTime());
+        const csvText = await response.text();
+        
+        const lines = csvText.split('\n');
+        if (lines.length <= 1) {
+            document.getElementById('teacher-table-body').innerHTML = `<tr><td colspan="6" class="p-8 text-center text-gray-500 italic">No student data recorded yet.</td></tr>`;
+            return;
+        }
+
+        const dataRows = lines.slice(1).filter(line => line.trim().length > 0);
+        dataRows.reverse(); 
+
+        const uniqueStudents = new Set();
+        let completions = 0;
+
+        let html = '';
+        dataRows.forEach(row => {
+            const cols = parseCSVRow(row);
+            if (cols.length >= 5) {
+                const dateRaw = cols[0];
+                const name = cols[1];
+                const gameId = cols[2];
+                const attempt = cols[3] || '1';
+                const status = cols[4];
+                const details = cols[5] || '';
+
+                uniqueStudents.add(name);
+                if (status.toLowerCase() === 'completed') completions++;
+
+                let statusBadge = status.toLowerCase() === 'completed' 
+                    ? '<span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">Completed</span>'
+                    : '<span class="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm font-medium">Attempted</span>';
+
+                const formattedTime = new Date(dateRaw).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+
+                // Format Details for better readability
+                let formattedDetails = details;
+                if (details) {
+                    formattedDetails = details.split(' | ').map(detail => {
+                        if (detail.includes('Incorrect')) return `<span class="text-red-500">${detail}</span>`;
+                        if (detail.includes('Correct')) return `<span class="text-green-500">${detail}</span>`;
+                        return detail;
+                    }).join('<br>');
+                }
+
+                html += `
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="p-4 text-sm text-gray-500 whitespace-nowrap">${formattedTime}</td>
+                        <td class="p-4 font-medium text-gray-800">${name}</td>
+                        <td class="p-4 text-gray-600">${gameId}</td>
+                        <td class="p-4 text-center font-bold text-gray-600">${attempt}</td>
+                        <td class="p-4 text-center">${statusBadge}</td>
+                        <td class="p-4 text-sm text-gray-500">${formattedDetails}</td>
+                    </tr>
+                `;
+            }
+        });
+
+        document.getElementById('teacher-table-body').innerHTML = html;
+        
+        document.getElementById('stat-students').innerText = uniqueStudents.size;
+        document.getElementById('stat-attempts').innerText = dataRows.length;
+        const rate = dataRows.length > 0 ? Math.round((completions / dataRows.length) * 100) : 0;
+        document.getElementById('stat-completion').innerText = `${rate}%`;
+
+        const now = new Date();
+        document.getElementById('last-refresh').innerText = `Last updated: ${now.toLocaleTimeString()}`;
+
+    } catch (error) {
+        console.error('Error fetching teacher data:', error);
+    }
+}
