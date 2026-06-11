@@ -3,18 +3,180 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fix the Paragraph</title>
+    <title>Paragraph Fixer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Prevent unwanted horizontal scrolling */
-        body { overflow-x: hidden; }
+        body {
+            /* Dark Mode Neon / Sunrise Gradient */
+            background: linear-gradient(135deg, #0f172a 0%, #3b0764 50%, #1e1b4b 100%);
+            color: #f8fafc;
+            min-height: 100vh;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        /* The glowing neon border at the top of panels */
+        .glass-panel::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, #ec4899, #8b5cf6, #3b82f6);
+            border-top-left-radius: inherit;
+            border-top-right-radius: inherit;
+        }
+
+        /* Soft rounded rectangles for chips, NEVER circles */
+        .draggable-chip {
+            border-radius: 0.5rem !important; /* Tailwind rounded-lg */
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+            font-weight: 600;
+            color: #1e293b; /* Dark text for contrast on pastel */
+        }
+        
+        .draggable-chip:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px -1px rgba(0, 0, 0, 0.3);
+        }
+
+        .drop-slot {
+            transition: all 0.3s ease;
+            min-height: 48px;
+            min-width: 150px;
+        }
+
+        /* Specific styles for Categorisation (slot above text) */
+        .drop-slot.categorisation-slot {
+            border: 2px dashed rgba(255, 255, 255, 0.3);
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .drop-slot.categorisation-slot.filled {
+            border: 2px solid transparent; /* Hide dashed border when filled */
+        }
+
+        /* Specific styles for Gap Fill (inline slots) */
+        .drop-slot.inline-slot {
+            display: inline-flex;
+            vertical-align: middle;
+            border-bottom: 2px dashed rgba(255, 255, 255, 0.5);
+            margin: 0 0.5rem;
+            min-width: 120px;
+        }
+        
+        .drop-slot.inline-slot.filled {
+            border-bottom: none;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.2); }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.4); }
     </style>
 </head>
-<body class="bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 min-h-screen text-slate-100 font-sans">
-    <div id="app">
-        <!-- App engine injects here -->
+<body class="antialiased overflow-x-hidden flex flex-col items-center justify-center p-4">
+
+    <!-- LOGIN SCREEN (With the Lovely Neon Toggle) -->
+    <div id="login-section" class="w-full max-w-md mx-auto relative z-10 pt-10">
+        <h1 class="text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-400 mb-8 text-center drop-shadow-lg tracking-tight">Paragraph Fixer</h1>
+        
+        <div class="glass-panel p-8 rounded-2xl">
+            <!-- The Neon Toggle Switch -->
+            <div class="flex items-center justify-center space-x-4 mb-8">
+                <span id="label-student" class="text-lg font-bold text-white transition-colors">Student</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                    <input type="checkbox" id="role-toggle" class="sr-only peer">
+                    <div class="w-16 h-8 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-gradient-to-r after:from-pink-500 after:to-purple-500 after:rounded-full after:h-6 after:w-6 after:transition-all border border-white/20 shadow-[0_0_15px_rgba(236,72,153,0.3)] peer-checked:shadow-[0_0_15px_rgba(168,85,247,0.3)]"></div>
+                </label>
+                <span id="label-teacher" class="text-lg font-bold text-white/40 transition-colors">Teacher</span>
+            </div>
+
+            <!-- Student Form -->
+            <div id="student-login-form">
+                <input type="text" id="student-name" placeholder="Enter your first name..." class="w-full p-4 mb-6 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-pink-400 text-lg transition-all shadow-inner">
+                <button id="login-btn" class="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-400 hover:to-purple-400 text-white font-bold py-4 px-6 rounded-xl shadow-[0_0_20px_rgba(236,72,153,0.4)] transform hover:-translate-y-1 transition-all text-xl">Let's Go!</button>
+            </div>
+
+            <!-- Teacher Form -->
+            <div id="teacher-login-form" class="hidden">
+                <input type="password" id="teacher-pin" placeholder="Enter Teacher PIN..." class="w-full p-4 mb-6 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-purple-400 text-lg transition-all shadow-inner">
+                <button id="teacher-login-btn" class="w-full bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-400 hover:to-blue-400 text-white font-bold py-4 px-6 rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] transform hover:-translate-y-1 transition-all text-xl">Access Dashboard</button>
+                <p id="teacher-error" class="text-pink-400 text-sm mt-3 text-center hidden font-medium"></p>
+            </div>
+        </div>
     </div>
-    <!-- This v=42 forces the browser to forget the glitchy version! -->
-    <script src="app.js?v=43"></script>
+
+    <!-- STUDENT DASHBOARD (Whole screen filled) -->
+    <div id="dashboard-section" class="hidden w-full max-w-[1600px] mx-auto pt-6">
+        <div class="flex justify-between items-center mb-10 px-4">
+            <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-white/70 tracking-tight">Student Dashboard</h2>
+            <div class="flex items-center gap-6">
+                <span id="welcome-message" class="text-lg font-medium text-pink-300"></span>
+                <button id="logout-btn" class="px-5 py-2 glass-panel rounded-lg hover:bg-white/10 transition-colors text-white font-semibold border-white/20 border">Logout</button>
+            </div>
+        </div>
+        <div id="activities-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 px-4">
+            <!-- Activity Cards injected here -->
+        </div>
+    </div>
+
+    <!-- GAME SECTION (Whole screen filled) -->
+    <div id="game-section" class="hidden w-full max-w-[1600px] mx-auto pt-6 pb-20">
+        <div class="flex justify-between items-center mb-8 px-4">
+            <button id="back-btn" class="px-5 py-2 glass-panel rounded-lg hover:bg-white/10 transition-colors text-white font-semibold flex items-center gap-2 border border-white/20">
+                <span>←</span> Back to Dashboard
+            </button>
+            <h2 id="game-title" class="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-blue-400 tracking-tight text-center flex-1 mx-4"></h2>
+            <div class="w-[120px]"></div> <!-- Spacer for centering -->
+        </div>
+        
+        <div id="game-content" class="w-full">
+            <!-- App.js will inject the Categorisation OR Gap-Fill layout here -->
+        </div>
+    </div>
+
+    <!-- TEACHER DASHBOARD (Whole screen filled) -->
+    <div id="teacher-dashboard" class="hidden w-full max-w-[1600px] mx-auto pt-6">
+        <div class="flex justify-between items-center mb-10 px-4">
+            <h2 class="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400 tracking-tight">Teacher Dashboard</h2>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-blue-300 glass-panel px-3 py-1 rounded-full border border-white/10">Auto-refreshes every 15s</span>
+                <button id="teacher-logout-btn" class="px-5 py-2 glass-panel rounded-lg hover:bg-white/10 transition-colors text-white font-semibold border border-white/20">Logout</button>
+            </div>
+        </div>
+        
+        <div class="glass-panel p-6 rounded-2xl overflow-x-auto mx-4">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-white/20">
+                        <th class="p-4 text-white font-semibold">Time</th>
+                        <th class="p-4 text-white font-semibold">Student</th>
+                        <th class="p-4 text-white font-semibold">Activity</th>
+                        <th class="p-4 text-white font-semibold">Attempt</th>
+                        <th class="p-4 text-white font-semibold">Status</th>
+                        <th class="p-4 text-white font-semibold">Details</th>
+                    </tr>
+                </thead>
+                <tbody id="teacher-data" class="text-white/80">
+                    <!-- Tracking data injected here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="app.js?v=40"></script>
 </body>
 </html>
