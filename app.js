@@ -1,5 +1,5 @@
 // =========================================================================
-// Fix the Paragraph — app.js (v23 - Sticky Sidebar & Auto-Width Layout)
+// Fix the Paragraph — app.js (v24 - Brute Force Sticky & Auto-Width)
 // =========================================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -50,7 +50,7 @@ function injectStyles() {
     /* Loading Spinner Animation */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     
-    /* NEW: V23 Dynamic Layout Fixes */
+    /* NEW: V24 Brute Force Layout Fixes */
     #choice-pool { min-height: 150px; padding-bottom: 20px; }
     .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
     
@@ -60,21 +60,21 @@ function injectStyles() {
         max-width: 100%; 
     }
 
-    /* Override the 50/50 split and make the left panel beautifully sticky */
+    /* Brute Force IDs to override standard HTML templates */
     @media (min-width: 768px) {
-        .activity-grid-layout {
-            grid-template-columns: 320px 1fr !important; /* Left gets 320px, Right gets ALL remaining space */
-            align-items: start !important; /* STOPS the left box from stretching, allowing it to stick */
+        #main-activity-grid {
+            display: grid !important;
+            grid-template-columns: 320px 1fr !important;
+            align-items: start !important;
         }
     }
     
-    .sticky-left-panel {
+    #left-sticky-column {
         position: -webkit-sticky !important;
         position: sticky !important;
         top: 2rem !important;
-        height: max-content !important;
-        max-height: 85vh;
-        overflow-y: auto;
+        max-height: 85vh !important;
+        overflow-y: auto !important;
         scrollbar-width: thin;
     }
   `;
@@ -391,16 +391,14 @@ function renderActivity(game) {
   document.getElementById("btn-retry").style.display = "none";
   
   // =======================================================
-  // V23: APPLY STICKY LEFT PANEL & GRID WIDTH OVERRIDE
+  // V24: BRUTE FORCE STICKY LEFT PANEL & WIDTH
   // =======================================================
   const poolEl = document.getElementById("choice-pool");
   if (poolEl && poolEl.parentElement) {
-      // 1. Target the left white box and make it sticky
-      poolEl.parentElement.classList.add("sticky-left-panel");
-      
-      // 2. Target the main grid and force the 320px vs 1fr split
+      // Forcibly inject IDs so our CSS can find and manipulate the layout
+      poolEl.parentElement.id = "left-sticky-column";
       const gridEl = poolEl.parentElement.parentElement;
-      if (gridEl) gridEl.classList.add("activity-grid-layout");
+      if (gridEl) gridEl.id = "main-activity-grid";
   }
 }
 
