@@ -4,17 +4,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Fix the Paragraph</title>
-  <link rel="stylesheet" href="style.css?v=4">
+  <link rel="stylesheet" href="style.css?v=29">
 </head>
 <body>
   <div id="app">
     <h1 id="app-title">Fix the Paragraph</h1>
-
     <div id="tab-bar">
       <button id="tab-student" class="tab-btn active">Student</button>
       <button id="tab-teacher" class="tab-btn">Teacher</button>
     </div>
-
+    
     <!-- Student Panel -->
     <div id="panel-student">
       <!-- Name Entry -->
@@ -28,7 +27,7 @@
           <button id="btn-start" class="btn btn-primary">Start</button>
         </div>
       </div>
-
+      
       <!-- Loading -->
       <div id="screen-loading" class="screen">
         <div class="card center-card">
@@ -36,7 +35,7 @@
           <p class="subtitle loading-text">Loading activities…</p>
         </div>
       </div>
-
+      
       <!-- Library -->
       <div id="screen-library" class="screen">
         <div class="card">
@@ -44,7 +43,7 @@
           <div id="library-list" class="library-list"></div>
         </div>
       </div>
-
+      
       <!-- Activity Screen -->
       <div id="screen-activity" class="screen">
         <div class="card">
@@ -52,12 +51,9 @@
             <h2 id="activity-title" class="section-heading">Activity Title</h2>
             <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
           </div>
-
           <p class="instruction" id="game-instructions"></p>
-
           <!-- Overall Hint will inject here -->
           <div id="overall-hint-container"></div>
-
           <!-- Side-by-side Workspace -->
           <div class="workspace">
             <div class="panel-left">
@@ -69,7 +65,6 @@
               <div id="drop-zone" class="pool drop-zone-slots"></div>
             </div>
           </div>
-
           <div class="activity-footer">
             <button id="btn-check" class="btn primary">Check Answer</button>
             <button id="btn-retry" class="btn secondary" style="display:none;">Retry</button>
@@ -77,7 +72,7 @@
           </div>
         </div>
       </div>
-      
+
       <!-- Error Screen -->
       <div id="screen-error" class="screen">
         <div class="card center-card">
@@ -86,9 +81,8 @@
           <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 15px;">Refresh Page</button>
         </div>
       </div>
-
     </div> <!-- End Student Panel -->
-
+    
     <!-- Teacher Panel -->
     <div id="panel-teacher" class="hidden">
       <div class="card">
@@ -101,9 +95,8 @@
         </div>
       </div>
     </div> <!-- End Teacher Panel -->
-
   </div> <!-- End App -->
-
+  
   <!-- PIN Modal -->
   <div id="pin-modal" class="hidden">
     <div id="pin-modal-box">
@@ -117,8 +110,8 @@
       </div>
     </div>
   </div>
-   
-  <!-- Using ?v=6 to force the browser to clear the crash cache -->
+
+  <!-- Updated to v29 to ensure the newest javascript loads -->
   <script src="app.js?v=29"></script>
 </body>
 </html>
