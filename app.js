@@ -1,575 +1,499 @@
 // --- CONFIGURATION ---
 const LIBRARY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv';
-const TRACKING_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv';
 const TRACKING_URL = 'https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec';
-
-// Pastel colors with dark text mapping
+const TEACHER_PIN = '@pple';
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
 
-// --- APP STATE ---
-let state = {
-    activities: [],
-    currentUser: '',
-    isTeacher: false,
-    currentActivity: null,
-    attempts: 0,
-    trackingInterval: null
-};
+// --- STATE ---
+let activities = {};
+let currentUser = null;
+let currentGame = null;
+let attemptNumber = 0;
+let usedHints = false;
 
-// --- INITIALIZATION ---
-async function init() {
-    await loadData();
-    renderLogin();
+// --- DOM ELEMENTS ---
+const loginSection = document.getElementById('login-section');
+const dashboardSection = document.getElementById('dashboard-section');
+const gameSection = document.getElementById('game-section');
+const teacherDashboard = document.getElementById('teacher-dashboard');
+
+// Neon Toggle Elements
+const roleToggle = document.getElementById('role-toggle');
+const studentForm = document.getElementById('student-login-form');
+const teacherForm = document.getElementById('teacher-login-form');
+const labelStudent = document.getElementById('label-student');
+const labelTeacher = document.getElementById('label-teacher');
+
+// --- ROBUST CSV PARSER (The Fix for the Comma Bug) ---
+function parseCSV(text) {
+    const result = [];
+    let row = [];
+    let inQuotes = false;
+    let val = "";
+    for (let i = 0; i < text.length; i++) {
+        let char = text[i];
+        if (char === '"') {
+            if (inQuotes && text[i+1] === '"') {
+                val += '"'; i++; // escaped quote inside quote
+            } else {
+                inQuotes = !inQuotes; // toggle quote state
+            }
+        } else if (char === ',' && !inQuotes) {
+            row.push(val.trim());
+            val = "";
+        } else if (char === '\n' && !inQuotes) {
+            row.push(val.trim());
+            result.push(row);
+            row = [];
+            val = "";
+        } else if (char !== '\r') {
+            val += char;
+        }
+    }
+    if (val || row.length > 0) {
+        row.push(val.trim());
+        result.push(row);
+    }
+    return result;
 }
 
-// --- DATA LOADING & PARSING ---
-async function loadData() {
+// --- INITIALIZATION & DATA LOADING ---
+async function init() {
     try {
         const response = await fetch(LIBRARY_CSV_URL);
         const csvText = await response.text();
-        state.activities = parseCSV(csvText);
-    } catch (error) {
-        console.error("Error loading library data:", error);
-        alert("Failed to load activities. Please check your Google Sheet connection.");
-    }
-}
+        const rows = parseCSV(csvText);
+        const headers = rows[0].map(h => h.trim());
 
-function parseCSV(csv) {
-    const lines = csv.split('\n');
-    const headers = lines[0].split(',').map(h => h.trim());
-    
-    let parsedActivities = [];
-    let currentActivity = null;
+        let currentTitle = "";
+        let currentType = "";
+        let currentOverallHint = "";
 
-    for (let i = 1; i < lines.length; i++) {
-        if (!lines[i].trim()) continue;
-        
-        // Handle commas inside quotes properly
-        const row = lines[i].match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || lines[i].split(',');
-        const cleanRow = row.map(cell => cell.replace(/^"|"$/g, '').trim());
+        // Smart Data Parser
+        for (let i = 1; i < rows.length; i++) {
+            const row = rows[i];
+            if (!row || row.length < 2) continue;
 
-        const title = cleanRow[headers.indexOf('Title')] || '';
-        const type = cleanRow[headers.indexOf('Type')] || '';
-        const text = cleanRow[headers.indexOf('Text')] || '';
-        const label = cleanRow[headers.indexOf('Label')] || '';
-        const overallHint = cleanRow[headers.indexOf('Overall_Hint')] || '';
-        const status = cleanRow[headers.indexOf('Status')] || '';
+            const titleCell = row[headers.indexOf('Title')] || "";
+            const typeCell = row[headers.indexOf('Type')] || "";
+            const textCell = row[headers.indexOf('Text')] || "";
+            const labelCell = row[headers.indexOf('Label')] || "";
+            const hintCell = row[headers.indexOf('Hint')] || "";
+            const overallHintCell = row[headers.indexOf('Overall_Hint')] || "";
+            const statusCell = row[headers.indexOf('Status')] || "";
 
-        if (title && title !== (currentActivity ? currentActivity.title : '')) {
-            if (currentActivity) parsedActivities.push(currentActivity);
-            currentActivity = {
-                title: title,
-                type: type,
-                overallHint: overallHint,
-                parts: [],
-                labels: [],
-                distractors: [],
-                isDualMode: false 
-            };
-        }
+            if (titleCell) currentTitle = titleCell;
+            if (typeCell) currentType = typeCell;
+            if (overallHintCell) currentOverallHint = overallHintCell;
 
-        if (currentActivity) {
-            // Check for distractor in either Type or Status column
-            if (type.toLowerCase().includes('distractor') || status.toLowerCase().includes('distractor')) {
-                if (label) currentActivity.distractors.push(label);
-            } else {
-                if (text) {
-                    currentActivity.parts.push(text);
-                    if (text.includes('___')) currentActivity.isDualMode = true;
-                }
-                if (label) currentActivity.labels.push(label);
+            if (!currentTitle) continue;
+
+            if (!activities[currentTitle]) {
+                activities[currentTitle] = {
+                    title: currentTitle,
+                    type: currentType,
+                    overallHint: currentOverallHint,
+                    items: []
+                };
             }
-            
-            if (!currentActivity.type && type) currentActivity.type = type;
-            if (!currentActivity.overallHint && overallHint) currentActivity.overallHint = overallHint;
+
+            const isDistractor = (statusCell && statusCell.toLowerCase().includes('distractor')) || 
+                                 (typeCell && typeCell.toLowerCase().includes('distractor'));
+
+            if (textCell || labelCell || isDistractor) {
+                activities[currentTitle].items.push({
+                    text: textCell,
+                    label: labelCell,
+                    hint: hintCell,
+                    isDistractor: isDistractor
+                });
+            }
         }
+        console.log("Parsed Activities Successfully:", activities);
+    } catch (error) {
+        console.error("Error loading activities:", error);
+        alert("Failed to load activities. Please check the Google Sheet connection.");
     }
-    if (currentActivity) parsedActivities.push(currentActivity);
-    return parsedActivities;
 }
 
-// --- SCREENS ---
-
-function renderLogin() {
-    const app = document.getElementById('app');
-    app.className = "min-h-screen bg-gradient-to-br from-[#1e1b4b] to-[#2e2366] text-gray-800 relative font-sans flex flex-col items-center justify-center p-4";
-    app.innerHTML = `
-        <!-- Neon Top Bar -->
-        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 shadow-[0_0_15px_rgba(236,72,153,0.8)]"></div>
-
-        <!-- The Lovely Neon Toggle for Teacher Login -->
-        <div class="absolute top-6 right-6 flex items-center space-x-3 bg-white/5 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10">
-            <span class="text-white text-sm font-medium">Student</span>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="roleToggle" class="sr-only peer" onchange="handleRoleToggle(this)">
-                <div class="w-14 h-7 bg-indigo-950/80 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-gradient-to-r peer-checked:from-pink-500 peer-checked:to-purple-500 shadow-[0_0_10px_rgba(236,72,153,0.3)] peer-checked:shadow-[0_0_15px_rgba(236,72,153,0.8)] border border-indigo-400/30"></div>
-            </label>
-            <span class="text-pink-300 text-sm font-medium drop-shadow-[0_0_5px_rgba(236,72,153,0.5)]">Teacher</span>
-        </div>
-
-        <div class="max-w-md w-full bg-white/10 backdrop-blur-md rounded-2xl p-10 shadow-2xl border border-white/20 text-center relative overflow-hidden">
-            <div class="absolute -top-10 -left-10 w-32 h-32 bg-pink-500/20 rounded-full blur-2xl"></div>
-            <div class="absolute -bottom-10 -right-10 w-32 h-32 bg-blue-500/20 rounded-full blur-2xl"></div>
-            
-            <h1 class="text-5xl font-extrabold mb-8 bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 drop-shadow-sm relative z-10">Welcome</h1>
-            <input type="text" id="studentName" placeholder="Enter your first name" class="w-full p-4 mb-6 rounded-xl border-2 border-indigo-300/30 bg-indigo-900/40 text-white placeholder-indigo-300 focus:border-pink-400 focus:ring-2 focus:ring-pink-400 outline-none transition-all text-lg text-center shadow-inner relative z-10">
-            <button onclick="login()" class="w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold py-4 px-8 rounded-xl hover:from-pink-400 hover:to-purple-500 transition-all transform hover:scale-[1.02] shadow-[0_0_20px_rgba(236,72,153,0.4)] text-lg relative z-10">
-                Start Activities
-            </button>
-        </div>
-    `;
-}
-
-window.handleRoleToggle = function(checkbox) {
-    if (checkbox.checked) {
-        const pin = prompt("Enter Teacher PIN to access dashboard:");
-        if (pin === "@pple") {
-            state.isTeacher = true;
-            state.currentUser = "Teacher";
-            renderTeacherDashboard();
+// --- NEON TOGGLE LOGIC ---
+if(roleToggle) {
+    roleToggle.addEventListener('change', (e) => {
+        if(e.target.checked) {
+            // Teacher Mode
+            studentForm.classList.add('hidden');
+            teacherForm.classList.remove('hidden');
+            labelStudent.classList.replace('text-white', 'text-white/40');
+            labelTeacher.classList.replace('text-white/40', 'text-white');
         } else {
-            alert("Incorrect PIN.");
-            checkbox.checked = false; // flip back to student
+            // Student Mode
+            teacherForm.classList.add('hidden');
+            studentForm.classList.remove('hidden');
+            labelTeacher.classList.replace('text-white', 'text-white/40');
+            labelStudent.classList.replace('text-white/40', 'text-white');
         }
-    }
-};
-
-function login() {
-    const nameInput = document.getElementById('studentName').value.trim();
-    if (!nameInput) {
-        alert("Please enter your name.");
-        return;
-    }
-    state.currentUser = nameInput;
-    state.isTeacher = false;
-    renderActivityDashboard();
-}
-
-function renderActivityDashboard() {
-    const app = document.getElementById('app');
-    app.className = "min-h-screen bg-gradient-to-br from-[#1e1b4b] to-[#2e2366] text-gray-800 relative font-sans p-8";
-    
-    let html = `
-        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 shadow-[0_0_15px_rgba(236,72,153,0.8)]"></div>
-        <div class="w-full max-w-[1600px] mx-auto pt-4">
-            <div class="flex justify-between items-center mb-10">
-                <h1 class="text-4xl font-extrabold text-white">Student Dashboard</h1>
-                <div class="flex items-center space-x-4">
-                    <span class="text-pink-300 font-medium">Hello, ${state.currentUser}</span>
-                    <button onclick="renderLogin()" class="px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 backdrop-blur transition-all text-sm">Logout</button>
-                </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-    `;
-
-    state.activities.forEach((activity, index) => {
-        html += `
-            <div class="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 shadow-xl hover:shadow-2xl transition-all transform hover:-translate-y-1 cursor-pointer flex flex-col justify-between" onclick="openActivity(${index})">
-                <div>
-                    <h3 class="text-2xl font-bold text-white mb-2">${activity.title}</h3>
-                    <span class="inline-block px-3 py-1 bg-pink-500/20 text-pink-300 rounded-full text-xs font-semibold mb-4 border border-pink-500/30">
-                        ${activity.type.includes('Categorisation') || activity.type.includes('Categorize') ? 'Categorisation' : 'Gap-Fill'}
-                    </span>
-                </div>
-                <button class="mt-4 w-full bg-gradient-to-r from-pink-500 to-purple-600 text-white font-semibold py-2 rounded-lg hover:from-pink-400 hover:to-purple-500 transition-all shadow-[0_0_10px_rgba(236,72,153,0.3)]">
-                    Start Activity
-                </button>
-            </div>
-        `;
     });
-
-    html += `</div></div>`;
-    app.innerHTML = html;
 }
 
-// --- ACTIVITY RENDERING ---
+// --- AUTHENTICATION ---
+document.getElementById('login-btn').addEventListener('click', () => {
+    const nameInput = document.getElementById('student-name').value.trim();
+    if (nameInput) {
+        currentUser = nameInput;
+        document.getElementById('welcome-message').innerText = `Hello, ${currentUser}`;
+        showSection(dashboardSection);
+        renderDashboard();
+    } else {
+        alert("Please enter your name.");
+    }
+});
 
-function openActivity(index) {
-    state.currentActivity = state.activities[index];
-    state.attempts = 0;
+document.getElementById('teacher-login-btn').addEventListener('click', () => {
+    const pin = document.getElementById('teacher-pin').value;
+    const errorMsg = document.getElementById('teacher-error');
+    if (pin === TEACHER_PIN) {
+        errorMsg.classList.add('hidden');
+        showSection(teacherDashboard);
+        loadTeacherData();
+        setInterval(loadTeacherData, 15000); // Auto-refresh 15s
+    } else {
+        errorMsg.innerText = "Incorrect PIN";
+        errorMsg.classList.remove('hidden');
+    }
+});
+
+document.getElementById('logout-btn').addEventListener('click', () => { currentUser = null; showSection(loginSection); });
+document.getElementById('teacher-logout-btn').addEventListener('click', () => { showSection(loginSection); document.getElementById('teacher-pin').value = ''; });
+document.getElementById('back-btn').addEventListener('click', () => { showSection(dashboardSection); });
+
+// --- UTILS ---
+function showSection(section) {
+    [loginSection, dashboardSection, gameSection, teacherDashboard].forEach(s => s.classList.add('hidden'));
+    section.classList.remove('hidden');
+}
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+// --- STUDENT DASHBOARD ---
+function renderDashboard() {
+    const container = document.getElementById('activities-container');
+    container.innerHTML = '';
+
+    Object.values(activities).forEach(activity => {
+        const card = document.createElement('div');
+        card.className = 'glass-panel p-6 rounded-2xl flex flex-col justify-between hover:scale-[1.02] transition-transform cursor-pointer h-48';
+        
+        const isCategorisation = activity.type && (activity.type.toLowerCase().includes('categorisation') || activity.type.toLowerCase().includes('categorize'));
+        const typeBadge = isCategorisation ? 'Categorisation' : 'Gap-Fill';
+        
+        card.innerHTML = `
+            <div>
+                <h3 class="text-2xl font-bold text-white mb-2 drop-shadow-md">${activity.title}</h3>
+                <span class="text-xs font-semibold px-3 py-1 bg-white/10 text-pink-300 rounded-full border border-white/20">${typeBadge}</span>
+            </div>
+            <button class="mt-4 w-full bg-white/10 hover:bg-white/20 border border-white/20 text-white font-semibold py-2 rounded-lg transition-colors">Start Activity</button>
+        `;
+        card.addEventListener('click', () => startGame(activity));
+        container.appendChild(card);
+    });
+}
+
+// --- GAME LOGIC ---
+function startGame(activity) {
+    currentGame = activity;
+    attemptNumber = 0;
+    usedHints = false;
+    document.getElementById('game-title').innerText = activity.title;
     
-    const isCategorisation = state.currentActivity.type.toLowerCase().includes('categorisation') || state.currentActivity.type.toLowerCase().includes('categorize');
+    const content = document.getElementById('game-content');
+    content.innerHTML = '';
+
+    const isCategorisation = activity.type && (activity.type.toLowerCase().includes('categorisation') || activity.type.toLowerCase().includes('categorize'));
+
+    // Layout Wrapper: Grid (Choice Bank Left, Text Right)
+    const gridWrapper = document.createElement('div');
+    gridWrapper.className = 'flex flex-col lg:flex-row gap-8 w-full';
+
+    // 1. Choice Bank (Left)
+    const choiceBank = document.createElement('div');
+    choiceBank.className = 'w-full lg:w-1/4 glass-panel p-6 rounded-2xl flex flex-col items-center';
+    choiceBank.innerHTML = `<h3 class="text-xl font-bold text-white mb-4 w-full text-center border-b border-white/20 pb-2">Choices</h3>`;
+    
+    const choicesContainer = document.createElement('div');
+    choicesContainer.id = 'choices-container';
+    choicesContainer.className = 'flex flex-wrap gap-3 justify-center w-full min-h-[200px] content-start';
+    
+    // Create Draggable Chips
+    let labels = activity.items.map(item => item.label).filter(l => l);
+    labels = [...new Set(labels)]; // unique
+    labels = shuffle(labels);
+
+    labels.forEach((label, index) => {
+        const color = COLORS[index % COLORS.length];
+        const chip = document.createElement('div');
+        chip.className = 'draggable-chip px-4 py-2 cursor-grab text-center select-none shadow-md text-sm md:text-base';
+        chip.style.backgroundColor = color;
+        chip.dataset.label = label;
+        chip.dataset.origColor = color;
+        chip.innerText = label;
+        chip.setAttribute('draggable', 'true');
+        
+        chip.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', label);
+            setTimeout(() => chip.classList.add('opacity-50'), 0);
+        });
+        chip.addEventListener('dragend', () => chip.classList.remove('opacity-50'));
+        
+        // Double click to remove if dropped
+        chip.ondblclick = function() {
+            if (this.parentElement.classList.contains('drop-slot')) {
+                document.getElementById('choices-container').appendChild(this);
+                this.parentElement.classList.remove('filled');
+            }
+        };
+
+        choicesContainer.appendChild(chip);
+    });
+    choiceBank.appendChild(choicesContainer);
+    gridWrapper.appendChild(choiceBank);
+
+    // 2. Text Area (Right)
+    const textArea = document.createElement('div');
+    textArea.className = 'w-full lg:w-3/4 flex flex-col gap-6';
 
     if (isCategorisation) {
-        renderCategorisationActivity();
-    } else {
-        renderStandardGapFillActivity();
-    }
-}
+        // CATEGORISATION LAYOUT: Blocks with dashed boxes on top
+        activity.items.forEach(item => {
+            if (item.isDistractor) return;
 
-// 1. CATEGORISATION LAYOUT (Matches the PERFECT Screenshot exactly)
-function renderCategorisationActivity() {
-    const activity = state.currentActivity;
-    const app = document.getElementById('app');
-    app.className = "min-h-screen bg-gradient-to-br from-[#1e1b4b] to-[#2e2366] text-gray-800 relative font-sans pt-12 pb-8 px-4 md:px-8";
-    
-    let html = `
-        <!-- Neon Top Bar -->
-        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 shadow-[0_0_15px_rgba(236,72,153,0.8)]"></div>
-        
-        <!-- Wide Container filling the screen nicely -->
-        <div class="w-full max-w-[1600px] mx-auto">
-            
-            <!-- Header area matching screenshot -->
-            <div class="flex justify-between items-start mb-8">
-                <div>
-                    <h1 class="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 mb-2 drop-shadow-sm">${activity.title}</h1>
-                    <p class="text-indigo-200 text-sm">Drag the correct words/phrases into the gaps. Watch out for distractors!</p>
-                </div>
-                <button onclick="renderActivityDashboard()" class="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 backdrop-blur transition-all text-sm font-medium shadow-lg">
-                    ← All activities
-                </button>
-            </div>
+            const block = document.createElement('div');
+            block.className = 'flex flex-col gap-2 w-full';
 
-            <!-- Main Layout: 1 Column Left (Choices), 3 Columns Right (Text) -->
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                
-                <!-- Choices Panel -->
-                <div class="lg:col-span-1 bg-gray-50 rounded-xl shadow-2xl p-6 border border-gray-200">
-                    <h3 class="font-bold text-gray-800 mb-4 pb-2 border-b-2 border-gray-200">Choices</h3>
-                    <div id="choices-container" class="space-y-3 min-h-[300px]">
-                        ${renderChips(activity.labels, activity.distractors)}
-                    </div>
-                </div>
+            const slot = document.createElement('div');
+            slot.className = 'drop-slot categorisation-slot w-full md:w-1/2 bg-black/20';
+            slot.dataset.label = item.label;
+            setupDropZone(slot);
 
-                <!-- Paragraph Labels Panel -->
-                <div class="lg:col-span-3 bg-white rounded-xl shadow-2xl p-8 border border-gray-200 relative overflow-hidden">
-                    <h3 class="font-bold text-gray-800 mb-8 pb-2 border-b-2 border-gray-200">Paragraph Labels</h3>
-                    
-                    <div class="text-gray-800 leading-loose space-y-8 text-[17px]">
-                        ${renderCategorisationText(activity)}
-                    </div>
+            const textCard = document.createElement('div');
+            textCard.className = 'glass-panel p-6 rounded-xl text-white text-lg leading-relaxed shadow-lg';
+            textCard.innerHTML = item.text;
 
-                    <div class="mt-12 flex justify-between items-center border-t border-gray-100 pt-6">
-                        <button onclick="checkAnswers()" class="bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold py-3 px-8 rounded-lg hover:shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all transform hover:-translate-y-0.5">
-                            Check Answers
-                        </button>
-                        ${activity.overallHint ? `<button onclick="alert('${activity.overallHint.replace(/'/g, "\\'")}')" class="text-pink-500 hover:text-pink-600 font-semibold text-sm underline decoration-pink-300 underline-offset-4">Need a general hint?</button>` : ''}
-                    </div>
-                    <div id="feedback" class="mt-4 font-bold text-lg text-center hidden"></div>
-                </div>
-            </div>
-        </div>
-    `;
-    app.innerHTML = html;
-}
+            block.appendChild(slot);
+            block.appendChild(textCard);
 
-// Renders the blocky categorisation text with gaps ABOVE the text segments
-function renderCategorisationText(activity) {
-    let textHtml = '';
-    
-    if (activity.isDualMode) {
-        // Teacher used ___ gaps. Split exactly on them.
-        const fullText = activity.parts.join(' ');
-        const segments = fullText.split('___');
-        
-        segments.forEach((segment, index) => {
-            if (index < segments.length - 1) {
-                // Gap goes ABOVE the text segment
-                textHtml += `
-                    <div class="mb-6">
-                        <div id="gap-${index}" class="drop-zone block w-56 h-[42px] border-2 border-dashed border-indigo-400 bg-indigo-50/50 rounded-md mb-3 transition-all duration-200" ondrop="drop(event)" ondragover="allowDrop(event)" data-answer="${activity.labels[index]}"></div>
-                        <div class="text-gray-800 leading-relaxed">${segment.trim()}</div>
-                    </div>
-                `;
-            } else if (segment.trim().length > 0) {
-                // Final piece of text
-                textHtml += `<div class="text-gray-800 leading-relaxed">${segment.trim()}</div>`;
+            // Individual Hint
+            if (item.hint) {
+                const hintBtn = document.createElement('button');
+                hintBtn.innerText = '💡 Hint';
+                hintBtn.className = 'text-sm text-yellow-300 hover:text-yellow-100 self-start mt-1 bg-black/30 px-3 py-1 rounded-full transition-colors';
+                hintBtn.onclick = () => { alert(item.hint); usedHints = true; };
+                block.appendChild(hintBtn);
             }
+            textArea.appendChild(block);
         });
     } else {
-        // Fallback: One gap per part
-        activity.parts.forEach((part, index) => {
-            textHtml += `
-                <div class="mb-6">
-                    <div id="gap-${index}" class="drop-zone block w-56 h-[42px] border-2 border-dashed border-indigo-400 bg-indigo-50/50 rounded-md mb-3 transition-all duration-200" ondrop="drop(event)" ondragover="allowDrop(event)" data-answer="${activity.labels[index]}"></div>
-                    <div class="text-gray-800 leading-relaxed">${part}</div>
-                </div>
-            `;
-        });
-    }
-    return textHtml;
-}
-
-// 2. STANDARD GAP-FILL LAYOUT (Flowing inline text)
-function renderStandardGapFillActivity() {
-    const activity = state.currentActivity;
-    const app = document.getElementById('app');
-    app.className = "min-h-screen bg-gradient-to-br from-[#1e1b4b] to-[#2e2366] text-gray-800 relative font-sans pt-12 pb-8 px-4 md:px-8";
-    
-    let html = `
-        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 shadow-[0_0_15px_rgba(236,72,153,0.8)]"></div>
+        // GAP-FILL LAYOUT: Single Flowing Paragraph
+        const paragraphCard = document.createElement('div');
+        paragraphCard.className = 'glass-panel p-8 rounded-2xl text-white text-lg md:text-xl leading-loose shadow-lg w-full';
         
-        <div class="w-full max-w-[1600px] mx-auto">
-            <div class="flex justify-between items-start mb-8">
-                <div>
-                    <h1 class="text-4xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 mb-2 drop-shadow-sm">${activity.title}</h1>
-                    <p class="text-indigo-200 text-sm">Drag the correct phrases into the gaps.</p>
-                </div>
-                <button onclick="renderActivityDashboard()" class="px-5 py-2.5 bg-white/10 hover:bg-white/20 text-white rounded-lg border border-white/20 backdrop-blur transition-all text-sm font-medium shadow-lg">
-                    ← All activities
-                </button>
-            </div>
+        let htmlContent = '';
+        let itemIndex = 0;
 
-            <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                <div class="lg:col-span-1 bg-gray-50 rounded-xl shadow-2xl p-6 border border-gray-200">
-                    <h3 class="font-bold text-gray-800 mb-4 pb-2 border-b-2 border-gray-200">Word Bank</h3>
-                    <div id="choices-container" class="space-y-3 min-h-[300px]">
-                        ${renderChips(activity.labels, activity.distractors)}
-                    </div>
-                </div>
+        activity.items.forEach(item => {
+            if(item.isDistractor) return;
+            
+            let partText = item.text;
+            if (partText.includes('___')) {
+                // Replace ___ with an inline drop slot
+                const slotHTML = `<span class="drop-slot inline-slot bg-black/20 rounded-md" data-label="${item.label}" id="slot-${itemIndex}"></span>`;
+                partText = partText.replace('___', slotHTML);
+                
+                // Add hint if exists
+                if(item.hint) {
+                    partText += ` <button onclick="alert('${item.hint.replace(/'/g, "\\'")}'); usedHints=true;" class="text-sm text-yellow-300 hover:text-yellow-100 ml-1">💡</button>`;
+                }
+            }
+            htmlContent += partText + ' ';
+            itemIndex++;
+        });
+        
+        paragraphCard.innerHTML = htmlContent;
+        textArea.appendChild(paragraphCard);
+    }
 
-                <div class="lg:col-span-3 bg-white rounded-xl shadow-2xl p-10 border border-gray-200">
-                    <div class="text-gray-800 leading-[2.5] text-[18px]">
-                        ${renderInlineGapFillText(activity)}
-                    </div>
+    // Controls (Bottom of Text Area)
+    const controls = document.createElement('div');
+    controls.className = 'flex flex-wrap gap-4 mt-8 items-center justify-end border-t border-white/20 pt-6';
+    
+    if (activity.overallHint) {
+        const btnOverallHint = document.createElement('button');
+        btnOverallHint.className = 'bg-pink-500/20 text-pink-300 border border-pink-500/50 px-4 py-2 rounded-lg hover:bg-pink-500/40 transition-colors font-medium';
+        btnOverallHint.innerText = 'Need a general hint?';
+        btnOverallHint.onclick = () => { alert(activity.overallHint); usedHints = true; };
+        controls.appendChild(btnOverallHint);
+    }
 
-                    <div class="mt-12 flex justify-between items-center border-t border-gray-100 pt-6">
-                        <button onclick="checkAnswers()" class="bg-gradient-to-r from-pink-500 to-purple-600 text-white font-bold py-3 px-8 rounded-lg hover:shadow-[0_0_15px_rgba(236,72,153,0.6)] transition-all transform hover:-translate-y-0.5">
-                            Check Answers
-                        </button>
-                    </div>
-                    <div id="feedback" class="mt-4 font-bold text-lg text-center hidden"></div>
-                </div>
-            </div>
-        </div>
-    `;
-    app.innerHTML = html;
+    const btnCheck = document.createElement('button');
+    btnCheck.className = 'bg-gradient-to-r from-green-400 to-emerald-500 hover:from-green-300 hover:to-emerald-400 text-white px-8 py-3 rounded-xl font-bold shadow-[0_0_15px_rgba(52,211,153,0.4)] transform hover:-translate-y-1 transition-all text-lg';
+    btnCheck.innerText = 'Check Answers';
+    btnCheck.onclick = checkAnswers;
+
+    controls.appendChild(btnCheck);
+    textArea.appendChild(controls);
+
+    gridWrapper.appendChild(textArea);
+    content.appendChild(gridWrapper);
+
+    // Setup drop zones for inline slots (if Gap-Fill)
+    if (!isCategorisation) {
+        document.querySelectorAll('.inline-slot').forEach(setupDropZone);
+    }
+
+    showSection(gameSection);
 }
 
-// Renders continuous flowing text with inline gaps
-function renderInlineGapFillText(activity) {
-    const fullText = activity.parts.join(' ');
-    const segments = fullText.split('___');
-    let textHtml = '';
-    
-    segments.forEach((segment, index) => {
-        textHtml += `<span>${segment}</span>`;
-        if (index < segments.length - 1) {
-            textHtml += `<div id="gap-${index}" class="drop-zone inline-block min-w-[160px] h-[38px] border-2 border-dashed border-indigo-400 bg-indigo-50/50 rounded-md align-middle mx-2 transition-all duration-200" ondrop="drop(event)" ondragover="allowDrop(event)" data-answer="${activity.labels[index]}"></div>`;
+function setupDropZone(slot) {
+    slot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        slot.classList.add('bg-white/20');
+    });
+    slot.addEventListener('dragleave', () => {
+        slot.classList.remove('bg-white/20');
+    });
+    slot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slot.classList.remove('bg-white/20');
+        const label = e.dataTransfer.getData('text/plain');
+        const chip = document.querySelector(`.draggable-chip[data-label="${label}"]`);
+        
+        if (chip) {
+            // If slot already has a chip, send old chip back to choices
+            if (slot.children.length > 0) {
+                document.getElementById('choices-container').appendChild(slot.children[0]);
+            }
+            slot.appendChild(chip);
+            slot.classList.add('filled');
         }
     });
-    return textHtml;
 }
-
-
-// --- SHARED DRAG & DROP LOGIC ---
-
-function renderChips(labels, distractors) {
-    let allChips = [...labels, ...distractors];
-    // Shuffle array
-    for (let i = allChips.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [allChips[i], allChips[j]] = [allChips[j], allChips[i]];
-    }
-
-    return allChips.map((label, index) => {
-        const color = COLORS[index % COLORS.length];
-        // NOTE: Soft rounded corners (rounded-md), NOT circles. Dark text for contrast.
-        return `<div draggable="true" id="chip-${index}" 
-             class="cursor-grab active:cursor-grabbing px-4 py-3 rounded-md text-[15px] font-semibold text-gray-900 shadow-sm hover:shadow-md transition-all text-center border border-black/5" 
-             style="background-color: ${color};"
-             ondragstart="drag(event)">
-            ${label}
-        </div>`;
-    }).join('');
-}
-
-function allowDrop(ev) {
-    ev.preventDefault();
-}
-
-function drag(ev) {
-    ev.dataTransfer.setData("text", ev.target.id);
-}
-
-function drop(ev) {
-    ev.preventDefault();
-    const data = ev.dataTransfer.getData("text");
-    const draggedElement = document.getElementById(data);
-    const dropZone = ev.target.closest('.drop-zone');
-
-    if (dropZone) {
-        if (dropZone.children.length > 0) {
-            const existingChip = dropZone.children[0];
-            document.getElementById('choices-container').appendChild(existingChip);
-        }
-        
-        dropZone.appendChild(draggedElement);
-        // Remove dashed border when filled to look clean
-        dropZone.classList.remove('border-2', 'border-dashed', 'border-indigo-400', 'bg-indigo-50/50');
-        draggedElement.className = "cursor-pointer px-4 py-1.5 rounded-md text-[15px] font-semibold text-gray-900 w-full h-full flex items-center justify-center m-0 border border-black/5";
-        draggedElement.onclick = () => returnToChoices(draggedElement, dropZone);
-    }
-}
-
-function returnToChoices(chip, dropZone) {
-    document.getElementById('choices-container').appendChild(chip);
-    chip.onclick = null;
-    chip.className = "cursor-grab active:cursor-grabbing px-4 py-3 rounded-md text-[15px] font-semibold text-gray-900 shadow-sm hover:shadow-md transition-all text-center border border-black/5";
-    // Restore dashed border when empty
-    dropZone.classList.add('border-2', 'border-dashed', 'border-indigo-400', 'bg-indigo-50/50');
-}
-
-
-// --- CHECKING & TRACKING ---
 
 function checkAnswers() {
-    state.attempts++;
-    const gaps = document.querySelectorAll('.drop-zone');
-    let correctCount = 0;
-    const totalGaps = gaps.length;
+    attemptNumber++;
+    let allCorrect = true;
+    let anyEmpty = false;
 
-    gaps.forEach(gap => {
-        const correctAnswer = gap.getAttribute('data-answer');
-        const child = gap.children[0];
-        
-        if (child) {
-            const studentAnswer = child.innerText.trim();
-            if (studentAnswer === correctAnswer) {
-                correctCount++;
-                child.style.backgroundColor = '#86efac'; // Success green
-                child.draggable = false;
-                child.onclick = null;
-                child.style.cursor = 'default';
+    const slots = document.querySelectorAll('.drop-slot');
+    
+    slots.forEach(slot => {
+        if (slot.children.length > 0) {
+            const chip = slot.children[0];
+            const expected = slot.dataset.label;
+            const actual = chip.dataset.label;
+
+            if (expected === actual) {
+                // CORRECT: Lock it in, turn pastel green
+                chip.style.backgroundColor = '#86efac';
+                chip.style.color = '#064e3b';
+                chip.setAttribute('draggable', 'false');
+                chip.classList.add('cursor-default');
+                chip.ondblclick = null; // Prevent removal
             } else {
-                returnToChoices(child, gap);
+                // INCORRECT: Send back to choice bank
+                allCorrect = false;
+                document.getElementById('choices-container').appendChild(chip);
+                chip.style.backgroundColor = chip.dataset.origColor; // reset color
+                chip.style.color = '#1e293b';
+                slot.classList.remove('filled');
             }
+        } else {
+            allCorrect = false;
+            anyEmpty = true;
         }
     });
 
-    const feedback = document.getElementById('feedback');
-    feedback.classList.remove('hidden');
+    const hasDistractors = currentGame.items.some(i => i.isDistractor);
+    let statusText = allCorrect ? "Completed" : "Attempted";
     
-    let statusText = "";
-    if (correctCount === totalGaps) {
-        statusText = "Completed";
-        feedback.innerHTML = `🎉 Perfect! You got all ${totalGaps} correct!`;
-        feedback.className = "mt-6 font-bold text-xl text-center text-green-600 bg-green-50 py-3 rounded-lg border border-green-200";
-        sendTrackingData(statusText, `Got ${correctCount}/${totalGaps} in ${state.attempts} attempts.`);
-        setTimeout(() => renderActivityDashboard(), 3000);
-    } else {
-        statusText = "In Progress";
-        const hasDistractors = state.currentActivity.distractors && state.currentActivity.distractors.length > 0;
-        let tryAgainMsg = `You got ${correctCount} out of ${totalGaps} correct. Incorrect answers have been returned to the choices. Try again!`;
+    // Build Details Text
+    let detailsText = usedHints ? "Hints used. " : "No hints. ";
+    if (hasDistractors) detailsText += "Ignored distractors successfully.";
+
+    sendTrackingData(statusText, detailsText);
+
+    if (allCorrect) {
+        alert("🎉 Perfect! You nailed it!");
+    } else if (anyEmpty) {
         if (hasDistractors) {
-            tryAgainMsg += " Watch out for those distractors!";
+             alert(`Attempt ${attemptNumber}: Keep going! Remember, there are distractors you shouldn't use!`);
+        } else {
+             alert(`Attempt ${attemptNumber}: Some gaps are still empty. Keep trying!`);
         }
-        feedback.innerHTML = `⚠️ ${tryAgainMsg}`;
-        feedback.className = "mt-6 font-bold text-lg text-center text-amber-600 bg-amber-50 py-3 px-4 rounded-lg border border-amber-200";
-        sendTrackingData(statusText, `Currently ${correctCount}/${totalGaps} on attempt ${state.attempts}.`);
+    } else {
+        alert(`Attempt ${attemptNumber}: Incorrect answers have been bounced back. Try again!`);
     }
 }
 
+// --- TRACKING & TEACHER DATA ---
 function sendTrackingData(status, details) {
-    if (state.currentUser === 'Teacher') return;
-    const data = {
-        name: state.currentUser,
-        gameId: state.currentActivity.title,
-        attempt: state.attempts,
-        status: status,
-        details: details
+    const timestamp = new Date().toLocaleString();
+    const payload = {
+        Timestamp: timestamp,
+        Name: currentUser,
+        Game_ID: currentGame.title,
+        Attempt: attemptNumber,
+        Status: status,
+        Details: details
     };
 
     fetch(TRACKING_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    }).catch(error => console.error("Tracking Error:", error));
+        body: JSON.stringify(payload)
+    }).catch(err => console.error('Tracking Error:', err));
 }
 
-
-// --- TEACHER DASHBOARD ---
-
-function renderTeacherDashboard() {
-    const app = document.getElementById('app');
-    app.className = "min-h-screen bg-gray-50 text-gray-800 font-sans p-8";
-    app.innerHTML = `
-        <div class="max-w-7xl mx-auto">
-            <div class="flex justify-between items-center mb-8 bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                <h1 class="text-3xl font-bold text-indigo-900">Teacher Dashboard</h1>
-                <div class="flex space-x-4">
-                    <button onclick="renderLogin()" class="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors">Logout</button>
-                </div>
-            </div>
-            
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                <div class="p-4 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
-                    <h2 class="text-lg font-semibold text-indigo-900">Live Student Progress</h2>
-                    <span class="text-xs font-medium text-indigo-500 bg-indigo-100 px-2 py-1 rounded-full uppercase tracking-wider">Auto-updates every 15s</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-gray-50 border-b border-gray-200 text-gray-600 text-sm uppercase tracking-wider">
-                                <th class="p-4 font-semibold">Timestamp</th>
-                                <th class="p-4 font-semibold">Student Name</th>
-                                <th class="p-4 font-semibold">Activity Title</th>
-                                <th class="p-4 font-semibold">Attempt #</th>
-                                <th class="p-4 font-semibold">Status</th>
-                                <th class="p-4 font-semibold">Details</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tracking-body" class="divide-y divide-gray-100">
-                            <tr><td colspan="6" class="p-8 text-center text-gray-400">Loading tracking data...</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    `;
-
-    fetchTrackingData();
-    if (state.trackingInterval) clearInterval(state.trackingInterval);
-    state.trackingInterval = setInterval(fetchTrackingData, 15000);
-}
-
-async function fetchTrackingData() {
-    if (!state.isTeacher) {
-        clearInterval(state.trackingInterval);
-        return;
-    }
+async function loadTeacherData() {
     try {
-        const response = await fetch(TRACKING_CSV_URL);
-        const text = await response.text();
-        const rows = text.split('\n').slice(1).reverse();
+        const response = await fetch('https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv');
+        const csvText = await response.text();
+        const rows = parseCSV(csvText);
         
-        const tbody = document.getElementById('tracking-body');
+        const tbody = document.getElementById('teacher-data');
         tbody.innerHTML = '';
-        
-        if (rows.length === 0 || (rows.length === 1 && rows[0].trim() === '')) {
-             tbody.innerHTML = '<tr><td colspan="6" class="p-8 text-center text-gray-500">No student data yet.</td></tr>';
-             return;
-        }
 
-        rows.forEach(row => {
-            if (!row.trim()) return;
-            const cols = row.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || row.split(',');
-            const cleanCols = cols.map(c => c.replace(/^"|"$/g, '').trim());
+        // Start from 1 to skip header, show last 50 entries
+        const dataRows = rows.slice(1).filter(r => r.length >= 6).reverse().slice(0, 50);
+
+        dataRows.forEach(row => {
+            const tr = document.createElement('tr');
+            tr.className = 'border-b border-white/10 hover:bg-white/5 transition-colors';
             
-            let statusBadge = '';
-            if (cleanCols[4] === 'Completed') {
-                statusBadge = '<span class="bg-green-100 text-green-700 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wide">Completed</span>';
-            } else {
-                statusBadge = '<span class="bg-amber-100 text-amber-700 px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wide">In Progress</span>';
-            }
+            // Format status color
+            let statusColor = 'text-white';
+            if(row[4].includes('Completed')) statusColor = 'text-green-400 font-bold';
+            else if(row[4].includes('Attempted')) statusColor = 'text-yellow-400';
 
-            tbody.innerHTML += `
-                <tr class="hover:bg-gray-50 transition-colors">
-                    <td class="p-4 text-sm text-gray-500">${cleanCols[0] || ''}</td>
-                    <td class="p-4 font-medium text-gray-900">${cleanCols[1] || ''}</td>
-                    <td class="p-4 text-indigo-600 font-medium">${cleanCols[2] || ''}</td>
-                    <td class="p-4 text-center font-bold text-gray-700">${cleanCols[3] || ''}</td>
-                    <td class="p-4">${statusBadge}</td>
-                    <td class="p-4 text-sm text-gray-600">${cleanCols[5] || ''}</td>
-                </tr>
+            tr.innerHTML = `
+                <td class="p-4 text-sm">${row[0]}</td>
+                <td class="p-4 font-semibold text-pink-300">${row[1]}</td>
+                <td class="p-4">${row[2]}</td>
+                <td class="p-4 text-center">${row[3]}</td>
+                <td class="p-4 ${statusColor}">${row[4]}</td>
+                <td class="p-4 text-sm text-white/60">${row[5]}</td>
             `;
+            tbody.appendChild(tr);
         });
     } catch (error) {
-        console.error("Error fetching tracking data:", error);
+        console.error("Error loading tracking data:", error);
     }
 }
 
-// Start app
-window.onload = init;
+// Start
+init();
