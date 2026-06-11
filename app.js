@@ -1,15 +1,13 @@
 // ============================================================
-// Fix the Paragraph — app.js (v20 - Cache Buster & Mobile Fix)
+// Fix the Paragraph — app.js (v21 - Colour Bleed & Mobile Fix)
 // ============================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
 const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
 const TEACHER_PIN = "@pple";
 const REFRESH_INTERVAL = 15000;
-
 // Vibrant tones that match the purple/pink/blue aesthetic
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
-
 // ── State ────────────────────────────────────────────────────
 let studentName = "";
 let activities = {};
@@ -19,7 +17,6 @@ let dragSrcEl = null;
 let hintsUsed = [];
 let attemptCount = 0;
 let isGapFillMode = false;
-
 // ── Inject CSS Automatically ──────────────────────────────────
 function injectStyles() {
   if (document.getElementById('paragraph-builder-styles')) return;
@@ -47,10 +44,12 @@ function injectStyles() {
     .hint-btn-inline:hover { transform: scale(1.2); }
     /* Loading Spinner Animation */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    /* NEW: Drag Back Pool Fix & Gap Row Bleed Style */
+    #choice-pool { min-height: 150px; padding-bottom: 20px; }
+    .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
   `;
   document.head.appendChild(style);
 }
-
 // ── Boot ─────────────────────────────────────────────────────
 document.addEventListener("DOMContentLoaded", () => {
   try {
@@ -59,15 +58,14 @@ document.addEventListener("DOMContentLoaded", () => {
       mobileFixScript.src = "https://unpkg.com/drag-drop-touch";
       document.head.appendChild(mobileFixScript);
   } catch (e) { console.log("Mobile fix skipped", e); }
-
   injectStyles();
   showScreen("screen-name");
-  
+
   const safeAdd = (id, event, handler) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, handler);
   };
-  
+
   safeAdd("btn-start", "click", handleNameSubmit);
   safeAdd("btn-check", "click", checkAnswer);
   safeAdd("btn-retry", "click", retryActivity);
@@ -77,20 +75,18 @@ document.addEventListener("DOMContentLoaded", () => {
   safeAdd("btn-pin-submit", "click", submitPin);
   safeAdd("btn-pin-cancel", "click", closePinModal);
   safeAdd("btn-reset-session", "click", resetSession);
-  
+
   const nameInput = document.getElementById("input-name");
   if (nameInput) nameInput.addEventListener("keydown", e => { if (e.key === "Enter") handleNameSubmit(); });
   const pinInput = document.getElementById("pin-input");
   if (pinInput) pinInput.addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
 });
-
 // ── Screens & CSV Parsing ────────────────────────────────────
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   const el = document.getElementById(id);
   if (el) el.classList.add("active");
 }
-
 function handleNameSubmit() {
   const input = document.getElementById("input-name");
   if (!input) return;
@@ -100,7 +96,6 @@ function handleNameSubmit() {
   studentName = name;
   loadLibrary();
 }
-
 function parseCSV(text) {
   const rows = []; const lines = text.split(/\r?\n/);
   if (lines.length === 0) return rows;
@@ -113,7 +108,6 @@ function parseCSV(text) {
   }
   return rows;
 }
-
 function splitCSVLine(line) {
   const result = []; let current = ""; let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
@@ -124,11 +118,10 @@ function splitCSVLine(line) {
   }
   result.push(current); return result;
 }
-
 // ── Library Loading & Smart Parsing ───────────────────────────
 function loadLibrary() {
   showScreen("screen-loading");
-  
+
   // INJECT A BEAUTIFUL LOADING SPINNER
   const loadingScreen = document.getElementById("screen-loading");
   if (loadingScreen) {
@@ -139,7 +132,6 @@ function loadLibrary() {
           </div>
       `;
   }
-
   fetch(LIBRARY_CSV_URL + "&t=" + new Date().getTime())
     .then(r => r.text())
     .then(text => {
@@ -151,45 +143,42 @@ function loadLibrary() {
     })
     .catch((e) => { console.error(e); showError("Couldn't load activities."); });
 }
-
 function buildActivities(rows) {
   activities = {};
   let lastTitle = "";
   let lastStatus = "";
-  
+
   rows.forEach(originalRow => {
     const row = {};
     for (let key in originalRow) if (key) row[key.trim().toLowerCase().replace(/ /g, "_")] = originalRow[key];
-    
+
     // Inherit Title
     let rowTitle = (row["title"] || "").trim();
     if (rowTitle) lastTitle = rowTitle;
     let currentTitle = lastTitle;
-    if (!currentTitle) return; 
-    
+    if (!currentTitle) return;
+
     // Inherit Status
     let rowStatus = (row["status"] || "").trim().toLowerCase();
     if (rowStatus === 'active' || rowStatus === 'inactive') { lastStatus = rowStatus; }
-    if (lastStatus !== "active") return; 
-    
+    if (lastStatus !== "active") return;
+
     // Check if it's a Distractor
     let rowType = (row["type"] || "").trim().toLowerCase();
     let isDistractor = (rowType === "distractor" || rowStatus === "distractor");
-    
-    // Check text 
+
+    // Check text
     let textContent = (row["text"] || "").trim();
     if (!textContent && !isDistractor) return;
-    
+
     // Build the activity
     if (!activities[currentTitle]) activities[currentTitle] = { title: currentTitle, parts: [], distractors: [], overallHint: "" };
     if (row["overall_hint"]) activities[currentTitle].overallHint = row["overall_hint"];
     const item = { text: textContent, label: row["label"], hint: row["hint"] };
-
-    if (isDistractor) { activities[currentTitle].distractors.push(item); } 
+    if (isDistractor) { activities[currentTitle].distractors.push(item); }
     else { activities[currentTitle].parts.push(item); }
   });
 }
-
 function showLibrary() {
   showScreen("screen-library");
   const list = document.getElementById("library-list");
@@ -203,26 +192,21 @@ function showLibrary() {
     list.appendChild(card);
   });
 }
-
 // ── UI Rendering: The Builder ─────────────────────────────────
 function startActivity(gameId) {
   currentGame = gameId; hintsUsed = []; attemptCount = 0;
-
   // DUAL MODE CHECK
   const gameData = activities[gameId];
   isGapFillMode = gameData.parts.some(p => p.text && p.text.includes('___'));
-
   renderActivity(gameData);
   showScreen("screen-activity");
 }
-
 function renderActivity(game) {
   document.getElementById("activity-title").textContent = game.title;
-
   let instructions = isGapFillMode ? "Drag the correct words/phrases into the gaps." : "Drag the text parts into the correct spaces to build the paragraph.";
   if (game.distractors.length > 0) instructions += " Watch out for distractors!";
   document.getElementById("game-instructions").textContent = instructions;
-  
+
   const hintContainer = document.getElementById("overall-hint-container");
   hintContainer.innerHTML = game.overallHint ? "<button id='btn-overall-hint' class='btn-overall-hint'>💡 Need an overall hint?</button><div id='overall-hint-text' class='overall-hint-text hidden'>" + game.overallHint + "</div>" : "";
   if (game.overallHint) {
@@ -232,14 +216,12 @@ function renderActivity(game) {
       hintsUsed.push("Overall Hint");
     });
   }
-
   // 1. Build Left Pool
   const allSentences = [
     ...game.parts.map((p, i) => ({ ...p, isDistractor: false, answerIndex: i })),
     ...game.distractors.map(d => ({ ...d, isDistractor: true, answerIndex: -1 }))
   ];
   shuffle(allSentences);
-
   const pool = document.getElementById("choice-pool");
   pool.innerHTML = "";
   allSentences.forEach((item, index) => {
@@ -248,36 +230,40 @@ function renderActivity(game) {
     chip.draggable = true;
     chip.dataset.answerIndex = item.answerIndex;
     chip.dataset.isDistractor = item.isDistractor;
-
     chip.textContent = isGapFillMode ? (item.label || "[Missing]") : item.text;
-
     if (isGapFillMode) {
       chip.dataset.color = COLORS[index % COLORS.length];
       chip.style.backgroundColor = chip.dataset.color;
     }
-
     chip.addEventListener("dragstart", onDragStart);
     chip.addEventListener("dragend", onDragEnd);
     pool.appendChild(chip);
   });
   pool.addEventListener("dragover", onDragOver);
   pool.addEventListener("drop", e => onDropIntoPool(e, pool));
-
+  
   // 2. Build Right Zone
   const dropZone = document.getElementById("drop-zone");
   dropZone.innerHTML = "";
-
   if (isGapFillMode) {
       const gapFillBox = document.createElement("div");
       gapFillBox.className = "gap-fill-box";
-
+      // Ensure the box stacks neatly
+      gapFillBox.style.display = "flex";
+      gapFillBox.style.flexDirection = "column";
+      gapFillBox.style.gap = "8px";
+      
       game.parts.forEach((part, i) => {
+          // Create the new colour-bleed row box
+          const rowDiv = document.createElement("div");
+          rowDiv.className = "gap-row";
+          
           const segments = (part.text || "").split('___');
           segments.forEach((seg, sIdx) => {
               if (seg) {
                   const span = document.createElement("span");
                   span.textContent = seg;
-                  gapFillBox.appendChild(span);
+                  rowDiv.appendChild(span);
               }
               if (sIdx < segments.length - 1) {
                   const slot = document.createElement("span");
@@ -285,25 +271,23 @@ function renderActivity(game) {
                   slot.dataset.expectedIndex = i;
                   slot.addEventListener("dragover", onDragOver);
                   slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
-                  gapFillBox.appendChild(slot);
-
+                  rowDiv.appendChild(slot);
                   if (part.hint) {
                       const hBtn = document.createElement("button");
                       hBtn.className = "hint-btn-inline";
                       hBtn.innerHTML = "💡";
                       hBtn.title = "View Hint";
-                      hBtn.onclick = () => { 
-                          alert("Hint:\n\n" + part.hint); 
-                          hintsUsed.push("Hint (Gap " + (i+1) + ")"); 
+                      hBtn.onclick = () => {
+                          alert("Hint:\n\n" + part.hint);
+                          hintsUsed.push("Hint (Gap " + (i+1) + ")");
                       };
-                      gapFillBox.appendChild(hBtn);
+                      rowDiv.appendChild(hBtn);
                   }
               }
           });
-          gapFillBox.appendChild(document.createTextNode(" "));
+          gapFillBox.appendChild(rowDiv);
       });
       dropZone.appendChild(gapFillBox);
-
   } else {
       const legendBox = document.createElement("div");
       legendBox.className = "legend-box";
@@ -311,7 +295,6 @@ function renderActivity(game) {
       legendTitle.className = "w-full text-sm uppercase font-bold text-gray-500 mb-1";
       legendTitle.textContent = "Paragraph Structure:";
       legendBox.appendChild(legendTitle);
-
       game.parts.forEach((part, i) => {
         const color = COLORS[i % COLORS.length];
         const tag = document.createElement("div");
@@ -323,16 +306,15 @@ function renderActivity(game) {
           hintBtn.className = "hint-btn-small";
           hintBtn.innerHTML = "💡";
           hintBtn.title = "View Hint";
-          hintBtn.onclick = () => { 
-              alert("Hint for " + part.label + ":\n\n" + part.hint); 
-              hintsUsed.push("Hint (" + part.label + ")"); 
+          hintBtn.onclick = () => {
+              alert("Hint for " + part.label + ":\n\n" + part.hint);
+              hintsUsed.push("Hint (" + part.label + ")");
           };
           tag.appendChild(hintBtn);
         }
         legendBox.appendChild(tag);
       });
       dropZone.appendChild(legendBox);
-
       const paraBuilder = document.createElement("div");
       paraBuilder.className = "paragraph-builder";
       game.parts.forEach((part, i) => {
@@ -351,26 +333,22 @@ function renderActivity(game) {
   document.getElementById("btn-check").style.display = "inline-flex";
   document.getElementById("btn-retry").style.display = "none";
 }
-
 // ── Drag & Drop Handlers ─────────────────────────────────────
 function onDragStart(e) {
   dragSrcEl = this;
   e.dataTransfer.effectAllowed = "move";
   setTimeout(() => this.classList.add("opacity-50"), 0);
 }
-
 function onDragEnd() {
   this.classList.remove("opacity-50");
   document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
   updateSlotLayouts();
 }
-
 function onDragOver(e) {
   e.preventDefault();
   e.dataTransfer.dropEffect = "move";
   if (this.classList.contains("dropzone")) this.classList.add("drag-over");
 }
-
 function onDropIntoSlot(e, slot) {
   e.preventDefault();
   slot.classList.remove("drag-over");
@@ -378,32 +356,40 @@ function onDropIntoSlot(e, slot) {
   if (slot.children.length > 0) document.getElementById("choice-pool").appendChild(slot.children[0]);
   slot.appendChild(dragSrcEl);
 }
-
 function onDropIntoPool(e, pool) {
   e.preventDefault();
   if (dragSrcEl) pool.appendChild(dragSrcEl);
 }
-
 // ── Dynamic Styling Update ────────────────────────────────────
 function updateSlotLayouts() {
   document.querySelectorAll('.dropzone').forEach(slot => {
+    const row = slot.closest('.gap-row'); // Look for the new row box
+    
     if (slot.children.length > 0) {
       slot.classList.add('filled');
       const chip = slot.children[0];
       chip.classList.add('in-paragraph');
       chip.classList.remove('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
-
       if (isGapFillMode) {
           chip.classList.add('gap-chip');
           chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
+          // Apply Colour Bleed
+          if (row) {
+              row.style.backgroundColor = chip.dataset.color;
+              row.style.color = '#000';
+          }
       } else {
           chip.style.backgroundColor = slot.dataset.color;
       }
     } else {
       slot.classList.remove('filled');
+      // Remove Colour Bleed
+      if (isGapFillMode && row) {
+          row.style.backgroundColor = 'transparent';
+          row.style.color = 'inherit';
+      }
     }
   });
-
   document.querySelectorAll('#choice-pool .sentence-chip').forEach(chip => {
     chip.classList.remove('in-paragraph', 'locked', 'gap-chip');
     chip.classList.add('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
@@ -415,22 +401,18 @@ function updateSlotLayouts() {
     chip.style.outline = 'none';
   });
 }
-
 // ── Check Answer ──────────────────────────────────────────────
 function checkAnswer() {
   const slots = document.querySelectorAll(".dropzone");
   let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
   attemptCount++;
-
   slots.forEach((slot, i) => {
     const chip = slot.querySelector(".sentence-chip");
     if (!chip) { emptyCount++; return; }
     if (chip.classList.contains("locked")) { correctCount++; return; }
-
     const expected = slot.dataset.expectedIndex;
     const actual = chip.dataset.answerIndex;
     const isDistractor = chip.dataset.isDistractor === "true";
-
     if (isDistractor) {
       distractorCount++; mistakesMade = true;
       document.getElementById("choice-pool").appendChild(chip);
@@ -443,11 +425,10 @@ function checkAnswer() {
       document.getElementById("choice-pool").appendChild(chip);
     }
   });
-  
+
   updateSlotLayouts();
   const totalSlots = slots.length;
   let status, message;
-
   if (correctCount === totalSlots) {
     status = "correct"; message = isGapFillMode ? "🎉 Perfect! You filled the gaps correctly." : "🎉 Perfect! You built the paragraph correctly.";
     document.getElementById("btn-check").style.display = "none";
@@ -457,28 +438,23 @@ function checkAnswer() {
   } else if (emptyCount > 0) {
     status = "partial"; message = "Fill the remaining empty spaces! You have " + correctCount + " locked in.";
   }
-
   const fb = document.getElementById("feedback");
   if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
-
   let details = ["Score: " + correctCount + "/" + totalSlots];
   if (distractorCount > 0) details.push("⚠️ Fell for distractors");
   details.push(hintsUsed.length > 0 ? "💡 Hints: " + [...new Set(hintsUsed)].join(", ") : "🧠 No hints used");
   trackAttempt(status, attemptCount, details);
 }
-
 function retryActivity() {
   let cA = attemptCount; let cH = [...hintsUsed];
   renderActivity(activities[currentGame]);
   attemptCount = cA; hintsUsed = cH;
 }
-
 // ── Tracking & Teacher Tab ────────────────────────────────────
 function trackAttempt(status, attempt, details) {
   const params = new URLSearchParams({ name: studentName, game_id: currentGame, attempt: attempt, status: status, details: details.join(" | ") });
   fetch(TRACKING_URL + "?" + params.toString(), { mode: 'no-cors' }).catch(() => {});
 }
-
 function switchTab(tab) {
   const tabS = document.getElementById("tab-student"); const tabT = document.getElementById("tab-teacher");
   const pS = document.getElementById("panel-student"); const pT = document.getElementById("panel-teacher");
@@ -488,24 +464,19 @@ function switchTab(tab) {
   if(pT) pT.classList.toggle("hidden", tab !== "teacher");
   if (tab === "teacher") loadTeacherData();
 }
-
 function promptTeacherPin() {
   const modal = document.getElementById("pin-modal"); const input = document.getElementById("pin-input");
   if (modal) modal.classList.remove("hidden"); if (input) { input.value = ""; input.focus(); }
 }
-
 function closePinModal() {
   const modal = document.getElementById("pin-modal"); if(modal) modal.classList.add("hidden");
 }
-
 function submitPin() {
   const input = document.getElementById("pin-input"); if (!input) return;
   if (input.value.trim() === TEACHER_PIN) { closePinModal(); switchTab("teacher"); }
   else { document.getElementById("pin-error").textContent = "Incorrect PIN."; input.value = ""; input.focus(); }
 }
-
 function resetSession() { sessionStart = Date.now(); loadTeacherData(); }
-
 function loadTeacherData() {
   const container = document.getElementById("teacher-results"); if(!container) return;
   container.innerHTML = "<p>Loading results...</p>";
@@ -515,7 +486,6 @@ function loadTeacherData() {
       renderTeacherTable(filtered.reverse());
     }).catch(() => { container.innerHTML = "<p>Could not load results.</p>"; });
 }
-
 function renderTeacherTable(rows) {
   const container = document.getElementById("teacher-results"); if (!container) return;
   if (rows.length === 0) { container.innerHTML = "<p>No results yet.</p>"; return; }
@@ -526,7 +496,6 @@ function renderTeacherTable(rows) {
   html += "</tbody></table>"; container.innerHTML = html;
 }
 setInterval(() => { const t = document.getElementById("panel-teacher"); if (t && !t.classList.contains("hidden")) loadTeacherData(); }, REFRESH_INTERVAL);
-
 // ── Utils ────────────────────────────────────────────────────
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
