@@ -42,6 +42,23 @@
     .panel-right::-webkit-scrollbar-thumb:hover {
       background: linear-gradient(135deg, #fca5a5, #d8b4fe); 
     }
+        /* 1. TACTILE HOVER GLOW FOR CHIPS */
+    .draggable-chip {
+        transition: all 0.2s ease-in-out !important; 
+    }
+    
+    .draggable-chip:hover {
+        transform: translateY(-4px) scale(1.03) !important; 
+        box-shadow: 0 10px 20px rgba(255, 255, 255, 0.3), inset 0 0 8px rgba(255, 255, 255, 0.5) !important; 
+        cursor: grab !important;
+        z-index: 100 !important;
+    }
+    
+    .draggable-chip:active {
+        transform: translateY(2px) scale(0.98) !important; 
+        box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1) !important;
+        cursor: grabbing !important;
+    }
   </style>
 </head>
 <body>
