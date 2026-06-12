@@ -243,17 +243,19 @@ function renderActivity(game) {
   let instructions = "Drag the text parts into the correct spaces to build the paragraph.";
   if (currentLayoutMode !== "paragraph") instructions = "Drag the correct words/phrases into the gaps.";
   if (game.distractors.length > 0) instructions += " Watch out for distractors!";
-
-  document.getElementById("game-instructions").textContent = instructions;
-
-  const hintContainer = document.getElementById("overall-hint-container");
-  hintContainer.innerHTML = game.overallHint ? "<button id='btn-overall-hint' class='btn-overall-hint'>💡 Need an overall hint?</button><div id='overall-hint-text' class='overall-hint-text hidden'>" + game.overallHint + "</div>" : "";
+  
   if (game.overallHint) {
-    document.getElementById("btn-overall-hint").addEventListener("click", () => {
-      document.getElementById("overall-hint-text").classList.remove("hidden");
-      document.getElementById("btn-overall-hint").style.display = "none";
-      hintsUsed.push("Overall Hint");
-    });
+      let safeOverallHint = game.overallHint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+      instructions += `<span onclick="showNeonHint('${safeOverallHint}')" title="Click for an overall hint" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 8px rgba(249, 168, 212, 0.8));">💡</span>`;
+      document.getElementById("game-instructions").innerHTML = instructions;
+  } else {
+      document.getElementById("game-instructions").textContent = instructions;
+  }
+
+  // Clear out the old yellow button box so it doesn't show up anymore
+  const hintContainer = document.getElementById("overall-hint-container");
+  if (hintContainer) {
+      hintContainer.innerHTML = "";
   }
   
   const allSentences = [
@@ -264,18 +266,35 @@ function renderActivity(game) {
   const pool = document.getElementById("choice-pool");
   pool.innerHTML = "";
 
-  allSentences.forEach((item, index) => {
+   allSentences.forEach((item, index) => {
     const chip = document.createElement("div");
-    chip.className = "sentence-chip bg-white border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
+    chip.className = "sentence-chip border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
     chip.draggable = true;
     chip.dataset.answerIndex = item.answerIndex;
     chip.dataset.isDistractor = item.isDistractor;
+    
+    // Build the text and optional lightbulb
+    const displayText = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
+    let innerHtml = `<span style="pointer-events: none;">${displayText}</span>`;
+    
+    if (item.hint) {
+        let safeHint = item.hint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        // event.stopPropagation() stops the click from accidentally triggering a drag
+        innerHtml += `<span onclick="event.stopPropagation(); showNeonHint('${safeHint}')" title="Click for a hint" style="margin-left: 10px; cursor: pointer; font-size: 1.1em; filter: drop-shadow(0 0 5px rgba(255,255,255,0.6));">💡</span>`;
+    }
+    
+    chip.innerHTML = innerHtml;
+    chip.style.display = "flex";
+    chip.style.justifyContent = "space-between";
+    chip.style.alignItems = "center";
 
-    chip.textContent = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
     if (currentLayoutMode !== "paragraph") {
       chip.dataset.color = COLORS[index % COLORS.length];
       chip.style.backgroundColor = chip.dataset.color;
+    } else {
+      chip.classList.add("bg-white");
     }
+    
     chip.addEventListener("dragstart", onDragStart);
     chip.addEventListener("dragend", onDragEnd);
     pool.appendChild(chip);
