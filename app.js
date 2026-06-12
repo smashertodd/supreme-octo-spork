@@ -266,22 +266,22 @@ function renderActivity(game) {
   const pool = document.getElementById("choice-pool");
   pool.innerHTML = "";
 
-     allSentences.forEach((item, index) => {
+  allSentences.forEach((item, index) => {
     const chip = document.createElement("div");
     chip.className = "sentence-chip border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
     chip.draggable = true;
     chip.dataset.answerIndex = item.answerIndex;
     chip.dataset.isDistractor = item.isDistractor;
     
-    // Build the text and optional lightbulb
+    // Build the text
     const displayText = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
     
     // flex: 1 makes the text take up the available space, pushing the bulb to the edge
     let innerHtml = `<span style="pointer-events: none; flex: 1; padding-right: 10px;">${displayText}</span>`;
     
-    if (item.hint) {
+    // ONLY add the lightbulb to the draggable chips if it is a Categorisation/Gap-Fill activity.
+    if (item.hint && currentLayoutMode !== "paragraph") {
         let safeHint = item.hint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        // flex-shrink: 0 stops the bulb from getting squished if the text is long
         innerHtml += `<span onclick="event.stopPropagation(); showNeonHint('${safeHint}')" title="Click for a hint" style="cursor: pointer; font-size: 1.2em; flex-shrink: 0; filter: drop-shadow(0 0 5px rgba(255,255,255,0.6));">💡</span>`;
     }
     
