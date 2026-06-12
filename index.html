@@ -1,141 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Activity Arcade</title>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <style>
-        /* BASE STYLES */
-        :root {
-            --bg-dark: #0f172a; --panel-bg: rgba(30, 41, 59, 0.7);
-            --text-main: #f8fafc; --accent-pink: #ec4899;
-            --accent-purple: #8b5cf6; --neon-glow: rgba(236, 72, 153, 0.5);
-        }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-            color: var(--text-main); margin: 0; padding: 20px;
-            min-height: 100vh;
-        }
-        #app {
-            max-width: 1200px; margin: 0 auto;
-            background: var(--panel-bg); border-radius: 16px;
-            padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border-top: 4px solid var(--accent-pink);
-            border-image: linear-gradient(to right, var(--accent-pink), var(--accent-purple)) 1;
-            backdrop-filter: blur(10px);
-        }
-        
-        /* TITLE FIX - Padding added to stop the 'y' from cutting off! */
-        h1 {
-            text-align: center; font-size: 3rem; margin-bottom: 30px;
-            background: linear-gradient(to right, #f472b6, #c084fc);
-            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-            text-shadow: 0 0 20px var(--neon-glow);
-            padding-bottom: 15px; 
-            line-height: 1.2;
-        }
-        
-        /* SCREENS */
-        .screen { display: none; animation: fadeIn 0.4s ease-in-out; }
-        .screen.active { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* INPUTS & BUTTONS */
-        .input-box {
-            width: 100%; padding: 12px 16px; margin-bottom: 20px;
-            background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
-            border-radius: 8px; color: white; font-size: 1.1rem;
-            box-sizing: border-box;
-        }
-        .input-box:focus { outline: none; border-color: var(--accent-pink); box-shadow: 0 0 10px var(--neon-glow); }
-        .btn {
-            background: linear-gradient(to right, var(--accent-pink), var(--accent-purple));
-            color: white; border: none; padding: 12px 24px; border-radius: 8px;
-            font-size: 1.1rem; font-weight: bold; cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px var(--neon-glow); }
-        
-        /* ACTIVITY GRID */
-        .activity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
-        .activity-card {
-            background: rgba(255,255,255,0.05); padding: 20px; border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.1); cursor: pointer;
-            transition: all 0.3s; text-align: center; font-size: 1.2rem; font-weight: bold;
-        }
-        .activity-card:hover { background: rgba(255,255,255,0.1); border-color: var(--accent-pink); transform: scale(1.02); }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Activity Arcade</title>
+  <link rel="stylesheet" href="style.css?v=4">
+  
+  <!-- Custom Neon Scrollbar Styles Added Here -->
+  <style>
+    .panel-left, .panel-right {
+      max-height: 60vh; /* Keeps the boxes on the screen */
+      overflow-y: auto; /* Adds the scroll when text gets long */
+      overflow-x: hidden;
+      padding-right: 10px;
+    }
+
+    /* Beautiful Neon Scrollbar Styling */
+    .panel-left::-webkit-scrollbar,
+    .panel-right::-webkit-scrollbar {
+      width: 8px;
+    }
+    .panel-left::-webkit-scrollbar-track,
+    .panel-right::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05); /* Very subtle glass track */
+      border-radius: 10px;
+    }
+    .panel-left::-webkit-scrollbar-thumb,
+    .panel-right::-webkit-scrollbar-thumb {
+      background: linear-gradient(135deg, #f9a8d4, #a5b4fc); /* Pink to blue gradient */
+      border-radius: 10px;
+    }
+    .panel-left::-webkit-scrollbar-thumb:hover,
+    .panel-right::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(135deg, #fca5a5, #d8b4fe); /* Brighter on hover */
+    }
+  </style>
+
 </head>
 <body>
-
-    <!-- NEON TEACHER TOGGLE -->
-    <button onclick="switchScreen('teacher-login')" style="position: absolute; top: 20px; right: 20px; background: rgba(30, 41, 59, 0.8); border: 2px solid #ec4899; color: #f9a8d4; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-weight: bold; box-shadow: 0 0 10px rgba(236, 72, 153, 0.3); transition: all 0.3s; z-index: 1000; backdrop-filter: blur(5px);">
-        ⚡ Teacher Mode
-    </button>
-
-    <div id="app">
-        <h1 id="app-title">Activity Arcade</h1>
-
-        <!-- STUDENT LOGIN -->
-        <div id="student-login" class="screen active">
-            <p>Enter your name to get started.</p>
-            <input type="text" id="student-name" class="input-box" placeholder="Your Name" />
-            <button class="btn" onclick="studentSignIn()">Start</button>
-        </div>
-
-        <!-- ACTIVITY LIST -->
-        <div id="activity-list" class="screen">
-            <h2>Choose an Activity</h2>
-            <div id="activities-container" class="activity-grid"></div>
-            <button class="btn" style="margin-top: 20px; background: #475569;" onclick="switchScreen('student-login')">Back</button>
-        </div>
-
-        <!-- PLAY SCREEN -->
-        <div id="activity-play" class="screen">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 id="activity-title" style="margin: 0;"></h2>
-                <button id="btn-overall-hint" class="btn" style="display:none; padding: 8px 16px; font-size: 1rem;">💡 Overall Hint</button>
-            </div>
-            <p id="activity-instruction" style="font-size: 1.1rem; color: #94a3b8; margin-bottom: 20px;"></p>
-            
-            <div style="display: flex; gap: 24px; align-items: flex-start;">
-                <div id="choice-pool" style="flex: 1; min-width: 200px; background: rgba(0,0,0,0.2); padding: 16px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); display: flex; flex-direction: column; gap: 10px;"></div>
-                <div id="text-container" style="flex: 3;"></div>
-            </div>
-
-            <div style="margin-top: 30px; text-align: center;">
-                <p id="feedback-message" style="font-size: 1.2rem; font-weight: bold; margin-bottom: 15px; height: 24px;"></p>
-                <button id="btn-check" class="btn" onclick="checkAnswer()">Check Answer</button>
-                <button id="btn-retry" class="btn" onclick="retryActivity()" style="display:none;">Retry Activity</button>
-                <button class="btn" style="background: #475569; margin-left: 10px;" onclick="switchScreen('activity-list')">Exit</button>
-            </div>
-        </div>
-
-        <!-- TEACHER LOGIN (The Good One!) -->
-        <div id="teacher-login" class="screen">
-            <h2 style="color: #f472b6;">Teacher Access</h2>
-            <p>Enter PIN to view live tracking.</p>
-            <input type="password" id="teacher-pin" class="input-box" placeholder="PIN" />
-            <button class="btn" onclick="teacherLogin()">Enter Dashboard</button>
-            <button class="btn" style="background: #475569; margin-left: 10px;" onclick="switchScreen('student-login')">Back</button>
-        </div>
-
-        <!-- TEACHER DASHBOARD -->
-        <div id="teacher-dashboard" class="screen">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: #f472b6; margin: 0;">Live Tracking</h2>
-                <div>
-                    <button class="btn" style="padding: 8px 16px; font-size: 1rem;" onclick="refreshTeacherData()">🔄 Refresh Now</button>
-                    <button class="btn" style="background: #475569; padding: 8px 16px; font-size: 1rem; margin-left: 10px;" onclick="exitTeacherMode()">Close</button>
-                </div>
-            </div>
-            <div id="teacher-data" style="background: rgba(0,0,0,0.2); padding: 20px; border-radius: 12px; overflow-x: auto;"></div>
-        </div>
-
+  <div id="app">
+    <h1 id="app-title">Activity Arcade</h1>
+    <div id="tab-bar">
+      <button id="tab-student" class="tab-btn active">Student</button>
+      <button id="tab-teacher" class="tab-btn">Teacher</button>
     </div>
+    <!-- Student Panel -->
+    <div id="panel-student">
+      <!-- Name Entry -->
+      <div id="screen-name" class="screen active">
+        <div class="card center-card" id="name-section">
+          <p class="subtitle">Enter your name to get started.</p>
+          <div class="form-group">
+            <label for="input-name">Your name</label>
+            <input id="input-name" type="text" placeholder="First name" autocomplete="off" />
+          </div>
+          <button id="btn-start" class="btn btn-primary">Start</button>
+        </div>
+      </div>
+      <!-- Loading -->
+      <div id="screen-loading" class="screen">
+        <div class="card center-card">
+          <div class="spinner" aria-label="Loading"></div>
+          <p class="subtitle loading-text">Loading activities…</p>
+        </div>
+      </div>
+      <!-- Library -->
+      <div id="screen-library" class="screen">
+        <div class="card">
+          <h2 class="section-heading">Choose an Activity</h2>
+          <div id="library-list" class="library-list"></div>
+        </div>
+      </div>
+      <!-- Activity Screen -->
+      <div id="screen-activity" class="screen">
+        <div class="card">
+          <div class="activity-header">
+            <h2 id="activity-title" class="section-heading">Activity Title</h2>
+            <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
+          </div>
+          <p class="instruction" id="game-instructions"></p>
+          <!-- Overall Hint will inject here -->
+          <div id="overall-hint-container"></div>
+          <!-- Side-by-side Workspace -->
+          <div class="workspace">
+            <div class="panel-left">
+              <h3>Choices</h3>
+              <div id="choice-pool" class="pool"></div>
+            </div>
+            <div class="panel-right">
+              <h3>Paragraph Labels</h3>
+              <div id="drop-zone" class="pool drop-zone-slots"></div>
+            </div>
+          </div>
+          <div class="activity-footer">
+            <button id="btn-check" class="btn primary">Check Answer</button>
+            <button id="btn-retry" class="btn secondary" style="display:none;">Retry</button>
+            <div id="feedback" class="feedback"></div>
+          </div>
+        </div>
+      </div>
 
-    <script src="app.js?v=101"></script>
+      <!-- Error Screen -->
+      <div id="screen-error" class="screen">
+        <div class="card center-card">
+          <h2 style="color: #e74c3c;">Oops!</h2>
+          <p id="error-message">Something went wrong.</p>
+          <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 15px;">Refresh Page</button>
+        </div>
+      </div>
+    </div> <!-- End Student Panel -->
+    <!-- Teacher Panel -->
+    <div id="panel-teacher" class="hidden">
+      <div class="card">
+        <div class="teacher-header">
+          <h2>Teacher Dashboard</h2>
+<a href="https://docs.google.com/spreadsheets/d/1iZQd9GEMfcs-uY9rzRHIf4LMMoGe7qpcAOfbOdxQi9c/edit?gid=0#gid=0" target="_blank" class="btn btn-sm" style="background: linear-gradient(to right, #8b5cf6, #ec4899) !important; color: white !important; border: none !important; text-decoration: none; display: flex; align-items: center;">Edit Activities Sheet</a>
+          <button id="btn-reset-session" class="btn btn-secondary btn-sm">Refresh Current Session</button>
+        </div>
+        <div id="teacher-results" class="results-container">
+          <p>Loading results...</p>
+        </div>
+      </div>
+    </div> <!-- End Teacher Panel -->
+  </div> <!-- End App -->
+  <!-- PIN Modal -->
+  <div id="pin-modal" class="hidden">
+    <div id="pin-modal-box">
+      <h3>Teacher Access</h3>
+      <p>Enter your PIN to continue.</p>
+      <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" />
+      <p id="pin-error" class="pin-error" role="alert" aria-live="polite"></p>
+      <div class="pin-actions">
+        <button id="btn-pin-cancel" class="btn btn-ghost">Cancel</button>
+        <button id="btn-pin-submit" class="btn btn-primary">Enter</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=41"></script>
+      <!-- GLOWING NEON BOX -->
+    <div id="neon-hint-box" class="hidden fixed top-10 left-1/2 transform -translate-x-1/2 bg-[#0f172a] border-2 border-[#d946ef] text-white px-8 py-4 rounded-xl shadow-[0_0_25px_#d946ef] z-[9999] text-center min-w-[300px] max-w-[80%]">
+        <p id="neon-hint-text" class="text-lg font-medium tracking-wide drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]"></p>
+    </div>
 </body>
 </html>
