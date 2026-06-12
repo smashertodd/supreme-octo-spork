@@ -266,7 +266,7 @@ function renderActivity(game) {
   const pool = document.getElementById("choice-pool");
   pool.innerHTML = "";
 
-   allSentences.forEach((item, index) => {
+     allSentences.forEach((item, index) => {
     const chip = document.createElement("div");
     chip.className = "sentence-chip border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
     chip.draggable = true;
@@ -275,16 +275,19 @@ function renderActivity(game) {
     
     // Build the text and optional lightbulb
     const displayText = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
-    let innerHtml = `<span style="pointer-events: none;">${displayText}</span>`;
+    
+    // flex: 1 makes the text take up the available space, pushing the bulb to the edge
+    let innerHtml = `<span style="pointer-events: none; flex: 1; padding-right: 10px;">${displayText}</span>`;
     
     if (item.hint) {
         let safeHint = item.hint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        // event.stopPropagation() stops the click from accidentally triggering a drag
-        innerHtml += `<span onclick="event.stopPropagation(); showNeonHint('${safeHint}')" title="Click for a hint" style="margin-left: 10px; cursor: pointer; font-size: 1.1em; filter: drop-shadow(0 0 5px rgba(255,255,255,0.6));">💡</span>`;
+        // flex-shrink: 0 stops the bulb from getting squished if the text is long
+        innerHtml += `<span onclick="event.stopPropagation(); showNeonHint('${safeHint}')" title="Click for a hint" style="cursor: pointer; font-size: 1.2em; flex-shrink: 0; filter: drop-shadow(0 0 5px rgba(255,255,255,0.6));">💡</span>`;
     }
     
     chip.innerHTML = innerHtml;
     chip.style.display = "flex";
+    chip.style.flexDirection = "row";
     chip.style.justifyContent = "space-between";
     chip.style.alignItems = "center";
 
