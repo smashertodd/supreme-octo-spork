@@ -149,19 +149,22 @@ function renderGame() {
     // Check layout type
     const isStandardGapFill = !type.toLowerCase().includes('categorisation') && !type.toLowerCase().includes('categorize');
 
-    const overallHintText = currentActivityData[0].overallHint;
-    if (overallHintText) {
-        document.getElementById('overall-hint-container').innerHTML = `<button onclick="showHint('${overallHintText.replace(/'/g, "\\'")}')" class="hint-btn">💡 Need an overall hint?</button>`;
-    } else {
-        document.getElementById('overall-hint-container').innerHTML = '';
+    totalDistractors = currentActivityData.filter(item => item.isDistractor).length;
+    let subtitleText = "Drag the correct words/phrases into the gaps.";
+    if (totalDistractors > 0) {
+        subtitleText += " Watch out for distractors!";
     }
 
-    totalDistractors = currentActivityData.filter(item => item.isDistractor).length;
-    let subtitle = "Drag the correct words/phrases into the gaps.";
-    if (totalDistractors > 0) {
-        subtitle += " Watch out for distractors!";
+    // --- NEW OVERALL HINT (Matching Lightbulb) ---
+    const overallHintText = currentActivityData[0].overallHint;
+    if (overallHintText) {
+        let hintHtml = `<span class="hint-icon" onclick="showHint('${overallHintText.replace(/'/g, "\\'")}')" title="Need an overall hint?" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 5px rgba(249, 168, 212, 0.6));">💡</span>`;
+        document.getElementById('activity-subtitle').innerHTML = subtitleText + hintHtml;
+        document.getElementById('overall-hint-container').innerHTML = ''; 
+    } else {
+        document.getElementById('activity-subtitle').textContent = subtitleText;
+        document.getElementById('overall-hint-container').innerHTML = '';
     }
-    document.getElementById('activity-subtitle').textContent = subtitle;
 
     // BUILD CHOICES (With lightbulbs inside!)
     let choiceObjects = new Map();
@@ -180,7 +183,6 @@ function renderGame() {
     let choicesHtml = '';
     choices.forEach((choiceObj, index) => {
         let color = COLORS[index % COLORS.length];
-        // The magic lightbulb code attached to the choice!
         let hintHtml = choiceObj.hint ? `<span class="hint-icon" onclick="event.stopPropagation(); showHint('${choiceObj.hint.replace(/'/g, "\\'")}')" title="Need a hint?" style="margin-left: 8px; cursor: pointer; font-size: 1.1em;">💡</span>` : '';
         
         choicesHtml += `<div class="draggable-chip" draggable="true" ondragstart="drag(event)" id="chip-${index}" data-answer="${choiceObj.label}" style="background-color: ${color}; display: inline-flex; align-items: center; border-radius: 8px;">${choiceObj.label}${hintHtml}</div>`;
@@ -211,7 +213,6 @@ function renderGame() {
 
     textContainer.innerHTML = html;
     
-    // Add layout class to text-container to switch CSS styles automatically
     if (isStandardGapFill) {
         textContainer.className = 'standard-gap-fill-layout';
     } else {
@@ -249,18 +250,15 @@ window.drop = function(event) {
     
     dropzone.appendChild(draggedElement);
     
-    // Remove dashed border when filled
     dropzone.style.border = 'none';
     dropzone.style.backgroundColor = 'transparent';
 };
 
-// Allow dropping back into choices
 document.getElementById('choices-container').addEventListener('dragover', allowDrop);
 document.getElementById('choices-container').addEventListener('drop', function(event) {
     event.preventDefault();
     if (draggedElement) {
         this.appendChild(draggedElement);
-        // Find the dropzone it left and restore its border
         document.querySelectorAll('.dropzone, .gap-fill-dropzone').forEach(dz => {
             if (dz.children.length === 0) {
                 dz.style.border = '2px dashed rgba(255, 255, 255, 0.4)';
@@ -270,9 +268,23 @@ document.getElementById('choices-container').addEventListener('drop', function(e
     }
 });
 
+// --- NEW PREMIUM HINT REVEAL (NO MORE UGLY ALERTS) ---
 window.showHint = function(hintText) {
     hintsUsed++;
-    alert("Hint: " + hintText);
+    
+    let existing = document.getElementById('custom-hint-modal');
+    if (existing) existing.remove();
+
+    let modal = document.createElement('div');
+    modal.id = 'custom-hint-modal';
+    modal.style.cssText = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(30, 27, 75, 0.95); border: 1px solid rgba(249, 168, 212, 0.5); border-radius: 16px; padding: 30px; z-index: 10000; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1); text-align: center; color: white; min-width: 300px; max-width: 80%; backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center;";
+    
+    modal.innerHTML = `
+        <div style="font-size: 2.5em; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(249, 168, 212, 0.8));">💡</div>
+        <div style="font-size: 1.2em; margin-bottom: 25px; line-height: 1.5;">${hintText}</div>
+        <button onclick="document.getElementById('custom-hint-modal').remove()" style="background: linear-gradient(135deg, #f9a8d4, #a5b4fc); border: none; padding: 10px 25px; border-radius: 8px; color: #1e1b4b; font-weight: bold; font-size: 1em; cursor: pointer; box-shadow: 0 4px 15px rgba(249, 168, 212, 0.4);">Got it!</button>
+    `;
+    document.body.appendChild(modal);
 };
 
 window.checkAnswer = function() {
@@ -290,14 +302,14 @@ window.checkAnswer = function() {
         if (child) {
             let studentAnswer = child.getAttribute('data-answer');
             if (studentAnswer === expectedAnswer) {
-                child.style.backgroundColor = '#4ade80'; // Success green
+                child.style.backgroundColor = '#4ade80';
                 child.style.color = '#1e1b4b';
-                child.setAttribute('draggable', 'false'); // Lock correct answers
+                child.setAttribute('draggable', 'false');
                 correctCount++;
             } else {
                 isCorrect = false;
-                document.getElementById('choices-container').appendChild(child); // Send wrong back
-                zone.style.border = '2px dashed rgba(255, 255, 255, 0.4)'; // Restore dashed border
+                document.getElementById('choices-container').appendChild(child);
+                zone.style.border = '2px dashed rgba(255, 255, 255, 0.4)';
             }
         } else {
             isCorrect = false;
