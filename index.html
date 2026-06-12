@@ -78,42 +78,74 @@
     .pin-error { color: #fca5a5; min-height: 24px; margin-bottom: 15px; font-size: 1rem; font-weight: bold; }
     /* Hide the old tab bar completely */
     #tab-bar { display: none !important; }
-
     /* --- MANUAL SPACING CONTROLS --- */
-    
+
     /* 1. Gap between "Enter your name..." and the text box */
     #name-section .subtitle {
-        margin-bottom: 25px !important; 
+        margin-bottom: 25px !important;
     }
-
     /* 2. Gap between the text box and the "Start" button */
     #name-section .form-group {
-        margin-bottom: 25px !important; 
+        margin-bottom: 25px !important;
     }
-
     /* 3. Gap above the "Check Answer" button */
     .activity-footer {
-        margin-top: 30px !important; 
+        margin-top: 30px !important;
     }
     /* Smooth Slide-In Animations */
-@keyframes slideUpFade {
-    from { opacity: 0; transform: translateY(30px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-#library-screen, #game-screen {
-    animation: slideUpFade 0.6s ease-out forwards;
-}
+    @keyframes slideUpFade {
+        from { opacity: 0; transform: translateY(30px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    #library-screen, #game-screen {
+        animation: slideUpFade 0.6s ease-out forwards;
+    }
     /* Magnetic Drop Zones */
-.gap-box {
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
-}
+    .gap-box {
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
+    }
+    .gap-box:hover {
+        transform: scale(1.08);
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important;
+        border-color: rgba(255, 255, 255, 0.9) !important;
+    }
 
-.gap-box:hover {
-    transform: scale(1.08);
-    box-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important;
-    border-color: rgba(255, 255, 255, 0.9) !important;
-}
+    /* --- DETECTIVE MODE STYLES --- */
+    .detective-word {
+        cursor: pointer;
+        padding: 4px 8px;
+        margin: 0 2px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+        border: 2px solid transparent;
+        display: inline-block;
+        background: rgba(255, 255, 255, 0.05); /* very subtle initial background */
+        color: #e2e8f0;
+    }
+    .detective-word:hover { 
+        background: rgba(255, 255, 255, 0.15); 
+        transform: translateY(-2px); 
+    }
+    .detective-word.selected {
+        background: #f9a8d4;
+        color: #000;
+        font-weight: 700;
+        box-shadow: 0 0 15px #f9a8d4;
+        border-color: #ec4899;
+        transform: scale(1.05);
+    }
+    .detective-word.correct {
+        background: #86efac !important;
+        box-shadow: 0 0 15px #86efac !important;
+        border-color: #22c55e !important;
+        color: #000;
+    }
+    .detective-word.incorrect {
+        background: #fca5a5 !important;
+        box-shadow: 0 0 15px #fca5a5 !important;
+        border-color: #ef4444 !important;
+        color: #000;
+    }
   </style>
 </head>
 <body>
@@ -214,6 +246,6 @@
       </div>
     </div>
   </div>
-  <script src="app.js?v=85"></script>
+  <script src="app.js?v=92"></script>
 </body>
 </html>
