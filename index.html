@@ -7,31 +7,25 @@
   <link rel="stylesheet" href="style.css?v=4">
   <!-- CONFETTI SCRIPT -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
   <style>
     /* WIDE LAYOUT FIX - "Whole screen filled" */
     #app { max-width: 95vw !important; width: 100% !important; margin: 0 auto; padding: 20px; }
     .workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
     .panel-left, .panel-right { max-height: 75vh !important; overflow-y: auto; overflow-x: hidden; padding-right: 15px; }
-
     /* THE 'Y' FIX */
     h1#app-title { padding-bottom: 15px; }
-
     /* Beautiful Neon Scrollbar Styling */
     .panel-left::-webkit-scrollbar, .panel-right::-webkit-scrollbar { width: 8px; }
     .panel-left::-webkit-scrollbar-track, .panel-right::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
     .panel-left::-webkit-scrollbar-thumb, .panel-right::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #f9a8d4, #a5b4fc); border-radius: 10px; }
     .panel-left::-webkit-scrollbar-thumb:hover, .panel-right::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #fca5a5, #d8b4fe); }
-
     /* 1. TACTILE HOVER GLOW FOR CHIPS */
     .draggable-chip { transition: all 0.2s ease-in-out !important; }
     .draggable-chip:hover { transform: translateY(-4px) scale(1.03) !important; box-shadow: 0 10px 20px rgba(255, 255, 255, 0.3), inset 0 0 8px rgba(255, 255, 255, 0.5) !important; cursor: grab !important; z-index: 100 !important; }
     .draggable-chip:active { transform: translateY(2px) scale(0.98) !important; box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1) !important; cursor: grabbing !important; }
-
     /* 2. BREATHING BACKGROUND ANIMATION */
     body { background-size: 200% 200% !important; animation: breathingGradient 20s ease infinite !important; }
     @keyframes breathingGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
-
     /* 3. FROSTED GLASS DEPTH */
     #student-login, #game-container, #teacher-view, .card {
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
@@ -40,7 +34,6 @@
         background: rgba(30, 30, 46, 0.6) !important; /* Ensuring dark glass look */
         backdrop-filter: blur(10px);
     }
-
     /* NEON TOGGLE CORNER BUTTONS */
     .neon-toggle-container { position: absolute; top: 25px; right: 30px; z-index: 1000; }
     .neon-toggle {
@@ -56,7 +49,6 @@
     /* Magic logic: only show the button for the mode we are NOT in! */
     #tab-student.active, #tab-teacher.active { display: none !important; }
     #tab-student:not(.active), #tab-teacher:not(.active) { display: inline-block !important; }
-
     /* NEON PIN MODAL */
     #pin-modal {
         position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -84,26 +76,38 @@
     #btn-pin-submit { background: linear-gradient(135deg, #6366f1, #a855f7); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
     #btn-pin-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6); }
     .pin-error { color: #fca5a5; min-height: 24px; margin-bottom: 15px; font-size: 1rem; font-weight: bold; }
-
     /* Hide the old tab bar completely */
     #tab-bar { display: none !important; }
+
+    /* --- MANUAL SPACING CONTROLS --- */
+    
+    /* 1. Gap between "Enter your name..." and the text box */
+    #name-section .subtitle {
+        margin-bottom: 25px !important; 
+    }
+
+    /* 2. Gap between the text box and the "Start" button */
+    #name-section .form-group {
+        margin-bottom: 25px !important; 
+    }
+
+    /* 3. Gap above the "Check Answer" button */
+    .activity-footer {
+        margin-top: 30px !important; 
+    }
   </style>
 </head>
 <body>
-
   <!-- NEW GORGEOUS NEON TOGGLE CORNER -->
   <div class="neon-toggle-container">
     <!-- Magic logic: Only one shows at a time based on which tab is 'active' in app.js -->
     <button id="tab-student" class="neon-toggle active">← Back to Game</button>
     <button id="tab-teacher" class="neon-toggle">Teacher Login 🔐</button>
   </div>
-
   <div id="app">
     <h1 id="app-title">Activity Arcade</h1>
-
     <!-- Student Panel -->
     <div id="panel-student">
-
       <!-- Name Entry -->
       <div id="screen-name" class="screen active">
         <div class="card center-card" id="name-section">
@@ -114,7 +118,6 @@
           <button id="btn-start" class="btn btn-primary">Start</button>
         </div>
       </div>
-
       <!-- Loading -->
       <div id="screen-loading" class="screen">
         <div class="card center-card">
@@ -122,7 +125,6 @@
           <p class="subtitle loading-text">Loading activities…</p>
         </div>
       </div>
-
       <!-- Library -->
       <div id="screen-library" class="screen">
         <div class="card">
@@ -130,7 +132,6 @@
           <div id="library-list" class="library-list"></div>
         </div>
       </div>
-
       <!-- Activity Screen -->
       <div id="screen-activity" class="screen">
         <div class="card">
@@ -139,9 +140,7 @@
             <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
           </div>
           <p class="instruction" id="game-instructions"></p>
-
           <div id="overall-hint-container"></div>
-
           <!-- Side-by-side Workspace -->
           <div class="workspace">
             <div class="panel-left">
@@ -160,7 +159,6 @@
           </div>
         </div>
       </div>
-
       <!-- Error Screen -->
       <div id="screen-error" class="screen">
         <div class="card center-card">
@@ -170,7 +168,6 @@
         </div>
       </div>
     </div>
-
     <!-- Teacher Panel -->
     <div id="panel-teacher" class="hidden">
       <div class="card">
@@ -185,7 +182,6 @@
       </div>
     </div>
   </div>
-
   <!-- GORGEOUS NEON PIN MODAL -->
   <div id="pin-modal" class="hidden">
     <div id="pin-modal-box">
@@ -199,7 +195,6 @@
       </div>
     </div>
   </div>
-
   <script src="app.js?v=83"></script>
 </body>
 </html>
