@@ -16,6 +16,24 @@ let totalDistractors = 0;
 document.addEventListener('DOMContentLoaded', () => {
     loadLibraryData();
     setInterval(loadTeacherData, 15000); 
+
+    // Safe loading: Waits for the page to load before attaching drop rules
+    const choicesContainer = document.getElementById('choices-container');
+    if (choicesContainer) {
+        choicesContainer.addEventListener('dragover', allowDrop);
+        choicesContainer.addEventListener('drop', function(event) {
+            event.preventDefault();
+            if (draggedElement) {
+                this.appendChild(draggedElement);
+                document.querySelectorAll('.dropzone, .gap-fill-dropzone').forEach(dz => {
+                    if (dz.children.length === 0) {
+                        dz.style.border = '2px dashed rgba(255, 255, 255, 0.4)';
+                        dz.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
+                    }
+                });
+            }
+        });
+    }
 });
 
 window.toggleRole = function() {
@@ -146,7 +164,6 @@ function renderGame() {
     document.getElementById('activity-title').textContent = currentActivityTitle;
     const type = currentActivityData[0].type || "";
     
-    // Check layout type
     const isStandardGapFill = !type.toLowerCase().includes('categorisation') && !type.toLowerCase().includes('categorize');
 
     totalDistractors = currentActivityData.filter(item => item.isDistractor).length;
@@ -155,16 +172,19 @@ function renderGame() {
         subtitleText += " Watch out for distractors!";
     }
 
-    // --- NEW OVERALL HINT (Matching Lightbulb) ---
+    // --- OVERALL HINT (Matching Lightbulb) ---
     const overallHintText = currentActivityData[0].overallHint;
     if (overallHintText) {
-        let hintHtml = `<span class="hint-icon" onclick="showHint('${overallHintText.replace(/'/g, "\\'")}')" title="Need an overall hint?" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 5px rgba(249, 168, 212, 0.6));">💡</span>`;
+        let safeHint = overallHintText.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+        let hintHtml = `<span class="hint-icon" onclick="showHint('${safeHint}')" title="Need an overall hint?" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 5px rgba(249, 168, 212, 0.6));">💡</span>`;
         document.getElementById('activity-subtitle').innerHTML = subtitleText + hintHtml;
-        document.getElementById('overall-hint-container').innerHTML = ''; 
     } else {
         document.getElementById('activity-subtitle').textContent = subtitleText;
-        document.getElementById('overall-hint-container').innerHTML = '';
     }
+
+    // Clear out the old yellow hint button container if it exists
+    let oldHintContainer = document.getElementById('overall-hint-container');
+    if (oldHintContainer) oldHintContainer.innerHTML = '';
 
     // BUILD CHOICES (With lightbulbs inside!)
     let choiceObjects = new Map();
@@ -183,9 +203,14 @@ function renderGame() {
     let choicesHtml = '';
     choices.forEach((choiceObj, index) => {
         let color = COLORS[index % COLORS.length];
-        let hintHtml = choiceObj.hint ? `<span class="hint-icon" onclick="event.stopPropagation(); showHint('${choiceObj.hint.replace(/'/g, "\\'")}')" title="Need a hint?" style="margin-left: 8px; cursor: pointer; font-size: 1.1em;">💡</span>` : '';
         
-        choicesHtml += `<div class="draggable-chip" draggable="true" ondragstart="drag(event)" id="chip-${index}" data-answer="${choiceObj.label}" style="background-color: ${color}; display: inline-flex; align-items: center; border-radius: 8px;">${choiceObj.label}${hintHtml}</div>`;
+        let hintHtml = '';
+        if (choiceObj.hint) {
+            let safeChoiceHint = choiceObj.hint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+            hintHtml = `<span class="hint-icon" onclick="event.stopPropagation(); showHint('${safeChoiceHint}')" title="Need a hint?" style="margin-left: 8px; cursor: pointer; font-size: 1.1em;">💡</span>`;
+        }
+        
+        choicesHtml += `<div class="draggable-chip" draggable="true" ondragstart="drag(event)" id="chip-${index}" data-answer="${choiceObj.label.replace(/"/g, '&quot;')}" style="background-color: ${color}; display: inline-flex; align-items: center; border-radius: 8px;">${choiceObj.label}${hintHtml}</div>`;
     });
     document.getElementById('choices-container').innerHTML = choicesHtml;
 
@@ -219,8 +244,11 @@ function renderGame() {
         textContainer.className = 'categorisation-layout';
     }
 
-    document.getElementById('feedback-message').textContent = '';
-    document.getElementById('feedback-message').className = '';
+    let fbMessage = document.getElementById('feedback-message');
+    if (fbMessage) {
+        fbMessage.textContent = '';
+        fbMessage.className = '';
+    }
 }
 
 window.drag = function(event) {
@@ -254,21 +282,7 @@ window.drop = function(event) {
     dropzone.style.backgroundColor = 'transparent';
 };
 
-document.getElementById('choices-container').addEventListener('dragover', allowDrop);
-document.getElementById('choices-container').addEventListener('drop', function(event) {
-    event.preventDefault();
-    if (draggedElement) {
-        this.appendChild(draggedElement);
-        document.querySelectorAll('.dropzone, .gap-fill-dropzone').forEach(dz => {
-            if (dz.children.length === 0) {
-                dz.style.border = '2px dashed rgba(255, 255, 255, 0.4)';
-                dz.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-            }
-        });
-    }
-});
-
-// --- NEW PREMIUM HINT REVEAL (NO MORE UGLY ALERTS) ---
+// --- PREMIUM HINT REVEAL (FROSTED GLASS MODAL) ---
 window.showHint = function(hintText) {
     hintsUsed++;
     
