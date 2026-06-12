@@ -628,3 +628,89 @@ setInterval(() => { const t = document.getElementById("panel-teacher"); if (t &&
 // ── Utils ────────────────────────────────────────────────────
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
+
+// --- NEON HINT MODAL OVERRIDE ---
+// This creates the neon pop-up and overrides the ugly default browser alerts.
+
+const neonModalOverlay = document.createElement('div');
+neonModalOverlay.id = 'neon-hint-overlay';
+neonModalOverlay.style.cssText = `
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+`;
+
+const neonModalBox = document.createElement('div');
+neonModalBox.style.cssText = `
+    background: rgba(30, 30, 46, 0.95);
+    border: 2px solid #ec4899;
+    box-shadow: 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 15px rgba(139, 92, 246, 0.4);
+    border-radius: 20px;
+    padding: 35px;
+    max-width: 80%;
+    width: 450px;
+    text-align: center;
+    transform: scale(0.8);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+`;
+
+const neonModalTitle = document.createElement('h3');
+neonModalTitle.innerHTML = "💡 Hint";
+neonModalTitle.style.cssText = "margin-top: 0; color: #f9a8d4; text-shadow: 0 0 10px #ec4899; margin-bottom: 20px; font-size: 2rem; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;";
+
+const neonModalText = document.createElement('p');
+neonModalText.id = 'neon-hint-text';
+neonModalText.style.cssText = "color: #e2e8f0; font-size: 1.3rem; line-height: 1.5; margin-bottom: 25px;";
+
+const neonModalInstruction = document.createElement('small');
+neonModalInstruction.innerHTML = "(Click anywhere to close)";
+neonModalInstruction.style.cssText = "display: block; color: #8b5cf6; font-size: 0.95rem; opacity: 0.8; font-style: italic;";
+
+neonModalBox.appendChild(neonModalTitle);
+neonModalBox.appendChild(neonModalText);
+neonModalBox.appendChild(neonModalInstruction);
+neonModalOverlay.appendChild(neonModalBox);
+document.body.appendChild(neonModalOverlay);
+
+function openNeonModal(text) {
+    document.getElementById('neon-hint-text').innerText = text;
+    neonModalOverlay.style.display = 'flex';
+    setTimeout(() => {
+        neonModalOverlay.style.opacity = '1';
+        neonModalBox.style.transform = 'scale(1)';
+    }, 10);
+}
+
+function closeNeonModal() {
+    neonModalOverlay.style.opacity = '0';
+    neonModalBox.style.transform = 'scale(0.8)';
+    setTimeout(() => {
+        neonModalOverlay.style.display = 'none';
+    }, 300);
+}
+
+neonModalOverlay.addEventListener('click', closeNeonModal);
+
+// Override the old functions
+window.showHint = function(hintText, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    openNeonModal(hintText);
+};
+
+window.showOverallHint = function() {
+    if (window.currentActivity && window.currentActivity.overallHint) {
+        openNeonModal(window.currentActivity.overallHint);
+    }
+};
+// --- END NEON HINT MODAL OVERRIDE ---
