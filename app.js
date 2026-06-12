@@ -23,6 +23,7 @@ function injectStyles() {
   const style = document.createElement('style');
   style.id = 'paragraph-builder-styles';
   style.innerHTML = `
+    /* --- ORIGINAL STYLES --- */
     .legend-box { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
     .legend-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 6px; font-weight: 600; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); }
     .hint-btn-small { background: rgba(255,255,255,0.7); border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
@@ -33,6 +34,7 @@ function injectStyles() {
     .paragraph-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
     .sentence-chip.in-paragraph { display: inline; padding: 4px 8px; border-radius: 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; }
     .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
+    
     /* Gap Fill Specific Styles */
     .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
     .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed #94a3b8; background: #f8fafc; border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
@@ -42,31 +44,21 @@ function injectStyles() {
     .gap-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
     .hint-btn-inline { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 4px; vertical-align: middle; transition: transform 0.2s; padding: 0; }
     .hint-btn-inline:hover { transform: scale(1.2); }
+    
     /* Loading Spinner Animation */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    /* NEW: V22 Sticky Pool, Auto-Width Chips, Gap Row Bleed Style */
-    #choice-pool {
-        min-height: 150px;
-        padding-bottom: 20px;
-        position: sticky;
-        top: 2rem;
-        align-self: start;
-        max-height: 85vh;
-        overflow-y: auto;
-    }
-    .sentence-chip:not(.in-paragraph) {
-        display: block;
-        width: fit-content;
-        max-width: 100%;
-    }
+    
+    /* Sticky Pool, Auto-Width Chips, Gap Row Bleed Style */
+    #choice-pool { min-height: 150px; padding-bottom: 20px; position: sticky; top: 2rem; align-self: start; max-height: 85vh; overflow-y: auto; }
+    .sentence-chip:not(.in-paragraph) { display: block; width: fit-content; max-width: 100%; }
     .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
-        /* 3. Custom Neon Scrollbars */
+
+    /* --- NEW UPGRADES (Scrollbars, Shimmer, Shake, Glow-Up, Spacing) --- */
     ::-webkit-scrollbar { width: 10px; height: 10px; }
     ::-webkit-scrollbar-track { background: rgba(30, 30, 46, 0.5); border-radius: 5px; }
     ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #ec4899, #8b5cf6); border-radius: 5px; }
     ::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #f472b6, #a78bfa); }
 
-    /* 4. Shimmering Check Answer Button */
     #btn-check { position: relative; overflow: hidden; border: none; margin-top: 30px !important; }
     #btn-check::after {
         content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
@@ -75,11 +67,9 @@ function injectStyles() {
     }
     @keyframes shimmer { 0% { transform: translateX(-100%) rotate(30deg); } 100% { transform: translateX(100%) rotate(30deg); } }
 
-    /* 2. Shake Animation for Wrong Answers */
     @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-6px);} 75% {transform: translateX(6px);} }
     .shake-error { animation: shake 0.4s ease-in-out; background-color: #fca5a5 !important; color: #7f1d1d !important; }
 
-    /* 5. Teacher Dashboard Glow-Up */
     #results-table { width: 100%; border-collapse: collapse; margin-top: 15px; color: #e2e8f0; font-size: 0.95rem; }
     #results-table th { background: rgba(139, 92, 246, 0.2); padding: 12px; text-align: left; border-bottom: 2px solid #ec4899; color: #f9a8d4; }
     #results-table td { padding: 12px; border-bottom: 1px solid rgba(139, 92, 246, 0.2); transition: background 0.2s; }
@@ -88,7 +78,6 @@ function injectStyles() {
     .status-incorrect { color: #f87171; text-shadow: 0 0 8px rgba(248, 113, 113, 0.4); font-weight: bold; }
     .status-partial { color: #fbbf24; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); font-weight: bold; }
 
-    /* 6. Layout Fixes for Spacing & Large Text */
     #student-name { margin-top: 12px !important; }
     
     .sentence-chip, .gap-chip {
