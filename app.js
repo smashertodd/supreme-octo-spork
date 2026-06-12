@@ -278,13 +278,7 @@ function renderActivity(game) {
     
     // flex: 1 makes the text take up the available space, pushing the bulb to the edge
     let innerHtml = `<span style="pointer-events: none; flex: 1; padding-right: 10px;">${displayText}</span>`;
-    
-    // ONLY add the lightbulb to the draggable chips if it is a Categorisation/Gap-Fill activity.
-    if (item.hint && currentLayoutMode !== "paragraph") {
-        let safeHint = item.hint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        innerHtml += `<span onclick="event.stopPropagation(); showNeonHint('${safeHint}')" title="Click for a hint" style="cursor: pointer; font-size: 1.2em; flex-shrink: 0; filter: drop-shadow(0 0 5px rgba(255,255,255,0.6));">💡</span>`;
-    }
-    
+     
     chip.innerHTML = innerHtml;
     chip.style.display = "flex";
     chip.style.flexDirection = "row";
