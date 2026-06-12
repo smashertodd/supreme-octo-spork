@@ -1,367 +1,673 @@
-const LIBRARY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv';
-const TRACKING_URL = 'https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec';
-const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
+// 5. NEON POP UPS (Mapped properly to your neon modal code at the bottom)
+window.showNeonHint = function(message) {
+    if (typeof openNeonModal === 'function') {
+        openNeonModal(message);
+    } else {
+        alert(message); // Safety backup
+    }
+};
+
+// =========================================================================
+// Fix the Paragraph — app.js (v24 - Final Neon + Dual Mode)
+// =========================================================================
+const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
+const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
+const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
 const TEACHER_PIN = "@pple";
-
-let libraryData = [];
+const REFRESH_INTERVAL = 10000;
+// Vibrant tones that match the purple/pink/blue aesthetic
+const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
+// ── State ────────────────────────────────────────────────────
 let studentName = "";
-let currentActivity = null;
+let activities = {};
+let currentGame = null;
+let sessionStart = null;
+let dragSrcEl = null;
+let hintsUsed = [];
+let attemptCount = 0;
+let currentLayoutMode = "paragraph"; // 'paragraph', 'categorisation', 'gapfill'
 
-// --- Core Startup ---
-document.addEventListener('DOMContentLoaded', () => {
-    injectStyles();
-    loadLibrary();
-});
-
-// --- Inject Styles ---
+// ── Inject CSS Automatically ──────────────────────────────────
 function injectStyles() {
   if (document.getElementById('paragraph-builder-styles')) return;
   const style = document.createElement('style');
   style.id = 'paragraph-builder-styles';
   style.innerHTML = `
-    .legend-box { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; background: rgba(30, 41, 59, 0.5); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); }
+    .legend-box { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
     .legend-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 6px; font-weight: 600; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); }
     .hint-btn-small { background: rgba(255,255,255,0.7); border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
     .hint-btn-small:hover { background: #fff; transform: scale(1.1); }
-    .paragraph-builder { line-height: 2.2; font-size: 1.1rem; background: rgba(255,255,255,0.05); padding: 24px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: left; color: #f8fafc; }
-    .paragraph-slot { display: inline-block; min-width: 140px; height: 1.8rem; vertical-align: middle; margin: 4px; border: 2px dashed rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); border-radius: 4px; transition: all 0.2s; }
-    .paragraph-slot.drag-over { border-color: #f9a8d4; background: rgba(249, 168, 212, 0.1); transform: scale(1.02); }
+    .paragraph-builder { line-height: 2.2; font-size: 1.1rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; }
+    .paragraph-slot { display: inline-block; min-width: 140px; height: 1.8rem; vertical-align: middle; margin: 4px; border: 2px dashed #cbd5e1; background: #f1f5f9; border-radius: 4px; transition: all 0.2s; }
+    .paragraph-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.02); }
     .paragraph-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
     .sentence-chip.in-paragraph { display: inline; padding: 4px 8px; border-radius: 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; }
-    
-    .sentence-chip.locked, .gap-chip.locked { pointer-events: none; outline: none !important; }
-    
-    .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: rgba(255,255,255,0.05); padding: 24px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); text-align: left; color: #f8fafc; }
-    .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
-    .gap-slot.drag-over { border-color: #f9a8d4; background: rgba(249, 168, 212, 0.1); transform: scale(1.05); }
+    .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
+    /* Gap Fill Specific Styles */
+    .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
+    .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed #94a3b8; background: #f8fafc; border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
+    .gap-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.05); }
     .gap-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
     .gap-chip { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 600; color: #0f172a !important; cursor: pointer; transition: background 0.2s; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: none !important; margin: 0 !important; }
+    .gap-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
     .hint-btn-inline { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 4px; vertical-align: middle; transition: transform 0.2s; padding: 0; }
     .hint-btn-inline:hover { transform: scale(1.2); }
-    
-    #choice-pool { min-height: 150px; padding-bottom: 20px; position: sticky; top: 2rem; align-self: start; max-height: 85vh; overflow-y: auto; }
-    .sentence-chip:not(.in-paragraph) { display: block; width: fit-content; max-width: 100%; border-radius: 8px; }
+    /* Loading Spinner Animation */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    /* NEW: V22 Sticky Pool, Auto-Width Chips, Gap Row Bleed Style */
+    #choice-pool {
+        min-height: 150px;
+        padding-bottom: 20px;
+        position: sticky;
+        top: 2rem;
+        align-self: start;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .sentence-chip:not(.in-paragraph) {
+        display: block;
+        width: fit-content;
+        max-width: 100%;
+    }
     .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
-
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
-    ::-webkit-scrollbar-track { background: rgba(30, 30, 46, 0.5); border-radius: 5px; }
-    ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #ec4899, #8b5cf6); border-radius: 5px; }
     
-    #btn-check { position: relative; overflow: hidden; border: none; margin-top: 30px !important; }
-    
-    @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-6px);} 75% {transform: translateX(6px);} }
-    .shake-error { animation: shake 0.4s ease-in-out; background-color: #fca5a5 !important; color: #7f1d1d !important; }
-
-    #results-table { width: 100%; border-collapse: collapse; margin-top: 15px; color: #e2e8f0; font-size: 0.95rem; }
-    #results-table th { background: rgba(139, 92, 246, 0.2); padding: 12px; text-align: left; border-bottom: 2px solid #ec4899; color: #f9a8d4; }
-    #results-table td { padding: 12px; border-bottom: 1px solid rgba(139, 92, 246, 0.2); transition: background 0.2s; }
-    
-    .sentence-chip, .gap-chip { height: auto !important; white-space: normal !important; text-align: left !important; line-height: 1.5 !important; padding: 12px 16px !important; max-width: 100% !important; box-sizing: border-box !important; }
-    .paragraph-slot, .gap-slot { height: auto !important; min-height: 46px !important; max-width: 100% !important; white-space: normal !important; display: inline-block; vertical-align: middle; box-sizing: border-box !important; }
-    #text-container { overflow-x: hidden !important; }
+    /* 3. SHINY CHECK YOUR ANSWERS BUTTON */
+    #btn-check { position: relative; overflow: hidden; border: none; }
+    #btn-check::after {
+        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+        transform: rotate(30deg); animation: shimmer 3s infinite linear; pointer-events: none;
+    }
+    @keyframes shimmer { 0% { transform: translateX(-100%) rotate(30deg); } 100% { transform: translateX(100%) rotate(30deg); } }
   `;
   document.head.appendChild(style);
 }
+// ── Boot ─────────────────────────────────────────────────────
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+      const mobileFixScript = document.createElement('script');
+      mobileFixScript.src = "https://unpkg.com/drag-drop-touch";
+      document.head.appendChild(mobileFixScript);
+  } catch (e) { console.log("Mobile fix skipped", e); }
+  injectStyles();
+  showScreen("screen-name");
 
-// --- CSV Loading ---
-function loadLibrary() {
-    fetch(LIBRARY_CSV_URL)
-        .then(response => response.text())
-        .then(csvText => {
-            libraryData = processInheritance(parseCSV(csvText));
-        })
-        .catch(err => console.error("Error loading CSV:", err));
+  const safeAdd = (id, event, handler) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+  };
+
+  safeAdd("btn-start", "click", handleNameSubmit);
+  safeAdd("btn-check", "click", checkAnswer);
+  safeAdd("btn-retry", "click", retryActivity);
+  safeAdd("btn-library", "click", () => showLibrary());
+  safeAdd("tab-student", "click", () => switchTab("student"));
+  safeAdd("tab-teacher", "click", () => promptTeacherPin());
+  safeAdd("btn-pin-submit", "click", submitPin);
+  safeAdd("btn-pin-cancel", "click", closePinModal);
+  safeAdd("btn-reset-session", "click", resetSession);
+
+  const nameInput = document.getElementById("input-name");
+  if (nameInput) nameInput.addEventListener("keydown", e => { if (e.key === "Enter") handleNameSubmit(); });
+  const pinInput = document.getElementById("pin-input");
+  if (pinInput) pinInput.addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
+});
+// ── Screens & CSV Parsing ────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById(id);
+  if (el) el.classList.add("active");
 }
-
+function handleNameSubmit() {
+  const input = document.getElementById("input-name");
+  if (!input) return;
+  const name = input.value.trim();
+  if (!name) { input.classList.add("error"); input.placeholder = "Please enter your name"; return; }
+  input.classList.remove("error");
+  studentName = name;
+  loadLibrary();
+}
 function parseCSV(text) {
-    const rows = text.split('\n').filter(r => r.trim() !== '');
-    const headers = rows[0].split(',').map(h => h.trim());
-    const data = [];
-    for (let i = 1; i < rows.length; i++) {
-        const cols = parseCSVRow(rows[i]);
-        if (cols.length === headers.length) {
-            const rowObj = {};
-            headers.forEach((h, idx) => rowObj[h] = cols[idx].trim());
-            data.push(rowObj);
-        }
-    }
-    return data;
+  const rows = []; const lines = text.split(/\r?\n/);
+  if (lines.length === 0) return rows;
+  const headers = splitCSVLine(lines[0]);
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const values = splitCSVLine(lines[i]); const row = {};
+    headers.forEach((h, idx) => { row[h.trim()] = (values[idx] || "").trim(); });
+    rows.push(row);
+  }
+  return rows;
 }
-
-function parseCSVRow(row) {
-    const cols = [];
-    let inQuotes = false;
-    let col = '';
-    for (let i = 0; i < row.length; i++) {
-        const char = row[i];
-        if (char === '"' && row[i+1] === '"') { col += '"'; i++; }
-        else if (char === '"') { inQuotes = !inQuotes; }
-        else if (char === ',' && !inQuotes) { cols.push(col); col = ''; }
-        else { col += char; }
-    }
-    cols.push(col);
-    return cols;
+function splitCSVLine(line) {
+  const result = []; let current = ""; let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQuotes && line[i + 1] === '"') { current += '"'; i++; } else { inQuotes = !inQuotes; } }
+    else if (ch === "," && !inQuotes) { result.push(current); current = ""; }
+    else { current += ch; }
+  }
+  result.push(current); return result;
 }
+// ── Library Loading & Smart Parsing ───────────────────────────
+function loadLibrary() {
+  showScreen("screen-loading");
+  const loadingScreen = document.getElementById("screen-loading");
+  if (loadingScreen) {
+      loadingScreen.innerHTML = `
+          <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 60vh;">
+              <div style="border: 5px solid #e2e8f0; border-top-color: #d8b4fe; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+              <h2 style="color: #334155; font-size: 1.5rem; font-weight: 600;">Loading Activities...</h2>
+          </div>
+      `;
+  }
+  fetch(LIBRARY_CSV_URL + "&t=" + new Date().getTime())
+    .then(r => r.text())
+    .then(text => {
+      buildActivities(parseCSV(text));
+      const activeGames = Object.keys(activities);
+      if (activeGames.length === 0) { showError("No active activities found."); return; }
+      if (activeGames.length === 1) startActivity(activeGames[0]);
+      else showLibrary();
+    })
+    .catch((e) => { console.error(e); showError("Couldn't load activities."); });
+}
+function buildActivities(rows) {
+  activities = {};
+  let lastTitle = "";
+  let lastStatus = "";
+  let lastType = "";
+  rows.forEach(originalRow => {
+    const row = {};
+    for (let key in originalRow) if (key) row[key.trim().toLowerCase().replace(/ /g, "_")] = originalRow[key];
 
-function processInheritance(data) {
-    let currentTitle = "", currentType = "", currentOverallHint = "", currentStatus = "";
-    data.forEach(row => {
-        if (row.Title) currentTitle = row.Title; else row.Title = currentTitle;
-        if (row.Type) currentType = row.Type; else row.Type = currentType;
-        if (row.Overall_Hint) currentOverallHint = row.Overall_Hint; else row.Overall_Hint = currentOverallHint;
-        if (row.Status && row.Status.toLowerCase() !== 'distractor') currentStatus = row.Status;
-        else if (!row.Status) row.Status = currentStatus;
+    // Inherit Title
+    let rowTitle = (row["title"] || "").trim();
+    if (rowTitle) lastTitle = rowTitle;
+    let currentTitle = lastTitle;
+    if (!currentTitle) return;
+
+    // Inherit Status
+    let rowStatus = (row["status"] || "").trim().toLowerCase();
+    if (rowStatus === 'active' || rowStatus === 'inactive') { lastStatus = rowStatus; }
+    if (lastStatus !== "active") return;
+    // Inherit Type (only if it's not a Distractor tag)
+    let rawType = (row["type"] || "").trim();
+    if (rawType && rawType.toLowerCase() !== "distractor") {
+        lastType = rawType;
+    }
+    // Check Distractor Status
+    let rowType = (row["type"] || "").trim().toLowerCase();
+    let isDistractor = (rowType === "distractor" || rowStatus === "distractor");
+
+    let textContent = (row["text"] || "").trim();
+    if (!textContent && !isDistractor) return;
+
+    if (!activities[currentTitle]) activities[currentTitle] = { title: currentTitle, type: lastType, parts: [], distractors: [], overallHint: "" };
+    if (row["overall_hint"]) activities[currentTitle].overallHint = row["overall_hint"];
+
+    const item = { text: textContent, label: row["label"], hint: row["hint"] };
+    if (isDistractor) { activities[currentTitle].distractors.push(item); }
+    else { activities[currentTitle].parts.push(item); }
+  });
+}
+function showLibrary() {
+  showScreen("screen-library");
+  const list = document.getElementById("library-list");
+  if (!list) return;
+  list.innerHTML = "";
+  Object.entries(activities).forEach(([id, game]) => {
+    const card = document.createElement("button"); card.className = "activity-card";
+    const distractorText = game.distractors.length ? "+ " + game.distractors.length + " distractor(s)" : "";
+    card.innerHTML = "<span class='card-title'>" + game.title + "</span><span class='card-meta'>" + game.parts.length + " parts " + distractorText + "</span>";
+    card.addEventListener("click", () => startActivity(id));
+    list.appendChild(card);
+  });
+}
+// ── UI Rendering: The Builder ─────────────────────────────────
+function startActivity(gameId) {
+  currentGame = gameId; hintsUsed = []; attemptCount = 0;
+  const gameData = activities[gameId];
+
+  // DETERMINE LAYOUT MODE
+  const hasGaps = gameData.parts.some(p => p.text && p.text.includes('___'));
+  const typeStr = (gameData.type || "").toLowerCase();
+  if (!hasGaps) {
+      currentLayoutMode = "paragraph";
+  } else if (typeStr.includes("categorisation") || typeStr.includes("categorize")) {
+      currentLayoutMode = "categorisation";
+  } else {
+      currentLayoutMode = "gapfill";
+  }
+  renderActivity(gameData);
+  showScreen("screen-activity");
+}
+function renderActivity(game) {
+  document.getElementById("activity-title").textContent = game.title;
+  let instructions = "Drag the text parts into the correct spaces to build the paragraph.";
+  if (currentLayoutMode !== "paragraph") instructions = "Drag the correct words/phrases into the gaps.";
+  if (game.distractors.length > 0) instructions += " Watch out for distractors!";
+
+  document.getElementById("game-instructions").textContent = instructions;
+
+  const hintContainer = document.getElementById("overall-hint-container");
+  hintContainer.innerHTML = game.overallHint ? "<button id='btn-overall-hint' class='btn-overall-hint'>💡 Need an overall hint?</button><div id='overall-hint-text' class='overall-hint-text hidden'>" + game.overallHint + "</div>" : "";
+  if (game.overallHint) {
+    document.getElementById("btn-overall-hint").addEventListener("click", () => {
+      document.getElementById("overall-hint-text").classList.remove("hidden");
+      document.getElementById("btn-overall-hint").style.display = "none";
+      hintsUsed.push("Overall Hint");
     });
-    return data;
-}
+  }
+  // 1. Build Left Pool
+  const allSentences = [
+    ...game.parts.map((p, i) => ({ ...p, isDistractor: false, answerIndex: i })),
+    ...game.distractors.map(d => ({ ...d, isDistractor: true, answerIndex: -1 }))
+  ];
+  shuffle(allSentences);
+  const pool = document.getElementById("choice-pool");
+  pool.innerHTML = "";
 
-// --- View Navigation ---
-function switchScreen(screenId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-    document.getElementById(screenId).classList.add('active');
-}
+  allSentences.forEach((item, index) => {
+    const chip = document.createElement("div");
+    chip.className = "sentence-chip bg-white border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
+    chip.draggable = true;
+    chip.dataset.answerIndex = item.answerIndex;
+    chip.dataset.isDistractor = item.isDistractor;
 
-function studentSignIn() {
-    const nameInput = document.getElementById('student-name').value.trim();
-    if (!nameInput) { alert("Please enter your name!"); return; }
-    studentName = nameInput;
-    renderActivityList();
-    switchScreen('activity-list');
-}
+    chip.textContent = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
+    if (currentLayoutMode !== "paragraph") {
+      chip.dataset.color = COLORS[index % COLORS.length];
+      chip.style.backgroundColor = chip.dataset.color;
+    }
+    chip.addEventListener("dragstart", onDragStart);
+    chip.addEventListener("dragend", onDragEnd);
+    pool.appendChild(chip);
+  });
 
-function teacherLogin() {
-    const pin = document.getElementById('teacher-pin').value;
-    if (pin === TEACHER_PIN) {
-        document.getElementById('teacher-pin').value = ''; // clear password box
-        switchScreen('teacher-dashboard');
-        refreshTeacherData();
-        window.teacherInterval = setInterval(refreshTeacherData, 15000);
+  pool.addEventListener("dragover", onDragOver);
+  pool.addEventListener("drop", e => onDropIntoPool(e, pool));
+  // 2. Build Right Zone
+  const dropZone = document.getElementById("drop-zone");
+  dropZone.innerHTML = "";
+  if (currentLayoutMode === "categorisation") {
+      // MODE: BLOCKY CATEGORISATION (Colour Bleed)
+      const gapFillBox = document.createElement("div");
+      gapFillBox.className = "gap-fill-box";
+      gapFillBox.style.display = "flex";
+      gapFillBox.style.flexDirection = "column";
+      gapFillBox.style.gap = "8px";
+
+      game.parts.forEach((part, i) => {
+          const rowDiv = document.createElement("div");
+          rowDiv.className = "gap-row";
+          const segments = (part.text || "").split('___');
+          segments.forEach((seg, sIdx) => {
+              if (seg) {
+                  const span = document.createElement("span");
+                  span.textContent = seg;
+                  rowDiv.appendChild(span);
+              }
+              if (sIdx < segments.length - 1) {
+                  const slot = document.createElement("span");
+                  slot.className = "gap-slot dropzone";
+                  slot.dataset.expectedIndex = i;
+                  slot.addEventListener("dragover", onDragOver);
+                  slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+                  rowDiv.appendChild(slot);
+                  if (part.hint) {
+                      const hBtn = document.createElement("button");
+                      hBtn.className = "hint-btn-inline";
+                      hBtn.innerHTML = "💡";
+                      hBtn.title = "View Hint";
+                      hBtn.onclick = () => {
+                          showNeonHint("Hint:\n\n" + part.hint);
+                          hintsUsed.push("Hint (Gap " + (i+1) + ")");
+                      };
+                      rowDiv.appendChild(hBtn);
+                  }
+              }
+          });
+          gapFillBox.appendChild(rowDiv);
+      });
+      dropZone.appendChild(gapFillBox);
+  } else if (currentLayoutMode === "gapfill") {
+      // MODE: STANDARD GAP FILL (Flowing Paragraph, no bleed)
+      const gapFillBox = document.createElement("div");
+      gapFillBox.className = "gap-fill-box";
+
+      game.parts.forEach((part, i) => {
+          const segments = (part.text || "").split('___');
+
+          segments.forEach((seg, sIdx) => {
+              if (seg) {
+                  const span = document.createElement("span");
+                  span.textContent = seg;
+                  gapFillBox.appendChild(span);
+              }
+              if (sIdx < segments.length - 1) {
+                  const slot = document.createElement("span");
+                  slot.className = "gap-slot dropzone";
+                  slot.dataset.expectedIndex = i;
+                  slot.addEventListener("dragover", onDragOver);
+                  slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+                  gapFillBox.appendChild(slot);
+                  if (part.hint) {
+                      const hBtn = document.createElement("button");
+                      hBtn.className = "hint-btn-inline";
+                      hBtn.innerHTML = "💡";
+                      hBtn.title = "View Hint";
+                      hBtn.onclick = () => {
+                          showNeonHint("Hint:\n\n" + part.hint);
+                          hintsUsed.push("Hint (Gap " + (i+1) + ")");
+                      };
+                      gapFillBox.appendChild(hBtn);
+                  }
+              }
+          });
+          // Add a space between parts so paragraphs flow naturally
+          gapFillBox.appendChild(document.createTextNode(" "));
+      });
+      dropZone.appendChild(gapFillBox);
+  } else {
+      // MODE: PARAGRAPH BUILDER
+      const legendBox = document.createElement("div");
+      legendBox.className = "legend-box";
+      const legendTitle = document.createElement("div");
+      legendTitle.className = "w-full text-sm uppercase font-bold text-gray-500 mb-1";
+      legendTitle.textContent = "Paragraph Structure:";
+      legendBox.appendChild(legendTitle);
+
+      game.parts.forEach((part, i) => {
+        const color = COLORS[i % COLORS.length];
+        const tag = document.createElement("div");
+        tag.className = "legend-tag";
+        tag.style.backgroundColor = color;
+        tag.textContent = (i + 1) + ". " + (part.label || "Part " + (i + 1));
+        if (part.hint) {
+          const hintBtn = document.createElement("button");
+          hintBtn.className = "hint-btn-small";
+          hintBtn.innerHTML = "💡";
+          hintBtn.title = "View Hint";
+          hintBtn.onclick = () => {
+              showNeonHint("Hint for " + part.label + ":\n\n" + part.hint);
+              hintsUsed.push("Hint (" + part.label + ")");
+          };
+          tag.appendChild(hintBtn);
+        }
+        legendBox.appendChild(tag);
+      });
+      dropZone.appendChild(legendBox);
+
+      const paraBuilder = document.createElement("div");
+      paraBuilder.className = "paragraph-builder";
+      game.parts.forEach((part, i) => {
+        const slot = document.createElement("div");
+        slot.className = "paragraph-slot dropzone";
+        slot.dataset.expectedIndex = i;
+        slot.dataset.color = COLORS[i % COLORS.length];
+        slot.addEventListener("dragover", onDragOver);
+        slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+        paraBuilder.appendChild(slot);
+      });
+      dropZone.appendChild(paraBuilder);
+  }
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("btn-check").style.display = "inline-flex";
+  document.getElementById("btn-retry").style.display = "none";
+}
+// ── Drag & Drop Handlers ─────────────────────────────────────
+function onDragStart(e) {
+  dragSrcEl = this;
+  e.dataTransfer.effectAllowed = "move";
+  setTimeout(() => this.classList.add("opacity-50"), 0);
+}
+function onDragEnd() {
+  this.classList.remove("opacity-50");
+  document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+  updateSlotLayouts();
+}
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  if (this.classList.contains("dropzone")) this.classList.add("drag-over");
+}
+function onDropIntoSlot(e, slot) {
+  e.preventDefault();
+  slot.classList.remove("drag-over");
+  if (!dragSrcEl || slot.classList.contains("correct")) return;
+  if (slot.children.length > 0) document.getElementById("choice-pool").appendChild(slot.children[0]);
+  slot.appendChild(dragSrcEl);
+}
+function onDropIntoPool(e, pool) {
+  e.preventDefault();
+  if (dragSrcEl) pool.appendChild(dragSrcEl);
+}
+// ── Dynamic Styling Update ────────────────────────────────────
+function updateSlotLayouts() {
+  document.querySelectorAll('.dropzone').forEach(slot => {
+    const row = slot.closest('.gap-row'); // Only exists in Categorisation mode
+
+    if (slot.children.length > 0) {
+      slot.classList.add('filled');
+      const chip = slot.children[0];
+      chip.classList.add('in-paragraph');
+      chip.classList.remove('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
+      if (currentLayoutMode !== "paragraph") {
+          chip.classList.add('gap-chip');
+          chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
+
+          // Apply Colour Bleed ONLY if Categorisation Mode
+          if (row && currentLayoutMode === "categorisation") {
+              row.style.backgroundColor = chip.dataset.color;
+              row.style.color = '#000';
+          }
+      } else {
+          chip.style.backgroundColor = slot.dataset.color;
+      }
     } else {
-        alert("Incorrect PIN");
+      slot.classList.remove('filled');
+      // Remove Colour Bleed
+      if (row && currentLayoutMode === "categorisation") {
+          row.style.backgroundColor = 'transparent';
+          row.style.color = 'inherit';
+      }
     }
-}
+  });
+  document.querySelectorAll('#choice-pool .sentence-chip').forEach(chip => {
+    chip.classList.remove('in-paragraph', 'locked', 'gap-chip');
+    chip.classList.add('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
 
-function exitTeacherMode() {
-    clearInterval(window.teacherInterval);
-    switchScreen('student-login');
-}
-
-function renderActivityList() {
-    const container = document.getElementById('activities-container');
-    container.innerHTML = '';
-    const activities = [...new Set(libraryData.map(r => r.Title))];
-    activities.forEach(title => {
-        const btn = document.createElement('div');
-        btn.className = 'activity-card';
-        btn.innerHTML = `<h3>${title}</h3>`;
-        btn.onclick = () => loadActivity(title);
-        container.appendChild(btn);
-    });
-}
-
-// --- Activity Engine ---
-function loadActivity(title) {
-    const activityRows = libraryData.filter(r => r.Title === title);
-    if(activityRows.length === 0) return;
-    
-    currentActivity = { Title: title, rows: activityRows };
-    window.currentAttempt = 0;
-    document.getElementById('activity-title').innerText = title;
-    
-    const type = activityRows[0].Type ? activityRows[0].Type.toLowerCase() : "";
-    const isCategorisation = type.includes("categorisation") || type.includes("categorize");
-    
-    const hasOverallHint = activityRows.some(r => r.Overall_Hint);
-    const overallHintBtn = document.getElementById('btn-overall-hint');
-    if (hasOverallHint) {
-        overallHintBtn.style.display = 'inline-block';
-        overallHintBtn.onclick = () => alert("Overall Hint: " + activityRows.find(r => r.Overall_Hint).Overall_Hint);
-    } else { overallHintBtn.style.display = 'none'; }
-
-    const choicePool = document.getElementById('choice-pool');
-    const textContainer = document.getElementById('text-container');
-    choicePool.innerHTML = ''; textContainer.innerHTML = '';
-
-    let validChoices = []; let distractors = [];
-    
-    if (isCategorisation) {
-        document.getElementById('activity-instruction').innerText = "Drag the labels into the correct spaces to categorize the text.";
-        const legendDiv = document.createElement('div'); legendDiv.className = 'legend-box';
-        const paragraphDiv = document.createElement('div'); paragraphDiv.className = 'paragraph-builder';
-        let labelIndex = 0;
-        
-        activityRows.forEach((row, i) => {
-            if (row.Status && row.Status.toLowerCase() === 'distractor') {
-                distractors.push({ id: `dist_${i}`, text: row.Label || row.Text, isDistractor: true }); return;
-            }
-            const labelColor = COLORS[labelIndex % COLORS.length];
-            const legendTag = document.createElement('div'); legendTag.className = 'legend-tag';
-            legendTag.style.backgroundColor = labelColor; legendTag.innerHTML = `${i+1}. ${row.Label}`;
-            
-            if (row.Hint) {
-                const hintBtn = document.createElement('button'); hintBtn.className = 'hint-btn-small'; hintBtn.innerHTML = '💡';
-                hintBtn.onclick = () => { alert(`Hint for ${row.Label}: ${row.Hint}`); logAttempt(studentName, title, window.currentAttempt+1, "Hint Used", `Hint for: ${row.Label}`); };
-                legendTag.appendChild(hintBtn);
-            }
-            legendDiv.appendChild(legendTag);
-            
-            const gapRow = document.createElement('div'); gapRow.className = 'gap-row';
-            const slot = document.createElement('div'); slot.className = 'paragraph-slot';
-            slot.dataset.answer = `${i+1}. ${row.Label}`; slot.dataset.color = labelColor;
-            gapRow.appendChild(slot);
-            
-            const textSpan = document.createElement('span'); textSpan.style.marginLeft = '8px'; textSpan.innerHTML = row.Text;
-            gapRow.appendChild(textSpan); paragraphDiv.appendChild(gapRow);
-            
-            validChoices.push({ id: `${i+1}. ${row.Label}`, text: `${i+1}. ${row.Label}`, color: labelColor });
-            labelIndex++;
-        });
-        textContainer.appendChild(legendDiv); textContainer.appendChild(paragraphDiv);
-        
+    if (currentLayoutMode !== "paragraph" && chip.dataset.color) {
+        chip.style.backgroundColor = chip.dataset.color;
     } else {
-        document.getElementById('activity-instruction').innerText = "Drag the correct words into the gaps to complete the text.";
-        const gapFillDiv = document.createElement('div'); gapFillDiv.className = 'gap-fill-box';
-        let htmlContent = ""; let gapCount = 0;
-        
-        activityRows.forEach((row, i) => {
-            if (row.Status && row.Status.toLowerCase() === 'distractor') {
-                distractors.push({ id: `dist_${i}`, text: row.Label || row.Text, isDistractor: true }); return;
-            }
-            const parts = row.Text.split('___');
-            if (parts.length > 1) {
-                htmlContent += parts[0];
-                const labelColor = COLORS[gapCount % COLORS.length];
-                let hintHtml = row.Hint ? `<button class="hint-btn-inline" title="Click for hint" onclick="alert('Hint: ${row.Hint.replace(/'/g, "\\'")}'); logAttempt('${studentName}', '${title}', window.currentAttempt+1, 'Hint Used', 'Hint for gap ${gapCount+1}');">💡</button>` : "";
-                htmlContent += `<div class="gap-slot" data-answer="${row.Label}" data-color="${labelColor}"></div>${hintHtml}`;
-                htmlContent += parts[1];
-                validChoices.push({ id: row.Label, text: row.Label, color: labelColor });
-                gapCount++;
-            } else { htmlContent += row.Text + " "; }
-        });
-        gapFillDiv.innerHTML = htmlContent; textContainer.appendChild(gapFillDiv);
+        chip.style.backgroundColor = '';
     }
-
-    const allChoices = [...validChoices, ...distractors].sort(() => Math.random() - 0.5);
-    allChoices.forEach(choice => {
-        const chip = document.createElement('div');
-        chip.className = isCategorisation ? 'sentence-chip' : 'gap-chip';
-        chip.draggable = true; chip.innerText = choice.text; chip.dataset.correct = choice.id;
-        chip.style.backgroundColor = (choice.color && !choice.isDistractor) ? choice.color : '#e2e8f0';
-        setupDragEvents(chip); choicePool.appendChild(chip);
-    });
-
-    setupDropZones();
-    document.getElementById('feedback-message').innerText = '';
-    document.getElementById('btn-check').style.display = 'inline-block';
-    document.getElementById('btn-retry').style.display = 'none';
-    switchScreen('activity-play');
-    logAttempt(studentName, title, 1, "Started", "");
+    chip.style.outline = 'none';
+  });
 }
-
-// --- Drag and Drop Logic ---
-let draggedItem = null;
-function setupDragEvents(item) {
-    item.addEventListener('dragstart', () => { draggedItem = item; setTimeout(() => item.style.opacity = '0.5', 0); });
-    item.addEventListener('dragend', () => { setTimeout(() => item.style.opacity = '1', 0); draggedItem = null; });
-    item.addEventListener('click', function() {
-        if (item.classList.contains('locked')) return;
-        if (item.parentElement.id !== 'choice-pool') {
-            document.getElementById('choice-pool').appendChild(item);
-            item.classList.remove('in-paragraph');
-            const gapRow = item.closest('.gap-row');
-            if (gapRow) gapRow.style.backgroundColor = 'transparent';
-            item.parentElement.classList.remove('filled');
-        }
-    });
-}
-
-function setupDropZones() {
-    const slots = document.querySelectorAll('.paragraph-slot, .gap-slot');
-    const pool = document.getElementById('choice-pool');
-    slots.forEach(slot => {
-        slot.addEventListener('dragover', e => { e.preventDefault(); slot.classList.add('drag-over'); });
-        slot.addEventListener('dragleave', () => slot.classList.remove('drag-over'));
-        slot.addEventListener('drop', function(e) {
-            e.preventDefault(); slot.classList.remove('drag-over');
-            if (!draggedItem) return;
-            if (this.children.length > 0) {
-                const existingChip = this.children[0];
-                pool.appendChild(existingChip); existingChip.classList.remove('in-paragraph');
-            }
-            this.appendChild(draggedItem); this.classList.add('filled'); draggedItem.classList.add('in-paragraph');
-            const gapRow = this.closest('.gap-row');
-            if (gapRow) gapRow.style.backgroundColor = draggedItem.style.backgroundColor.replace('rgb', 'rgba').replace(')', ', 0.15)');
-        });
-    });
-    pool.addEventListener('dragover', e => e.preventDefault());
-    pool.addEventListener('drop', function(e) {
-        e.preventDefault(); if (!draggedItem) return;
-        const originalSlot = draggedItem.parentElement;
-        if (originalSlot.classList.contains('paragraph-slot') || originalSlot.classList.contains('gap-slot')) {
-            const gapRow = originalSlot.closest('.gap-row');
-            if (gapRow) gapRow.style.backgroundColor = 'transparent';
-            originalSlot.classList.remove('filled');
-        }
-        this.appendChild(draggedItem); draggedItem.classList.remove('in-paragraph');
-    });
-}
-
-// --- Check Answer & Confetti ---
+// ── Check Answer ──────────────────────────────────────────────
 function checkAnswer() {
-    const slots = document.querySelectorAll('.gap-slot, .paragraph-slot');
-    let correctCount = 0; let totalGaps = slots.length;
+  const slots = document.querySelectorAll(".dropzone");
+  let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
+  attemptCount++;
 
-    slots.forEach(slot => {
-        const chip = slot.querySelector('.sentence-chip, .gap-chip');
-        if (!chip) return;
-        if (chip.dataset.correct === slot.dataset.answer) {
-            correctCount++; chip.classList.add('locked');
-        } else {
-            chip.classList.add('shake-error'); setTimeout(() => chip.classList.remove('shake-error'), 400);
-            document.getElementById('choice-pool').appendChild(chip); chip.classList.remove('in-paragraph');
-            const gapRow = slot.closest('.gap-row'); if (gapRow) gapRow.style.backgroundColor = 'transparent';
-            slot.classList.remove('filled');
-        }
-    });
+  slots.forEach((slot, i) => {
+    const chip = slot.querySelector(".sentence-chip");
+    if (!chip) { emptyCount++; return; }
+    if (chip.classList.contains("locked")) { correctCount++; return; }
 
-    const msg = document.getElementById('feedback-message');
-    if (correctCount === totalGaps) {
-        msg.innerHTML = "🎉 Perfect! You completed the activity correctly."; msg.style.color = "#4ade80";
-        document.getElementById('btn-check').style.display = 'none'; document.getElementById('btn-retry').style.display = 'inline-block';
-        if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
-        if (currentActivity) logAttempt(studentName, currentActivity.Title, (window.currentAttempt || 0) + 1, "Completed", "No incorrect distractors left");
+    const expected = slot.dataset.expectedIndex;
+    const actual = chip.dataset.answerIndex;
+    const isDistractor = chip.dataset.isDistractor === "true";
+
+    if (isDistractor) {
+      distractorCount++; mistakesMade = true;
+      document.getElementById("choice-pool").appendChild(chip);
+    } else if (expected === actual) {
+      correctCount++;
+      chip.classList.add("locked");
+      chip.draggable = false;
     } else {
-        msg.innerHTML = "Not quite! Incorrect answers have been returned to the pool."; msg.style.color = "#fca5a5";
-        window.currentAttempt = (window.currentAttempt || 0) + 1;
+      mistakesMade = true;
+      document.getElementById("choice-pool").appendChild(chip);
     }
+  });
+  updateSlotLayouts();
+  const totalSlots = slots.length;
+  let status, message;
+
+  if (correctCount === totalSlots) {
+    status = "correct";
+    message = (currentLayoutMode !== "paragraph") ? "🎉 Perfect! You filled the gaps correctly." : "🎉 Perfect! You built the paragraph correctly.";
+    document.getElementById("btn-check").style.display = "none";
+    document.getElementById("btn-retry").style.display = "inline-flex";
+    
+    // 1. CONFETTI FIRES HERE
+    if (typeof confetti === 'function') {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
+    }
+    
+  } else if (mistakesMade) {
+    status = "incorrect"; message = "⚠️ Incorrect parts were sent back to the left. You locked in " + correctCount + " correct answer(s). Keep trying!";
+  } else if (emptyCount > 0) {
+    status = "partial"; message = "Fill the remaining empty spaces! You have " + correctCount + " locked in.";
+  }
+
+  const fb = document.getElementById("feedback");
+  if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
+
+  let details = ["Score: " + correctCount + "/" + totalSlots];
+  if (distractorCount > 0) details.push("⚠️ Fell for distractors");
+  details.push(hintsUsed.length > 0 ? "💡 Hints: " + [...new Set(hintsUsed)].join(", ") : "🧠 No hints used");
+  trackAttempt(status, attemptCount, details);
 }
-
-function retryActivity() { loadActivity(currentActivity.Title); }
-
-// --- Tracking System ---
-function logAttempt(name, gameId, attempt, status, details) {
-    if (!name) return;
-    fetch(TRACKING_URL, {
-        method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ Name: name, Game_ID: gameId, Attempt: attempt, Status: status, Details: details })
-    }).catch(err => console.log("Tracking error:", err));
+function retryActivity() {
+  let cA = attemptCount; let cH = [...hintsUsed];
+  renderActivity(activities[currentGame]);
+  attemptCount = cA; hintsUsed = cH;
 }
-
-function refreshTeacherData() {
-    const container = document.getElementById('teacher-data');
-    container.innerHTML = '<p>Loading latest data...</p>';
-    const TRACKING_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv';
-
-    fetch(TRACKING_CSV_URL + "&t=" + new Date().getTime())
-        .then(response => response.text())
-        .then(csvText => {
-            const data = parseCSV(csvText).reverse(); 
-            let tableHtml = '<table id="results-table"><thead><tr><th>Time</th><th>Student</th><th>Activity</th><th>Attempt</th><th>Status</th><th>Details</th></tr></thead><tbody>';
-            data.forEach(row => {
-                let statusClass = row.Status === 'Completed' ? 'status-correct' : (row.Status === 'Started' ? 'status-partial' : 'status-incorrect');
-                tableHtml += `<tr><td>${row.Timestamp || ''}</td><td>${row.Name || ''}</td><td>${row.Game_ID || ''}</td><td>${row.Attempt || ''}</td><td class="${statusClass}">${row.Status || ''}</td><td>${row.Details || ''}</td></tr>`;
-            });
-            container.innerHTML = tableHtml + '</tbody></table>';
-        })
-        .catch(() => container.innerHTML = '<p style="color:red;">Error loading tracking data.</p>');
+// ── Tracking & Teacher Tab ────────────────────────────────────
+function trackAttempt(status, attempt, details) {
+  const params = new URLSearchParams({ name: studentName, game_id: currentGame, attempt: attempt, status: status, details: details.join(" | ") });
+  fetch(TRACKING_URL + "?" + params.toString(), { mode: 'no-cors' }).catch(() => {});
 }
+function switchTab(tab) {
+  const tabS = document.getElementById("tab-student"); const tabT = document.getElementById("tab-teacher");
+  const pS = document.getElementById("panel-student"); const pT = document.getElementById("panel-teacher");
+  if(tabS) tabS.classList.toggle("active", tab === "student");
+  if(tabT) tabT.classList.toggle("active", tab === "teacher");
+  if(pS) pS.classList.toggle("hidden", tab !== "student");
+  if(pT) pT.classList.toggle("hidden", tab !== "teacher");
+  if (tab === "teacher") loadTeacherData();
+}
+function promptTeacherPin() {
+  const modal = document.getElementById("pin-modal"); const input = document.getElementById("pin-input");
+  if (modal) modal.classList.remove("hidden"); if (input) { input.value = ""; input.focus(); }
+}
+function closePinModal() {
+  const modal = document.getElementById("pin-modal"); if(modal) modal.classList.add("hidden");
+}
+function submitPin() {
+  const input = document.getElementById("pin-input"); if (!input) return;
+  if (input.value.trim() === TEACHER_PIN) { closePinModal(); switchTab("teacher"); }
+  else { document.getElementById("pin-error").textContent = "Incorrect PIN."; input.value = ""; input.focus(); }
+}
+function resetSession() { sessionStart = Date.now(); loadTeacherData(); }
+function loadTeacherData() {
+  const container = document.getElementById("teacher-results"); if(!container) return;
+  container.innerHTML = "<p>Loading results...</p>";
+  fetch(TRACKING_CSV_URL + "&t=" + Date.now()).then(r => r.text()).then(text => {
+      const rows = parseCSV(text);
+      const filtered = sessionStart ? rows.filter(r => new Date(r["Timestamp"]).getTime() >= sessionStart) : rows;
+      renderTeacherTable(filtered.reverse());
+    }).catch(() => { container.innerHTML = "<p>Could not load results.</p>"; });
+}
+function renderTeacherTable(rows) {
+  const container = document.getElementById("teacher-results"); if (!container) return;
+  if (rows.length === 0) { container.innerHTML = "<p>No results yet.</p>"; return; }
+  const headers = ["Timestamp", "Name", "Game_ID", "Attempt", "Status", "Details"];
+  let html = "<table id='results-table'><thead><tr>";
+  headers.forEach(h => { html += "<th>" + h + "</th>"; }); html += "</tr></thead><tbody>";
+  rows.forEach(row => { html += "<tr>"; headers.forEach(h => { html += "<td>" + (row[h] || "") + "</td>"; }); html += "</tr>"; });
+  html += "</tbody></table>"; container.innerHTML = html;
+}
+setInterval(() => { const t = document.getElementById("panel-teacher"); if (t && !t.classList.contains("hidden")) loadTeacherData(); }, REFRESH_INTERVAL);
+// ── Utils ────────────────────────────────────────────────────
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
+// --- NEON HINT MODAL OVERRIDE ---
+// This creates the neon pop-up and overrides the ugly default browser alerts.
+const neonModalOverlay = document.createElement('div');
+neonModalOverlay.id = 'neon-hint-overlay';
+neonModalOverlay.style.cssText = `
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+`;
+const neonModalBox = document.createElement('div');
+neonModalBox.style.cssText = `
+    background: rgba(30, 30, 46, 0.95);
+    border: 2px solid #ec4899;
+    box-shadow: 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 15px rgba(139, 92, 246, 0.4);
+    border-radius: 20px;
+    padding: 35px;
+    max-width: 80%;
+    width: 450px;
+    text-align: center;
+    transform: scale(0.8);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+`;
+const neonModalTitle = document.createElement('h3');
+neonModalTitle.innerHTML = "💡 Hint";
+neonModalTitle.style.cssText = "margin-top: 0; color: #f9a8d4; text-shadow: 0 0 10px #ec4899; margin-bottom: 20px; font-size: 2rem; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;";
+const neonModalText = document.createElement('p');
+neonModalText.id = 'neon-hint-text-dynamic';
+neonModalText.style.cssText = "color: #e2e8f0; font-size: 1.3rem; line-height: 1.5; margin-bottom: 25px;";
+const neonModalInstruction = document.createElement('small');
+neonModalInstruction.innerHTML = "(Click anywhere to close)";
+neonModalInstruction.style.cssText = "display: block; color: #8b5cf6; font-size: 0.95rem; opacity: 0.8; font-style: italic;";
+neonModalBox.appendChild(neonModalTitle);
+neonModalBox.appendChild(neonModalText);
+neonModalBox.appendChild(neonModalInstruction);
+neonModalOverlay.appendChild(neonModalBox);
+document.body.appendChild(neonModalOverlay);
+function openNeonModal(text) {
+    document.getElementById('neon-hint-text-dynamic').innerText = text;
+    neonModalOverlay.style.display = 'flex';
+    setTimeout(() => {
+        neonModalOverlay.style.opacity = '1';
+        neonModalBox.style.transform = 'scale(1)';
+    }, 10);
+}
+function closeNeonModal() {
+    neonModalOverlay.style.opacity = '0';
+    neonModalBox.style.transform = 'scale(0.8)';
+    setTimeout(() => {
+        neonModalOverlay.style.display = 'none';
+    }, 300);
+}
+neonModalOverlay.addEventListener('click', closeNeonModal);
+// Override the old functions
+window.showHint = function(hintText, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    openNeonModal(hintText);
+};
+window.showOverallHint = function() {
+    if (window.currentActivity && window.currentActivity.overallHint) {
+        openNeonModal(window.currentActivity.overallHint);
+    }
+};
+// --- END NEON HINT MODAL OVERRIDE ---
