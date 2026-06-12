@@ -1,23 +1,13 @@
-// 5. NEON POP UPS (Mapped properly to your neon modal code at the bottom)
-window.showNeonHint = function(message) {
-    if (typeof openNeonModal === 'function') {
-        openNeonModal(message);
-    } else {
-        alert(message); // Safety backup
-    }
-};
-
 // =========================================================================
-// Fix the Paragraph — app.js (v24 - Final Neon + Dual Mode)
+// Fix the Paragraph — app.js (v42 - Foolproof Start Button)
 // =========================================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
 const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
 const TEACHER_PIN = "@pple";
-const REFRESH_INTERVAL = 10000;
-// Vibrant tones that match the purple/pink/blue aesthetic
+const REFRESH_INTERVAL = 15000;
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
-// ── State ────────────────────────────────────────────────────
+
 let studentName = "";
 let activities = {};
 let currentGame = null;
@@ -25,9 +15,16 @@ let sessionStart = null;
 let dragSrcEl = null;
 let hintsUsed = [];
 let attemptCount = 0;
-let currentLayoutMode = "paragraph"; // 'paragraph', 'categorisation', 'gapfill'
+let currentLayoutMode = "paragraph"; 
 
-// ── Inject CSS Automatically ──────────────────────────────────
+window.showNeonHint = function(message) {
+    if (typeof openNeonModal === 'function') {
+        openNeonModal(message);
+    } else {
+        alert(message); 
+    }
+};
+
 function injectStyles() {
   if (document.getElementById('paragraph-builder-styles')) return;
   const style = document.createElement('style');
@@ -43,7 +40,6 @@ function injectStyles() {
     .paragraph-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
     .sentence-chip.in-paragraph { display: inline; padding: 4px 8px; border-radius: 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; }
     .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
-    /* Gap Fill Specific Styles */
     .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
     .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed #94a3b8; background: #f8fafc; border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
     .gap-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.05); }
@@ -52,9 +48,7 @@ function injectStyles() {
     .gap-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
     .hint-btn-inline { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 4px; vertical-align: middle; transition: transform 0.2s; padding: 0; }
     .hint-btn-inline:hover { transform: scale(1.2); }
-    /* Loading Spinner Animation */
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    /* NEW: V22 Sticky Pool, Auto-Width Chips, Gap Row Bleed Style */
     #choice-pool {
         min-height: 150px;
         padding-bottom: 20px;
@@ -71,7 +65,6 @@ function injectStyles() {
     }
     .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
     
-    /* 3. SHINY CHECK YOUR ANSWERS BUTTON */
     #btn-check { position: relative; overflow: hidden; border: none; }
     #btn-check::after {
         content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
@@ -82,7 +75,7 @@ function injectStyles() {
   `;
   document.head.appendChild(style);
 }
-// ── Boot ─────────────────────────────────────────────────────
+
 document.addEventListener("DOMContentLoaded", () => {
   try {
       const mobileFixScript = document.createElement('script');
@@ -112,21 +105,27 @@ document.addEventListener("DOMContentLoaded", () => {
   const pinInput = document.getElementById("pin-input");
   if (pinInput) pinInput.addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
 });
-// ── Screens & CSV Parsing ────────────────────────────────────
+
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   const el = document.getElementById(id);
   if (el) el.classList.add("active");
 }
+
+// *** FOOLPROOF START BUTTON FIX ***
 function handleNameSubmit() {
   const input = document.getElementById("input-name");
-  if (!input) return;
-  const name = input.value.trim();
-  if (!name) { input.classList.add("error"); input.placeholder = "Please enter your name"; return; }
-  input.classList.remove("error");
+  let name = input ? input.value.trim() : "";
+  
+  // If they leave it blank, we call them "Student" so the button doesn't get stuck!
+  if (!name) { 
+      name = "Student"; 
+  }
+  
   studentName = name;
   loadLibrary();
 }
+
 function parseCSV(text) {
   const rows = []; const lines = text.split(/\r?\n/);
   if (lines.length === 0) return rows;
@@ -149,7 +148,7 @@ function splitCSVLine(line) {
   }
   result.push(current); return result;
 }
-// ── Library Loading & Smart Parsing ───────────────────────────
+
 function loadLibrary() {
   showScreen("screen-loading");
   const loadingScreen = document.getElementById("screen-loading");
@@ -181,22 +180,20 @@ function buildActivities(rows) {
     const row = {};
     for (let key in originalRow) if (key) row[key.trim().toLowerCase().replace(/ /g, "_")] = originalRow[key];
 
-    // Inherit Title
     let rowTitle = (row["title"] || "").trim();
     if (rowTitle) lastTitle = rowTitle;
     let currentTitle = lastTitle;
     if (!currentTitle) return;
 
-    // Inherit Status
     let rowStatus = (row["status"] || "").trim().toLowerCase();
     if (rowStatus === 'active' || rowStatus === 'inactive') { lastStatus = rowStatus; }
     if (lastStatus !== "active") return;
-    // Inherit Type (only if it's not a Distractor tag)
+    
     let rawType = (row["type"] || "").trim();
     if (rawType && rawType.toLowerCase() !== "distractor") {
         lastType = rawType;
     }
-    // Check Distractor Status
+    
     let rowType = (row["type"] || "").trim().toLowerCase();
     let isDistractor = (rowType === "distractor" || rowStatus === "distractor");
 
@@ -224,12 +221,11 @@ function showLibrary() {
     list.appendChild(card);
   });
 }
-// ── UI Rendering: The Builder ─────────────────────────────────
+
 function startActivity(gameId) {
   currentGame = gameId; hintsUsed = []; attemptCount = 0;
   const gameData = activities[gameId];
 
-  // DETERMINE LAYOUT MODE
   const hasGaps = gameData.parts.some(p => p.text && p.text.includes('___'));
   const typeStr = (gameData.type || "").toLowerCase();
   if (!hasGaps) {
@@ -259,7 +255,7 @@ function renderActivity(game) {
       hintsUsed.push("Overall Hint");
     });
   }
-  // 1. Build Left Pool
+  
   const allSentences = [
     ...game.parts.map((p, i) => ({ ...p, isDistractor: false, answerIndex: i })),
     ...game.distractors.map(d => ({ ...d, isDistractor: true, answerIndex: -1 }))
@@ -287,11 +283,10 @@ function renderActivity(game) {
 
   pool.addEventListener("dragover", onDragOver);
   pool.addEventListener("drop", e => onDropIntoPool(e, pool));
-  // 2. Build Right Zone
+  
   const dropZone = document.getElementById("drop-zone");
   dropZone.innerHTML = "";
   if (currentLayoutMode === "categorisation") {
-      // MODE: BLOCKY CATEGORISATION (Colour Bleed)
       const gapFillBox = document.createElement("div");
       gapFillBox.className = "gap-fill-box";
       gapFillBox.style.display = "flex";
@@ -332,7 +327,6 @@ function renderActivity(game) {
       });
       dropZone.appendChild(gapFillBox);
   } else if (currentLayoutMode === "gapfill") {
-      // MODE: STANDARD GAP FILL (Flowing Paragraph, no bleed)
       const gapFillBox = document.createElement("div");
       gapFillBox.className = "gap-fill-box";
 
@@ -365,12 +359,10 @@ function renderActivity(game) {
                   }
               }
           });
-          // Add a space between parts so paragraphs flow naturally
           gapFillBox.appendChild(document.createTextNode(" "));
       });
       dropZone.appendChild(gapFillBox);
   } else {
-      // MODE: PARAGRAPH BUILDER
       const legendBox = document.createElement("div");
       legendBox.className = "legend-box";
       const legendTitle = document.createElement("div");
@@ -417,7 +409,7 @@ function renderActivity(game) {
   document.getElementById("btn-check").style.display = "inline-flex";
   document.getElementById("btn-retry").style.display = "none";
 }
-// ── Drag & Drop Handlers ─────────────────────────────────────
+
 function onDragStart(e) {
   dragSrcEl = this;
   e.dataTransfer.effectAllowed = "move";
@@ -444,10 +436,10 @@ function onDropIntoPool(e, pool) {
   e.preventDefault();
   if (dragSrcEl) pool.appendChild(dragSrcEl);
 }
-// ── Dynamic Styling Update ────────────────────────────────────
+
 function updateSlotLayouts() {
   document.querySelectorAll('.dropzone').forEach(slot => {
-    const row = slot.closest('.gap-row'); // Only exists in Categorisation mode
+    const row = slot.closest('.gap-row'); 
 
     if (slot.children.length > 0) {
       slot.classList.add('filled');
@@ -458,7 +450,6 @@ function updateSlotLayouts() {
           chip.classList.add('gap-chip');
           chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
 
-          // Apply Colour Bleed ONLY if Categorisation Mode
           if (row && currentLayoutMode === "categorisation") {
               row.style.backgroundColor = chip.dataset.color;
               row.style.color = '#000';
@@ -468,7 +459,6 @@ function updateSlotLayouts() {
       }
     } else {
       slot.classList.remove('filled');
-      // Remove Colour Bleed
       if (row && currentLayoutMode === "categorisation") {
           row.style.backgroundColor = 'transparent';
           row.style.color = 'inherit';
@@ -487,7 +477,7 @@ function updateSlotLayouts() {
     chip.style.outline = 'none';
   });
 }
-// ── Check Answer ──────────────────────────────────────────────
+
 function checkAnswer() {
   const slots = document.querySelectorAll(".dropzone");
   let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
@@ -524,7 +514,6 @@ function checkAnswer() {
     document.getElementById("btn-check").style.display = "none";
     document.getElementById("btn-retry").style.display = "inline-flex";
     
-    // 1. CONFETTI FIRES HERE
     if (typeof confetti === 'function') {
         confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
     }
@@ -548,7 +537,7 @@ function retryActivity() {
   renderActivity(activities[currentGame]);
   attemptCount = cA; hintsUsed = cH;
 }
-// ── Tracking & Teacher Tab ────────────────────────────────────
+
 function trackAttempt(status, attempt, details) {
   const params = new URLSearchParams({ name: studentName, game_id: currentGame, attempt: attempt, status: status, details: details.join(" | ") });
   fetch(TRACKING_URL + "?" + params.toString(), { mode: 'no-cors' }).catch(() => {});
@@ -594,11 +583,11 @@ function renderTeacherTable(rows) {
   html += "</tbody></table>"; container.innerHTML = html;
 }
 setInterval(() => { const t = document.getElementById("panel-teacher"); if (t && !t.classList.contains("hidden")) loadTeacherData(); }, REFRESH_INTERVAL);
-// ── Utils ────────────────────────────────────────────────────
+
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
+
 // --- NEON HINT MODAL OVERRIDE ---
-// This creates the neon pop-up and overrides the ugly default browser alerts.
 const neonModalOverlay = document.createElement('div');
 neonModalOverlay.id = 'neon-hint-overlay';
 neonModalOverlay.style.cssText = `
@@ -641,6 +630,7 @@ neonModalBox.appendChild(neonModalText);
 neonModalBox.appendChild(neonModalInstruction);
 neonModalOverlay.appendChild(neonModalBox);
 document.body.appendChild(neonModalOverlay);
+
 function openNeonModal(text) {
     document.getElementById('neon-hint-text-dynamic').innerText = text;
     neonModalOverlay.style.display = 'flex';
@@ -657,7 +647,7 @@ function closeNeonModal() {
     }, 300);
 }
 neonModalOverlay.addEventListener('click', closeNeonModal);
-// Override the old functions
+
 window.showHint = function(hintText, event) {
     if (event) {
         event.stopPropagation();
