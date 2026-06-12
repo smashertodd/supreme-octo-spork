@@ -1,3 +1,14 @@
+window.showNeonHint = function(message) {
+    const box = document.getElementById('neon-hint-box');
+    const text = document.getElementById('neon-hint-text');
+    if (box && text) {
+        text.innerText = message;
+        box.classList.remove('hidden');
+        setTimeout(() => box.classList.add('hidden'), 4000); // Disappears after 4 seconds
+    } else {
+        showNeonHint(message); // Safety backup
+    }
+};
 // =========================================================================
 // Fix the Paragraph — app.js (v24 - Final Neon + Dual Mode)
 // =========================================================================
@@ -334,7 +345,7 @@ function renderActivity(game) {
                       hBtn.innerHTML = "💡";
                       hBtn.title = "View Hint";
                       hBtn.onclick = () => {
-                          alert("Hint:\n\n" + part.hint);
+                          showNeonHint("Hint:\n\n" + part.hint);
                           hintsUsed.push("Hint (Gap " + (i+1) + ")");
                       };
                       rowDiv.appendChild(hBtn);
@@ -372,7 +383,7 @@ function renderActivity(game) {
                       hBtn.innerHTML = "💡";
                       hBtn.title = "View Hint";
                       hBtn.onclick = () => {
-                          alert("Hint:\n\n" + part.hint);
+                          showNeonHint("Hint:\n\n" + part.hint);
                           hintsUsed.push("Hint (Gap " + (i+1) + ")");
                       };
                       gapFillBox.appendChild(hBtn);
@@ -405,7 +416,7 @@ function renderActivity(game) {
           hintBtn.innerHTML = "💡";
           hintBtn.title = "View Hint";
           hintBtn.onclick = () => {
-              alert("Hint for " + part.label + ":\n\n" + part.hint);
+              showNeonHint("Hint for " + part.label + ":\n\n" + part.hint);
               hintsUsed.push("Hint (" + part.label + ")");
           };
           tag.appendChild(hintBtn);
