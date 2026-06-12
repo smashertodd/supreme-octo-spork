@@ -1,5 +1,5 @@
 // =========================================================================
-// Fix the Paragraph — app.js (v93 - Detective Visibility & Hints Fix)
+// Fix the Paragraph — app.js (v94 - Detective Reset Color Fix)
 // =========================================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -290,6 +290,7 @@ function renderActivity(game) {
       document.querySelectorAll('.detective-word').forEach(span => {
           span.addEventListener('click', function() {
               this.classList.toggle('selected');
+              this.classList.remove('correct', 'incorrect'); // <-- THIS WASHES OFF THE RED/GREEN PAINT!
           });
       });
       
