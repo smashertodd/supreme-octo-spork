@@ -17,10 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loadLibraryData();
     setInterval(loadTeacherData, 15000); 
 
-    // Safe loading: Waits for the page to load before attaching drop rules
+    // Bulletproof loading to prevent Start button crashes
     const choicesContainer = document.getElementById('choices-container');
     if (choicesContainer) {
-        choicesContainer.addEventListener('dragover', allowDrop);
+        choicesContainer.addEventListener('dragover', (event) => event.preventDefault());
         choicesContainer.addEventListener('drop', function(event) {
             event.preventDefault();
             if (draggedElement) {
@@ -119,7 +119,6 @@ function parseLibraryCSV(csvText) {
             });
         }
     }
-
     populateActivitySelect();
 }
 
@@ -182,7 +181,6 @@ function renderGame() {
         document.getElementById('activity-subtitle').textContent = subtitleText;
     }
 
-    // Clear out the old yellow hint button container if it exists
     let oldHintContainer = document.getElementById('overall-hint-container');
     if (oldHintContainer) oldHintContainer.innerHTML = '';
 
@@ -277,7 +275,6 @@ window.drop = function(event) {
     }
     
     dropzone.appendChild(draggedElement);
-    
     dropzone.style.border = 'none';
     dropzone.style.backgroundColor = 'transparent';
 };
