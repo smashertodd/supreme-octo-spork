@@ -1,397 +1,663 @@
-const LIBRARY_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv';
-const TRACKING_CSV_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv';
-const TRACKING_URL = 'https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec';
-
+// =========================================================================
+// Fix the Paragraph — app.js (v42 - Foolproof Start Button)
+// =========================================================================
+const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
+const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
+const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
+const TEACHER_PIN = "@pple";
+const REFRESH_INTERVAL = 15000;
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
 
-let libraryData = [];
-let currentActivityData = [];
-let draggedElement = null;
-let currentActivityTitle = '';
-let studentName = '';
+let studentName = "";
+let activities = {};
+let currentGame = null;
+let sessionStart = null;
+let dragSrcEl = null;
+let hintsUsed = [];
 let attemptCount = 0;
-let hintsUsed = 0;
-let totalDistractors = 0;
+let currentLayoutMode = "paragraph"; 
 
-document.addEventListener('DOMContentLoaded', () => {
-    loadLibraryData();
-    setInterval(loadTeacherData, 15000); 
-
-    // Bulletproof loading to prevent Start button crashes
-    const choicesContainer = document.getElementById('choices-container');
-    if (choicesContainer) {
-        choicesContainer.addEventListener('dragover', (event) => event.preventDefault());
-        choicesContainer.addEventListener('drop', function(event) {
-            event.preventDefault();
-            if (draggedElement) {
-                this.appendChild(draggedElement);
-                document.querySelectorAll('.dropzone, .gap-fill-dropzone').forEach(dz => {
-                    if (dz.children.length === 0) {
-                        dz.style.border = '2px dashed rgba(255, 255, 255, 0.4)';
-                        dz.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
-                    }
-                });
-            }
-        });
+window.showNeonHint = function(message) {
+    if (typeof openNeonModal === 'function') {
+        openNeonModal(message);
+    } else {
+        alert(message); 
     }
+};
+
+function injectStyles() {
+  if (document.getElementById('paragraph-builder-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'paragraph-builder-styles';
+  style.innerHTML = `
+    .legend-box { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; padding: 16px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; }
+    .legend-tag { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 6px; font-weight: 600; color: #0f172a; box-shadow: 0 1px 2px rgba(0,0,0,0.05); border: 1px solid rgba(0,0,0,0.05); }
+    .hint-btn-small { background: rgba(255,255,255,0.7); border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+    .hint-btn-small:hover { background: #fff; transform: scale(1.1); }
+    .paragraph-builder { line-height: 2.2; font-size: 1.1rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; }
+    .paragraph-slot { display: inline-block; min-width: 140px; height: 1.8rem; vertical-align: middle; margin: 4px; border: 2px dashed #cbd5e1; background: #f1f5f9; border-radius: 4px; transition: all 0.2s; }
+    .paragraph-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.02); }
+    .paragraph-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
+    .sentence-chip.in-paragraph { display: inline; padding: 4px 8px; border-radius: 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; }
+    .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
+    .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
+    .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed #94a3b8; background: #f8fafc; border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
+    .gap-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.05); }
+    .gap-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
+    .gap-chip { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 600; color: #0f172a !important; cursor: pointer; transition: background 0.2s; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: none !important; margin: 0 !important; }
+    .gap-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
+    .hint-btn-inline { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 4px; vertical-align: middle; transition: transform 0.2s; padding: 0; }
+    .hint-btn-inline:hover { transform: scale(1.2); }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #choice-pool {
+        min-height: 150px;
+        padding-bottom: 20px;
+        position: sticky;
+        top: 2rem;
+        align-self: start;
+        max-height: 85vh;
+        overflow-y: auto;
+    }
+    .sentence-chip:not(.in-paragraph) {
+        display: block;
+        width: fit-content;
+        max-width: 100%;
+    }
+    .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
+    
+    #btn-check { position: relative; overflow: hidden; border: none; }
+    #btn-check::after {
+        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+        transform: rotate(30deg); animation: shimmer 3s infinite linear; pointer-events: none;
+    }
+    @keyframes shimmer { 0% { transform: translateX(-100%) rotate(30deg); } 100% { transform: translateX(100%) rotate(30deg); } }
+  `;
+  document.head.appendChild(style);
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  try {
+      const mobileFixScript = document.createElement('script');
+      mobileFixScript.src = "https://unpkg.com/drag-drop-touch";
+      document.head.appendChild(mobileFixScript);
+  } catch (e) { console.log("Mobile fix skipped", e); }
+  injectStyles();
+  showScreen("screen-name");
+
+  const safeAdd = (id, event, handler) => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener(event, handler);
+  };
+
+  safeAdd("btn-start", "click", handleNameSubmit);
+  safeAdd("btn-check", "click", checkAnswer);
+  safeAdd("btn-retry", "click", retryActivity);
+  safeAdd("btn-library", "click", () => showLibrary());
+  safeAdd("tab-student", "click", () => switchTab("student"));
+  safeAdd("tab-teacher", "click", () => promptTeacherPin());
+  safeAdd("btn-pin-submit", "click", submitPin);
+  safeAdd("btn-pin-cancel", "click", closePinModal);
+  safeAdd("btn-reset-session", "click", resetSession);
+
+  const nameInput = document.getElementById("input-name");
+  if (nameInput) nameInput.addEventListener("keydown", e => { if (e.key === "Enter") handleNameSubmit(); });
+  const pinInput = document.getElementById("pin-input");
+  if (pinInput) pinInput.addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
 });
 
-window.toggleRole = function() {
-    const isTeacher = document.getElementById('roleSwitch').checked;
-    if (isTeacher) {
-        let pin = prompt("Enter Teacher PIN:");
-        if (pin === "@pple") {
-            document.getElementById('student-login').style.display = 'none';
-            document.getElementById('game-container').style.display = 'none';
-            document.getElementById('teacher-view').style.display = 'block';
-            loadTeacherData();
-        } else {
-            alert("Incorrect PIN");
-            document.getElementById('roleSwitch').checked = false;
+function showScreen(id) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  const el = document.getElementById(id);
+  if (el) el.classList.add("active");
+}
+
+// *** FOOLPROOF START BUTTON FIX ***
+function handleNameSubmit() {
+  const input = document.getElementById("input-name");
+  let name = input ? input.value.trim() : "";
+  
+  // If they leave it blank, we call them "Student" so the button doesn't get stuck!
+  if (!name) { 
+      name = "Student"; 
+  }
+  
+  studentName = name;
+  loadLibrary();
+}
+
+function parseCSV(text) {
+  const rows = []; const lines = text.split(/\r?\n/);
+  if (lines.length === 0) return rows;
+  const headers = splitCSVLine(lines[0]);
+  for (let i = 1; i < lines.length; i++) {
+    if (!lines[i].trim()) continue;
+    const values = splitCSVLine(lines[i]); const row = {};
+    headers.forEach((h, idx) => { row[h.trim()] = (values[idx] || "").trim(); });
+    rows.push(row);
+  }
+  return rows;
+}
+function splitCSVLine(line) {
+  const result = []; let current = ""; let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { if (inQuotes && line[i + 1] === '"') { current += '"'; i++; } else { inQuotes = !inQuotes; } }
+    else if (ch === "," && !inQuotes) { result.push(current); current = ""; }
+    else { current += ch; }
+  }
+  result.push(current); return result;
+}
+
+function loadLibrary() {
+  showScreen("screen-loading");
+  const loadingScreen = document.getElementById("screen-loading");
+  if (loadingScreen) {
+      loadingScreen.innerHTML = `
+          <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 60vh;">
+              <div style="border: 5px solid #e2e8f0; border-top-color: #d8b4fe; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 20px;"></div>
+              <h2 style="color: #334155; font-size: 1.5rem; font-weight: 600;">Loading Activities...</h2>
+          </div>
+      `;
+  }
+  fetch(LIBRARY_CSV_URL + "&t=" + new Date().getTime())
+    .then(r => r.text())
+    .then(text => {
+      buildActivities(parseCSV(text));
+      const activeGames = Object.keys(activities);
+      if (activeGames.length === 0) { showError("No active activities found."); return; }
+      if (activeGames.length === 1) startActivity(activeGames[0]);
+      else showLibrary();
+    })
+    .catch((e) => { console.error(e); showError("Couldn't load activities."); });
+}
+function buildActivities(rows) {
+  activities = {};
+  let lastTitle = "";
+  let lastStatus = "";
+  let lastType = "";
+  rows.forEach(originalRow => {
+    const row = {};
+    for (let key in originalRow) if (key) row[key.trim().toLowerCase().replace(/ /g, "_")] = originalRow[key];
+
+    let rowTitle = (row["title"] || "").trim();
+    if (rowTitle) lastTitle = rowTitle;
+    let currentTitle = lastTitle;
+    if (!currentTitle) return;
+
+    let rowStatus = (row["status"] || "").trim().toLowerCase();
+    if (rowStatus === 'active' || rowStatus === 'inactive') { lastStatus = rowStatus; }
+    if (lastStatus !== "active") return;
+    
+    let rawType = (row["type"] || "").trim();
+    if (rawType && rawType.toLowerCase() !== "distractor") {
+        lastType = rawType;
+    }
+    
+    let rowType = (row["type"] || "").trim().toLowerCase();
+    let isDistractor = (rowType === "distractor" || rowStatus === "distractor");
+
+    let textContent = (row["text"] || "").trim();
+    if (!textContent && !isDistractor) return;
+
+    if (!activities[currentTitle]) activities[currentTitle] = { title: currentTitle, type: lastType, parts: [], distractors: [], overallHint: "" };
+    if (row["overall_hint"]) activities[currentTitle].overallHint = row["overall_hint"];
+
+    const item = { text: textContent, label: row["label"], hint: row["hint"] };
+    if (isDistractor) { activities[currentTitle].distractors.push(item); }
+    else { activities[currentTitle].parts.push(item); }
+  });
+}
+function showLibrary() {
+  showScreen("screen-library");
+  const list = document.getElementById("library-list");
+  if (!list) return;
+  list.innerHTML = "";
+  Object.entries(activities).forEach(([id, game]) => {
+    const card = document.createElement("button"); card.className = "activity-card";
+    const distractorText = game.distractors.length ? "+ " + game.distractors.length + " distractor(s)" : "";
+    card.innerHTML = "<span class='card-title'>" + game.title + "</span><span class='card-meta'>" + game.parts.length + " parts " + distractorText + "</span>";
+    card.addEventListener("click", () => startActivity(id));
+    list.appendChild(card);
+  });
+}
+
+function startActivity(gameId) {
+  currentGame = gameId; hintsUsed = []; attemptCount = 0;
+  const gameData = activities[gameId];
+
+  const hasGaps = gameData.parts.some(p => p.text && p.text.includes('___'));
+  const typeStr = (gameData.type || "").toLowerCase();
+  if (!hasGaps) {
+      currentLayoutMode = "paragraph";
+  } else if (typeStr.includes("categorisation") || typeStr.includes("categorize")) {
+      currentLayoutMode = "categorisation";
+  } else {
+      currentLayoutMode = "gapfill";
+  }
+  renderActivity(gameData);
+  showScreen("screen-activity");
+}
+function renderActivity(game) {
+  document.getElementById("activity-title").textContent = game.title;
+  let instructions = "Drag the text parts into the correct spaces to build the paragraph.";
+  if (currentLayoutMode !== "paragraph") instructions = "Drag the correct words/phrases into the gaps.";
+  if (game.distractors.length > 0) instructions += " Watch out for distractors!";
+
+  document.getElementById("game-instructions").textContent = instructions;
+
+  const hintContainer = document.getElementById("overall-hint-container");
+  hintContainer.innerHTML = game.overallHint ? "<button id='btn-overall-hint' class='btn-overall-hint'>💡 Need an overall hint?</button><div id='overall-hint-text' class='overall-hint-text hidden'>" + game.overallHint + "</div>" : "";
+  if (game.overallHint) {
+    document.getElementById("btn-overall-hint").addEventListener("click", () => {
+      document.getElementById("overall-hint-text").classList.remove("hidden");
+      document.getElementById("btn-overall-hint").style.display = "none";
+      hintsUsed.push("Overall Hint");
+    });
+  }
+  
+  const allSentences = [
+    ...game.parts.map((p, i) => ({ ...p, isDistractor: false, answerIndex: i })),
+    ...game.distractors.map(d => ({ ...d, isDistractor: true, answerIndex: -1 }))
+  ];
+  shuffle(allSentences);
+  const pool = document.getElementById("choice-pool");
+  pool.innerHTML = "";
+
+  allSentences.forEach((item, index) => {
+    const chip = document.createElement("div");
+    chip.className = "sentence-chip bg-white border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
+    chip.draggable = true;
+    chip.dataset.answerIndex = item.answerIndex;
+    chip.dataset.isDistractor = item.isDistractor;
+
+    chip.textContent = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
+    if (currentLayoutMode !== "paragraph") {
+      chip.dataset.color = COLORS[index % COLORS.length];
+      chip.style.backgroundColor = chip.dataset.color;
+    }
+    chip.addEventListener("dragstart", onDragStart);
+    chip.addEventListener("dragend", onDragEnd);
+    pool.appendChild(chip);
+  });
+
+  pool.addEventListener("dragover", onDragOver);
+  pool.addEventListener("drop", e => onDropIntoPool(e, pool));
+  
+  const dropZone = document.getElementById("drop-zone");
+  dropZone.innerHTML = "";
+  if (currentLayoutMode === "categorisation") {
+      const gapFillBox = document.createElement("div");
+      gapFillBox.className = "gap-fill-box";
+      gapFillBox.style.display = "flex";
+      gapFillBox.style.flexDirection = "column";
+      gapFillBox.style.gap = "8px";
+
+      game.parts.forEach((part, i) => {
+          const rowDiv = document.createElement("div");
+          rowDiv.className = "gap-row";
+          const segments = (part.text || "").split('___');
+          segments.forEach((seg, sIdx) => {
+              if (seg) {
+                  const span = document.createElement("span");
+                  span.textContent = seg;
+                  rowDiv.appendChild(span);
+              }
+              if (sIdx < segments.length - 1) {
+                  const slot = document.createElement("span");
+                  slot.className = "gap-slot dropzone";
+                  slot.dataset.expectedIndex = i;
+                  slot.addEventListener("dragover", onDragOver);
+                  slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+                  rowDiv.appendChild(slot);
+                  if (part.hint) {
+                      const hBtn = document.createElement("button");
+                      hBtn.className = "hint-btn-inline";
+                      hBtn.innerHTML = "💡";
+                      hBtn.title = "View Hint";
+                      hBtn.onclick = () => {
+                          showNeonHint("Hint:\n\n" + part.hint);
+                          hintsUsed.push("Hint (Gap " + (i+1) + ")");
+                      };
+                      rowDiv.appendChild(hBtn);
+                  }
+              }
+          });
+          gapFillBox.appendChild(rowDiv);
+      });
+      dropZone.appendChild(gapFillBox);
+  } else if (currentLayoutMode === "gapfill") {
+      const gapFillBox = document.createElement("div");
+      gapFillBox.className = "gap-fill-box";
+
+      game.parts.forEach((part, i) => {
+          const segments = (part.text || "").split('___');
+
+          segments.forEach((seg, sIdx) => {
+              if (seg) {
+                  const span = document.createElement("span");
+                  span.textContent = seg;
+                  gapFillBox.appendChild(span);
+              }
+              if (sIdx < segments.length - 1) {
+                  const slot = document.createElement("span");
+                  slot.className = "gap-slot dropzone";
+                  slot.dataset.expectedIndex = i;
+                  slot.addEventListener("dragover", onDragOver);
+                  slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+                  gapFillBox.appendChild(slot);
+                  if (part.hint) {
+                      const hBtn = document.createElement("button");
+                      hBtn.className = "hint-btn-inline";
+                      hBtn.innerHTML = "💡";
+                      hBtn.title = "View Hint";
+                      hBtn.onclick = () => {
+                          showNeonHint("Hint:\n\n" + part.hint);
+                          hintsUsed.push("Hint (Gap " + (i+1) + ")");
+                      };
+                      gapFillBox.appendChild(hBtn);
+                  }
+              }
+          });
+          gapFillBox.appendChild(document.createTextNode(" "));
+      });
+      dropZone.appendChild(gapFillBox);
+  } else {
+      const legendBox = document.createElement("div");
+      legendBox.className = "legend-box";
+      const legendTitle = document.createElement("div");
+      legendTitle.className = "w-full text-sm uppercase font-bold text-gray-500 mb-1";
+      legendTitle.textContent = "Paragraph Structure:";
+      legendBox.appendChild(legendTitle);
+
+      game.parts.forEach((part, i) => {
+        const color = COLORS[i % COLORS.length];
+        const tag = document.createElement("div");
+        tag.className = "legend-tag";
+        tag.style.backgroundColor = color;
+        tag.textContent = (i + 1) + ". " + (part.label || "Part " + (i + 1));
+        if (part.hint) {
+          const hintBtn = document.createElement("button");
+          hintBtn.className = "hint-btn-small";
+          hintBtn.innerHTML = "💡";
+          hintBtn.title = "View Hint";
+          hintBtn.onclick = () => {
+              showNeonHint("Hint for " + part.label + ":\n\n" + part.hint);
+              hintsUsed.push("Hint (" + part.label + ")");
+          };
+          tag.appendChild(hintBtn);
         }
+        legendBox.appendChild(tag);
+      });
+      dropZone.appendChild(legendBox);
+
+      const paraBuilder = document.createElement("div");
+      paraBuilder.className = "paragraph-builder";
+      game.parts.forEach((part, i) => {
+        const slot = document.createElement("div");
+        slot.className = "paragraph-slot dropzone";
+        slot.dataset.expectedIndex = i;
+        slot.dataset.color = COLORS[i % COLORS.length];
+        slot.addEventListener("dragover", onDragOver);
+        slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+        paraBuilder.appendChild(slot);
+      });
+      dropZone.appendChild(paraBuilder);
+  }
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("btn-check").style.display = "inline-flex";
+  document.getElementById("btn-retry").style.display = "none";
+}
+
+function onDragStart(e) {
+  dragSrcEl = this;
+  e.dataTransfer.effectAllowed = "move";
+  setTimeout(() => this.classList.add("opacity-50"), 0);
+}
+function onDragEnd() {
+  this.classList.remove("opacity-50");
+  document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
+  updateSlotLayouts();
+}
+function onDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = "move";
+  if (this.classList.contains("dropzone")) this.classList.add("drag-over");
+}
+function onDropIntoSlot(e, slot) {
+  e.preventDefault();
+  slot.classList.remove("drag-over");
+  if (!dragSrcEl || slot.classList.contains("correct")) return;
+  if (slot.children.length > 0) document.getElementById("choice-pool").appendChild(slot.children[0]);
+  slot.appendChild(dragSrcEl);
+}
+function onDropIntoPool(e, pool) {
+  e.preventDefault();
+  if (dragSrcEl) pool.appendChild(dragSrcEl);
+}
+
+function updateSlotLayouts() {
+  document.querySelectorAll('.dropzone').forEach(slot => {
+    const row = slot.closest('.gap-row'); 
+
+    if (slot.children.length > 0) {
+      slot.classList.add('filled');
+      const chip = slot.children[0];
+      chip.classList.add('in-paragraph');
+      chip.classList.remove('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
+      if (currentLayoutMode !== "paragraph") {
+          chip.classList.add('gap-chip');
+          chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
+
+          if (row && currentLayoutMode === "categorisation") {
+              row.style.backgroundColor = chip.dataset.color;
+              row.style.color = '#000';
+          }
+      } else {
+          chip.style.backgroundColor = slot.dataset.color;
+      }
     } else {
-        document.getElementById('teacher-view').style.display = 'none';
-        document.getElementById('student-login').style.display = 'block';
-        document.getElementById('game-container').style.display = 'none';
+      slot.classList.remove('filled');
+      if (row && currentLayoutMode === "categorisation") {
+          row.style.backgroundColor = 'transparent';
+          row.style.color = 'inherit';
+      }
     }
-};
+  });
+  document.querySelectorAll('#choice-pool .sentence-chip').forEach(chip => {
+    chip.classList.remove('in-paragraph', 'locked', 'gap-chip');
+    chip.classList.add('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
 
-async function loadLibraryData() {
-    try {
-        const response = await fetch(LIBRARY_CSV_URL);
-        const csvText = await response.text();
-        parseLibraryCSV(csvText);
-    } catch (error) {
-        console.error("Error loading library data:", error);
-    }
-}
-
-function parseLibraryCSV(csvText) {
-    const rows = csvText.split('\n').map(row => row.split(','));
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    
-    const titleIdx = headers.indexOf('title');
-    const typeIdx = headers.indexOf('type');
-    const textIdx = headers.indexOf('text');
-    const labelIdx = headers.indexOf('label');
-    const hintIdx = headers.indexOf('hint');
-    const overallHintIdx = headers.indexOf('overall_hint');
-    const statusIdx = headers.indexOf('status');
-
-    let currentTitle = "";
-    let currentType = "";
-    let currentOverallHint = "";
-
-    libraryData = [];
-
-    for (let i = 1; i < rows.length; i++) {
-        if (!rows[i] || rows[i].join('').trim() === '') continue;
-        
-        let row = rows[i].map(cell => {
-            let val = cell ? cell.trim() : "";
-            if (val.startsWith('"') && val.endsWith('"')) val = val.slice(1, -1);
-            return val;
-        });
-
-        if (row[titleIdx] && row[titleIdx] !== "") currentTitle = row[titleIdx];
-        if (row[typeIdx] && row[typeIdx] !== "") currentType = row[typeIdx];
-        if (row[overallHintIdx] && row[overallHintIdx] !== "") currentOverallHint = row[overallHintIdx];
-
-        let text = row[textIdx] || "";
-        let label = row[labelIdx] || "";
-        let hint = row[hintIdx] || "";
-        let status = row[statusIdx] || "";
-
-        let isDistractor = false;
-        if (status.toLowerCase().includes('distractor') || currentType.toLowerCase().includes('distractor')) {
-            isDistractor = true;
-        }
-
-        if (currentTitle && (text || label)) {
-            libraryData.push({
-                title: currentTitle,
-                type: currentType,
-                text: text,
-                label: label,
-                hint: hint,
-                overallHint: currentOverallHint,
-                isDistractor: isDistractor
-            });
-        }
-    }
-    populateActivitySelect();
-}
-
-function populateActivitySelect() {
-    const select = document.getElementById('activity-select');
-    select.innerHTML = '<option value="">-- Select an Activity --</option>';
-    
-    const titles = [...new Set(libraryData.map(item => item.title))];
-    titles.forEach(title => {
-        let opt = document.createElement('option');
-        opt.value = title;
-        opt.textContent = title;
-        select.appendChild(opt);
-    });
-}
-
-window.startActivity = function() {
-    studentName = document.getElementById('student-name').value.trim();
-    currentActivityTitle = document.getElementById('activity-select').value;
-
-    if (!studentName || !currentActivityTitle) {
-        alert("Please enter your name and select an activity.");
-        return;
-    }
-
-    currentActivityData = libraryData.filter(item => item.title === currentActivityTitle);
-    
-    if (currentActivityData.length === 0) {
-        alert("No data found for this activity.");
-        return;
-    }
-
-    document.getElementById('student-login').style.display = 'none';
-    document.getElementById('game-container').style.display = 'block';
-    
-    attemptCount = 0;
-    hintsUsed = 0;
-    renderGame();
-};
-
-function renderGame() {
-    document.getElementById('activity-title').textContent = currentActivityTitle;
-    const type = currentActivityData[0].type || "";
-    
-    const isStandardGapFill = !type.toLowerCase().includes('categorisation') && !type.toLowerCase().includes('categorize');
-
-    totalDistractors = currentActivityData.filter(item => item.isDistractor).length;
-    let subtitleText = "Drag the correct words/phrases into the gaps.";
-    if (totalDistractors > 0) {
-        subtitleText += " Watch out for distractors!";
-    }
-
-    // --- OVERALL HINT (Matching Lightbulb) ---
-    const overallHintText = currentActivityData[0].overallHint;
-    if (overallHintText) {
-        let safeHint = overallHintText.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-        let hintHtml = `<span class="hint-icon" onclick="showHint('${safeHint}')" title="Need an overall hint?" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 5px rgba(249, 168, 212, 0.6));">💡</span>`;
-        document.getElementById('activity-subtitle').innerHTML = subtitleText + hintHtml;
+    if (currentLayoutMode !== "paragraph" && chip.dataset.color) {
+        chip.style.backgroundColor = chip.dataset.color;
     } else {
-        document.getElementById('activity-subtitle').textContent = subtitleText;
+        chip.style.backgroundColor = '';
     }
+    chip.style.outline = 'none';
+  });
+}
 
-    let oldHintContainer = document.getElementById('overall-hint-container');
-    if (oldHintContainer) oldHintContainer.innerHTML = '';
+function checkAnswer() {
+  const slots = document.querySelectorAll(".dropzone");
+  let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
+  attemptCount++;
 
-    // BUILD CHOICES (With lightbulbs inside!)
-    let choiceObjects = new Map();
-    currentActivityData.forEach(item => {
-        if (item.label && !choiceObjects.has(item.label)) {
-            choiceObjects.set(item.label, {
-                label: item.label,
-                hint: item.hint || ''
-            });
-        }
-    });
+  slots.forEach((slot, i) => {
+    const chip = slot.querySelector(".sentence-chip");
+    if (!chip) { emptyCount++; return; }
+    if (chip.classList.contains("locked")) { correctCount++; return; }
 
-    let choices = Array.from(choiceObjects.values());
-    choices.sort(() => Math.random() - 0.5);
+    const expected = slot.dataset.expectedIndex;
+    const actual = chip.dataset.answerIndex;
+    const isDistractor = chip.dataset.isDistractor === "true";
 
-    let choicesHtml = '';
-    choices.forEach((choiceObj, index) => {
-        let color = COLORS[index % COLORS.length];
-        
-        let hintHtml = '';
-        if (choiceObj.hint) {
-            let safeChoiceHint = choiceObj.hint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
-            hintHtml = `<span class="hint-icon" onclick="event.stopPropagation(); showHint('${safeChoiceHint}')" title="Need a hint?" style="margin-left: 8px; cursor: pointer; font-size: 1.1em;">💡</span>`;
-        }
-        
-        choicesHtml += `<div class="draggable-chip" draggable="true" ondragstart="drag(event)" id="chip-${index}" data-answer="${choiceObj.label.replace(/"/g, '&quot;')}" style="background-color: ${color}; display: inline-flex; align-items: center; border-radius: 8px;">${choiceObj.label}${hintHtml}</div>`;
-    });
-    document.getElementById('choices-container').innerHTML = choicesHtml;
-
-    // BUILD RIGHT SIDE (Text/Gaps)
-    let textContainer = document.getElementById('text-container');
-    let html = '';
-
-    currentActivityData.forEach((item, index) => {
-        if (item.isDistractor) return;
-
-        if (isStandardGapFill) {
-            let parts = item.text.split('___');
-            html += `<span class="gap-text-part">${parts[0]}</span><div class="gap-fill-dropzone" data-index="${index}" ondragover="allowDrop(event)" ondrop="drop(event)"></div><span class="gap-text-part">${parts[1] || ''}</span> `;
-        } else {
-            html += `
-                <div class="categorisation-row">
-                    <div class="dropzone-container">
-                        <div class="dropzone" data-index="${index}" ondragover="allowDrop(event)" ondrop="drop(event)"></div>
-                    </div>
-                    <div class="text-content">${item.text}</div>
-                </div>
-            `;
-        }
-    });
-
-    textContainer.innerHTML = html;
-    
-    if (isStandardGapFill) {
-        textContainer.className = 'standard-gap-fill-layout';
+    if (isDistractor) {
+      distractorCount++; mistakesMade = true;
+      document.getElementById("choice-pool").appendChild(chip);
+    } else if (expected === actual) {
+      correctCount++;
+      chip.classList.add("locked");
+      chip.draggable = false;
     } else {
-        textContainer.className = 'categorisation-layout';
+      mistakesMade = true;
+      document.getElementById("choice-pool").appendChild(chip);
     }
+  });
+  updateSlotLayouts();
+  const totalSlots = slots.length;
+  let status, message;
 
-    let fbMessage = document.getElementById('feedback-message');
-    if (fbMessage) {
-        fbMessage.textContent = '';
-        fbMessage.className = '';
-    }
-}
-
-window.drag = function(event) {
-    draggedElement = event.target;
-    event.dataTransfer.setData("text", event.target.id);
-    event.target.style.opacity = '0.5';
-};
-
-document.addEventListener('dragend', function(event) {
-    if (event.target.classList.contains('draggable-chip')) {
-        event.target.style.opacity = '1';
-    }
-});
-
-window.allowDrop = function(event) {
-    event.preventDefault();
-};
-
-window.drop = function(event) {
-    event.preventDefault();
-    let dropzone = event.target.closest('.dropzone, .gap-fill-dropzone');
-    if (!dropzone) return;
+  if (correctCount === totalSlots) {
+    status = "correct";
+    message = (currentLayoutMode !== "paragraph") ? "🎉 Perfect! You filled the gaps correctly." : "🎉 Perfect! You built the paragraph correctly.";
+    document.getElementById("btn-check").style.display = "none";
+    document.getElementById("btn-retry").style.display = "inline-flex";
     
-    if (dropzone.children.length > 0) {
-        document.getElementById('choices-container').appendChild(dropzone.children[0]);
+    if (typeof confetti === 'function') {
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
     }
     
-    dropzone.appendChild(draggedElement);
-    dropzone.style.border = 'none';
-    dropzone.style.backgroundColor = 'transparent';
-};
+  } else if (mistakesMade) {
+    status = "incorrect"; message = "⚠️ Incorrect parts were sent back to the left. You locked in " + correctCount + " correct answer(s). Keep trying!";
+  } else if (emptyCount > 0) {
+    status = "partial"; message = "Fill the remaining empty spaces! You have " + correctCount + " locked in.";
+  }
 
-// --- PREMIUM HINT REVEAL (FROSTED GLASS MODAL) ---
-window.showHint = function(hintText) {
-    hintsUsed++;
-    
-    let existing = document.getElementById('custom-hint-modal');
-    if (existing) existing.remove();
+  const fb = document.getElementById("feedback");
+  if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
 
-    let modal = document.createElement('div');
-    modal.id = 'custom-hint-modal';
-    modal.style.cssText = "position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(30, 27, 75, 0.95); border: 1px solid rgba(249, 168, 212, 0.5); border-radius: 16px; padding: 30px; z-index: 10000; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.1); text-align: center; color: white; min-width: 300px; max-width: 80%; backdrop-filter: blur(10px); display: flex; flex-direction: column; align-items: center;";
-    
-    modal.innerHTML = `
-        <div style="font-size: 2.5em; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(249, 168, 212, 0.8));">💡</div>
-        <div style="font-size: 1.2em; margin-bottom: 25px; line-height: 1.5;">${hintText}</div>
-        <button onclick="document.getElementById('custom-hint-modal').remove()" style="background: linear-gradient(135deg, #f9a8d4, #a5b4fc); border: none; padding: 10px 25px; border-radius: 8px; color: #1e1b4b; font-weight: bold; font-size: 1em; cursor: pointer; box-shadow: 0 4px 15px rgba(249, 168, 212, 0.4);">Got it!</button>
-    `;
-    document.body.appendChild(modal);
-};
-
-window.checkAnswer = function() {
-    attemptCount++;
-    let dropzones = document.querySelectorAll('.dropzone, .gap-fill-dropzone');
-    let isCorrect = true;
-    let correctCount = 0;
-    let totalRequired = currentActivityData.filter(item => !item.isDistractor).length;
-
-    dropzones.forEach(zone => {
-        let index = zone.getAttribute('data-index');
-        let expectedAnswer = currentActivityData[index].label;
-        let child = zone.children[0];
-
-        if (child) {
-            let studentAnswer = child.getAttribute('data-answer');
-            if (studentAnswer === expectedAnswer) {
-                child.style.backgroundColor = '#4ade80';
-                child.style.color = '#1e1b4b';
-                child.setAttribute('draggable', 'false');
-                correctCount++;
-            } else {
-                isCorrect = false;
-                document.getElementById('choices-container').appendChild(child);
-                zone.style.border = '2px dashed rgba(255, 255, 255, 0.4)';
-            }
-        } else {
-            isCorrect = false;
-            zone.style.border = '2px dashed rgba(255, 255, 255, 0.4)';
-        }
-    });
-
-    let fb = document.getElementById('feedback-message');
-    let summary = `Attempts: ${attemptCount} | Hints Used: ${hintsUsed}`;
-
-    if (isCorrect && correctCount === totalRequired) {
-        fb.textContent = "🎉 Perfect! All correct!";
-        fb.className = "success";
-        sendTrackingData("Completed", summary);
-        triggerConfetti();
-    } else {
-        fb.textContent = "Not quite. Incorrect answers have been returned to the left. Try again!";
-        fb.className = "error";
-        sendTrackingData("Attempted", summary);
-    }
-};
-
-window.resetGame = function() {
-    document.getElementById('game-container').style.display = 'none';
-    document.getElementById('student-login').style.display = 'block';
-    document.getElementById('student-name').value = '';
-    document.getElementById('activity-select').value = '';
-};
-
-function triggerConfetti() {
-    for(let i=0; i<50; i++){
-        let conf = document.createElement('div');
-        conf.className = 'confetti';
-        conf.style.left = Math.random() * 100 + 'vw';
-        conf.style.animationDuration = (Math.random() * 2 + 1) + 's';
-        document.body.appendChild(conf);
-        setTimeout(() => conf.remove(), 3000);
-    }
+  let details = ["Score: " + correctCount + "/" + totalSlots];
+  if (distractorCount > 0) details.push("⚠️ Fell for distractors");
+  details.push(hintsUsed.length > 0 ? "💡 Hints: " + [...new Set(hintsUsed)].join(", ") : "🧠 No hints used");
+  trackAttempt(status, attemptCount, details);
+}
+function retryActivity() {
+  let cA = attemptCount; let cH = [...hintsUsed];
+  renderActivity(activities[currentGame]);
+  attemptCount = cA; hintsUsed = cH;
 }
 
-function sendTrackingData(status, details) {
-    let url = `${TRACKING_URL}?name=${encodeURIComponent(studentName)}&gameId=${encodeURIComponent(currentActivityTitle)}&attempt=${attemptCount}&status=${encodeURIComponent(status)}&details=${encodeURIComponent(details)}`;
-    fetch(url, { mode: 'no-cors' }).catch(err => console.log(err));
+function trackAttempt(status, attempt, details) {
+  const params = new URLSearchParams({ name: studentName, game_id: currentGame, attempt: attempt, status: status, details: details.join(" | ") });
+  fetch(TRACKING_URL + "?" + params.toString(), { mode: 'no-cors' }).catch(() => {});
 }
+function switchTab(tab) {
+  const tabS = document.getElementById("tab-student"); const tabT = document.getElementById("tab-teacher");
+  const pS = document.getElementById("panel-student"); const pT = document.getElementById("panel-teacher");
+  if(tabS) tabS.classList.toggle("active", tab === "student");
+  if(tabT) tabT.classList.toggle("active", tab === "teacher");
+  if(pS) pS.classList.toggle("hidden", tab !== "student");
+  if(pT) pT.classList.toggle("hidden", tab !== "teacher");
+  if (tab === "teacher") loadTeacherData();
+}
+function promptTeacherPin() {
+  const modal = document.getElementById("pin-modal"); const input = document.getElementById("pin-input");
+  if (modal) modal.classList.remove("hidden"); if (input) { input.value = ""; input.focus(); }
+}
+function closePinModal() {
+  const modal = document.getElementById("pin-modal"); if(modal) modal.classList.add("hidden");
+}
+function submitPin() {
+  const input = document.getElementById("pin-input"); if (!input) return;
+  if (input.value.trim() === TEACHER_PIN) { closePinModal(); switchTab("teacher"); }
+  else { document.getElementById("pin-error").textContent = "Incorrect PIN."; input.value = ""; input.focus(); }
+}
+function resetSession() { sessionStart = Date.now(); loadTeacherData(); }
+function loadTeacherData() {
+  const container = document.getElementById("teacher-results"); if(!container) return;
+  container.innerHTML = "<p>Loading results...</p>";
+  fetch(TRACKING_CSV_URL + "&t=" + Date.now()).then(r => r.text()).then(text => {
+      const rows = parseCSV(text);
+      const filtered = sessionStart ? rows.filter(r => new Date(r["Timestamp"]).getTime() >= sessionStart) : rows;
+      renderTeacherTable(filtered.reverse());
+    }).catch(() => { container.innerHTML = "<p>Could not load results.</p>"; });
+}
+function renderTeacherTable(rows) {
+  const container = document.getElementById("teacher-results"); if (!container) return;
+  if (rows.length === 0) { container.innerHTML = "<p>No results yet.</p>"; return; }
+  const headers = ["Timestamp", "Name", "Game_ID", "Attempt", "Status", "Details"];
+  let html = "<table id='results-table'><thead><tr>";
+  headers.forEach(h => { html += "<th>" + h + "</th>"; }); html += "</tr></thead><tbody>";
+  rows.forEach(row => { html += "<tr>"; headers.forEach(h => { html += "<td>" + (row[h] || "") + "</td>"; }); html += "</tr>"; });
+  html += "</tbody></table>"; container.innerHTML = html;
+}
+setInterval(() => { const t = document.getElementById("panel-teacher"); if (t && !t.classList.contains("hidden")) loadTeacherData(); }, REFRESH_INTERVAL);
 
-async function loadTeacherData() {
-    if (document.getElementById('teacher-view').style.display === 'none') return;
-    try {
-        const response = await fetch(TRACKING_CSV_URL);
-        const text = await response.text();
-        const rows = text.split('\n').map(row => row.split(','));
-        
-        let html = '<table><tr><th>Time</th><th>Student</th><th>Activity</th><th>Attempt</th><th>Status</th><th>Details</th></tr>';
-        
-        for(let i=rows.length-1; i>0; i--) {
-            if(!rows[i] || rows[i].length < 6) continue;
-            let date = new Date(rows[i][0]);
-            let timeStr = isNaN(date.getTime()) ? rows[i][0] : date.toLocaleTimeString();
-            
-            html += `<tr>
-                <td>${timeStr}</td>
-                <td>${rows[i][1]}</td>
-                <td>${rows[i][2]}</td>
-                <td>${rows[i][3]}</td>
-                <td>${rows[i][4]}</td>
-                <td>${rows[i][5]}</td>
-            </tr>`;
-        }
-        html += '</table>';
-        document.getElementById('teacher-data').innerHTML = html;
-    } catch (e) {
-        document.getElementById('teacher-data').innerHTML = 'Error loading data.';
-    }
+function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
+
+// --- NEON HINT MODAL OVERRIDE ---
+const neonModalOverlay = document.createElement('div');
+neonModalOverlay.id = 'neon-hint-overlay';
+neonModalOverlay.style.cssText = `
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(15, 23, 42, 0.8);
+    backdrop-filter: blur(5px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+`;
+const neonModalBox = document.createElement('div');
+neonModalBox.style.cssText = `
+    background: rgba(30, 30, 46, 0.95);
+    border: 2px solid #ec4899;
+    box-shadow: 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 15px rgba(139, 92, 246, 0.4);
+    border-radius: 20px;
+    padding: 35px;
+    max-width: 80%;
+    width: 450px;
+    text-align: center;
+    transform: scale(0.8);
+    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+`;
+const neonModalTitle = document.createElement('h3');
+neonModalTitle.innerHTML = "💡 Hint";
+neonModalTitle.style.cssText = "margin-top: 0; color: #f9a8d4; text-shadow: 0 0 10px #ec4899; margin-bottom: 20px; font-size: 2rem; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;";
+const neonModalText = document.createElement('p');
+neonModalText.id = 'neon-hint-text-dynamic';
+neonModalText.style.cssText = "color: #e2e8f0; font-size: 1.3rem; line-height: 1.5; margin-bottom: 25px;";
+const neonModalInstruction = document.createElement('small');
+neonModalInstruction.innerHTML = "(Click anywhere to close)";
+neonModalInstruction.style.cssText = "display: block; color: #8b5cf6; font-size: 0.95rem; opacity: 0.8; font-style: italic;";
+neonModalBox.appendChild(neonModalTitle);
+neonModalBox.appendChild(neonModalText);
+neonModalBox.appendChild(neonModalInstruction);
+neonModalOverlay.appendChild(neonModalBox);
+document.body.appendChild(neonModalOverlay);
+
+function openNeonModal(text) {
+    document.getElementById('neon-hint-text-dynamic').innerText = text;
+    neonModalOverlay.style.display = 'flex';
+    setTimeout(() => {
+        neonModalOverlay.style.opacity = '1';
+        neonModalBox.style.transform = 'scale(1)';
+    }, 10);
 }
+function closeNeonModal() {
+    neonModalOverlay.style.opacity = '0';
+    neonModalBox.style.transform = 'scale(0.8)';
+    setTimeout(() => {
+        neonModalOverlay.style.display = 'none';
+    }, 300);
+}
+neonModalOverlay.addEventListener('click', closeNeonModal);
+
+window.showHint = function(hintText, event) {
+    if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+    }
+    openNeonModal(hintText);
+};
+window.showOverallHint = function() {
+    if (window.currentActivity && window.currentActivity.overallHint) {
+        openNeonModal(window.currentActivity.overallHint);
+    }
+};
+// --- END NEON HINT MODAL OVERRIDE ---
