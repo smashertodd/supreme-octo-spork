@@ -1,7 +1,3 @@
-// =========================================================================
-// Fix the Paragraph - FULL APP CODE (v5 - Clean Interface & Flowing Text)
-// =========================================================================
-
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
 const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
@@ -17,7 +13,6 @@ let attemptCount = 1;
 let startTime = 0;
 
 document.addEventListener("DOMContentLoaded", () => {
-    // START APP
     document.getElementById("btn-start").addEventListener("click", startApp);
 
     // TEACHER PIN MODAL LOGIC
@@ -29,14 +24,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     teacherTab.addEventListener("click", () => {
         pinModal.classList.remove('hidden');
-        pinInput.value = '';
-        pinError.innerText = '';
-        pinInput.focus();
+        pinInput.value = ''; pinError.innerText = ''; pinInput.focus();
     });
 
-    document.getElementById("btn-pin-cancel").addEventListener("click", () => {
-        pinModal.classList.add('hidden');
-    });
+    document.getElementById("btn-pin-cancel").addEventListener("click", () => pinModal.classList.add('hidden'));
 
     document.getElementById("btn-pin-submit").addEventListener("click", () => {
         if (pinInput.value === TEACHER_PIN) {
@@ -47,9 +38,7 @@ document.addEventListener("DOMContentLoaded", () => {
             studentTab.classList.add('active');
             updateTeacherDashboard();
             setInterval(updateTeacherDashboard, 15000);
-        } else {
-            pinError.innerText = "Incorrect PIN";
-        }
+        } else { pinError.innerText = "Incorrect PIN"; }
     });
 
     studentTab.addEventListener("click", () => {
@@ -76,42 +65,62 @@ function startApp() {
 
 function loadActivities() {
     Papa.parse(LIBRARY_CSV_URL, {
-        download: true,
-        header: true,
+        download: true, header: true,
         complete: function(results) {
             activities = parseActivities(results.data);
             if (activities.length === 0) {
                 document.getElementById("screen-loading").innerHTML = "<h2 class='text-white text-2xl'>No Active Games Found!</h2>";
                 return;
             }
+            populateActivityMenu(); // BRINGING THE MENU BACK!
             document.getElementById("screen-loading").style.display = "none";
             document.getElementById("screen-activity").style.display = "block";
             loadActivity(0);
         },
-        error: function() {
-            Swal.fire('Error', 'Could not load the database.', 'error');
-        }
+        error: () => Swal.fire('Error', 'Could not load the database.', 'error')
     });
+}
+
+function populateActivityMenu() {
+    // We inject the dropdown menu dynamically into the header so we don't have to touch index.html
+    const header = document.querySelector(".activity-header");
+    let select = document.getElementById("activity-select");
+    
+    if (!select) {
+        select = document.createElement("select");
+        select.id = "activity-select";
+        // Sleek dark-mode styling for the dropdown
+        select.style.cssText = "background: rgba(15, 23, 42, 0.8); color: #f9a8d4; padding: 12px; border-radius: 12px; border: 1px solid rgba(236, 72, 153, 0.4); font-size: 1.1rem; outline: none; margin-bottom: 20px; width: 100%; box-shadow: 0 4px 15px rgba(236,72,153,0.1); font-weight: bold; cursor: pointer;";
+        header.insertBefore(select, header.firstChild);
+        document.getElementById("activity-title").style.display = "none"; // Hide standard title
+    }
+
+    select.innerHTML = '<option value="" disabled>Choose an activity...</option>';
+    activities.forEach((act, index) => {
+        let option = document.createElement("option");
+        option.value = index; option.innerText = act.title;
+        select.appendChild(option);
+    });
+
+    select.addEventListener("change", (e) => loadActivity(parseInt(e.target.value)));
 }
 
 function parseActivities(data) {
     let parsed = [];
-    let currentActivity = null;
-    let currentTitle = "";
-    let currentType = "";
-    let currentOverallHint = "";
-    let currentStatus = "";
+    let currentActivity = null; let currentTitle = ""; let currentType = ""; let currentOverallHint = ""; let currentStatus = "";
     data.forEach(row => {
         if (row.Title && row.Title.trim() !== "") currentTitle = row.Title.trim();
         if (row.Type && row.Type.trim() !== "") currentType = row.Type.trim();
         if (row.Overall_Hint && row.Overall_Hint.trim() !== "") currentOverallHint = row.Overall_Hint.trim();
         if (row.Status && row.Status.trim() !== "") currentStatus = row.Status.trim();
         if (!currentTitle || currentStatus.toLowerCase() !== 'active') return;
+        
         let rowData = {
             Title: currentTitle, Type: currentType, Text: row.Text ? row.Text.trim() : "",
             Label: row.Label ? row.Label.trim() : "", Hint: row.Hint ? row.Hint.trim() : "",
             Overall_Hint: currentOverallHint, Status: row.Status ? row.Status.trim() : ""
         };
+        
         if (!currentActivity || currentActivity.title !== currentTitle) {
             currentActivity = { title: currentTitle, data: [] };
             parsed.push(currentActivity);
@@ -129,41 +138,40 @@ function loadActivity(index) {
     currentActivityIndex = index; attemptCount = 1; startTime = Date.now();
     const activity = activities[index];
     
-    document.getElementById("activity-title").innerText = activity.title;
-    
+    // Sync dropdown menu
+    const select = document.getElementById("activity-select");
+    if (select) select.value = index;
+
     const overallHintBtn = document.getElementById("overall-hint-btn");
     if (activity.data[0].Overall_Hint) {
         overallHintBtn.style.display = "inline-block";
         overallHintBtn.onclick = () => Swal.fire({title: '💡 Activity Hint', text: activity.data[0].Overall_Hint, background: '#1e1b4b', color: '#fff'});
-    } else {
-        overallHintBtn.style.display = "none";
-    }
+    } else { overallHintBtn.style.display = "none"; }
 
     const typeLower = (activity.data[0].Type || "").toLowerCase();
     const hasGaps = activity.data.some(r => r.Text && r.Text.includes('___'));
     const isCategorisation = typeLower.includes('categor');
     const isDetective = typeLower.includes('detect');
     
-    const leftPanel = document.getElementById("choice-pool");
-    const rightPanel = document.getElementById("drop-zone");
+    const leftPanel = document.getElementById("choice-pool"); const rightPanel = document.getElementById("drop-zone");
     leftPanel.innerHTML = ""; rightPanel.innerHTML = "";
 
     if (isDetective) renderDetectiveActivity(activity.data, leftPanel, rightPanel);
     else if (hasGaps && isCategorisation) renderCategorisationActivity(activity.data, leftPanel, rightPanel);
     else if (hasGaps && !isCategorisation) renderFlowingGapFillActivity(activity.data, leftPanel, rightPanel);
-    else renderParagraphBuilderActivity(activity.data, leftPanel, rightPanel);
+    else renderParagraphBuilderActivity(activity.data, leftPanel, rightPanel); // Normal Game
 
     document.getElementById("btn-check").onclick = () => checkAnswers(activity);
 }
 
-// 🧠 BRAIN 1: Paragraph Builder
+// 🧠 BRAIN 1: Paragraph Builder (FIXED SLEEK STYLING)
 function renderParagraphBuilderActivity(data, leftPanel, rightPanel) {
     let items = [];
     data.forEach(row => { if (row.Text) items.push({ text: row.Text, isDistractor: row.Status.toLowerCase() === 'distractor', expected: row.Text }); });
     items.sort(() => Math.random() - 0.5).forEach((item, i) => leftPanel.appendChild(createDraggableChip(item.text, item.expected, i)));
 
     const structureBox = document.createElement("div");
-    structureBox.style.display = "flex"; structureBox.style.flexDirection = "column"; structureBox.style.gap = "15px";
+    structureBox.style.display = "flex"; structureBox.style.flexDirection = "column"; structureBox.style.gap = "20px";
     let activeIndex = 0;
 
     data.forEach((row) => {
@@ -172,15 +180,16 @@ function renderParagraphBuilderActivity(data, leftPanel, rightPanel) {
         rowDiv.style.display = "flex"; rowDiv.style.gap = "15px"; rowDiv.style.width = "100%";
         
         let labelBox = document.createElement('div');
-        labelBox.style.width = "33%"; labelBox.style.display = "flex"; labelBox.style.alignItems = "center"; labelBox.style.justifyContent = "space-between";
-        labelBox.style.padding = "15px"; labelBox.style.borderRadius = "12px"; labelBox.style.color = "#111"; labelBox.style.fontWeight = "bold";
-        labelBox.style.backgroundColor = COLORS[activeIndex % COLORS.length];
-        labelBox.innerHTML = `<span>${row.Label || 'Part ' + (activeIndex + 1)}</span>`;
-        if (row.Hint) labelBox.innerHTML += `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer;">💡</button>`;
+        labelBox.style.width = "30%"; labelBox.style.display = "flex"; labelBox.style.alignItems = "center"; labelBox.style.justifyContent = "space-between";
+        // SLEEK STYLING: Dark glass with glowing border instead of ugly solid colours
+        labelBox.style.padding = "15px"; labelBox.style.borderRadius = "12px"; labelBox.style.color = "#a5b4fc"; labelBox.style.fontWeight = "bold";
+        labelBox.style.background = "rgba(15, 23, 42, 0.6)"; labelBox.style.border = "1px solid rgba(165, 180, 252, 0.4)"; labelBox.style.boxShadow = "inset 0 0 10px rgba(165,180,252,0.1)";
+        labelBox.innerHTML = `<span style="font-size: 1.1rem;">${row.Label || 'Part ' + (activeIndex + 1)}</span>`;
+        if (row.Hint) labelBox.innerHTML += `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer; font-size: 1.2rem;">💡</button>`;
         
         let dropzone = document.createElement('div');
         dropzone.className = "dropzone gap-box";
-        dropzone.style.flex = "1"; dropzone.style.minHeight = "60px"; dropzone.style.border = "2px dashed rgba(255,255,255,0.3)"; dropzone.style.borderRadius = "12px"; dropzone.style.padding = "10px";
+        dropzone.style.flex = "1"; dropzone.style.minHeight = "65px"; dropzone.style.border = "2px dashed rgba(255,255,255,0.2)"; dropzone.style.borderRadius = "12px"; dropzone.style.padding = "10px"; dropzone.style.background = "rgba(0,0,0,0.2)";
         dropzone.dataset.expected = row.Text; dropzone.dataset.mode = 'block';
         
         dropzone.addEventListener('dragover', e => e.preventDefault());
@@ -192,29 +201,28 @@ function renderParagraphBuilderActivity(data, leftPanel, rightPanel) {
     rightPanel.appendChild(structureBox);
 }
 
-// 🧠 BRAIN 2: Categorisation (Blocky Colour Bleed)
+// 🧠 BRAIN 2: Categorisation
 function renderCategorisationActivity(data, leftPanel, rightPanel) {
     let items = [];
     data.forEach(row => { if (row.Label) items.push({ text: row.Label, isDistractor: row.Status.toLowerCase() === 'distractor', expected: row.Label }); });
     items.sort(() => Math.random() - 0.5).forEach((item, i) => leftPanel.appendChild(createDraggableChip(item.text, item.expected, i)));
 
     const structureBox = document.createElement("div");
-    structureBox.style.display = "flex"; structureBox.style.flexDirection = "column"; structureBox.style.gap = "15px";
+    structureBox.style.display = "flex"; structureBox.style.flexDirection = "column"; structureBox.style.gap = "20px";
 
     data.forEach((row, index) => {
         if (row.Status.toLowerCase() === 'distractor' || !row.Text) return;
         let block = document.createElement('div');
         block.className = "text-block";
-        block.style.background = "rgba(255,255,255,0.05)"; block.style.border = "1px solid rgba(255,255,255,0.1)"; block.style.borderRadius = "12px"; block.style.padding = "20px";
+        block.style.background = "rgba(15, 23, 42, 0.5)"; block.style.border = "1px solid rgba(255,255,255,0.1)"; block.style.borderRadius = "16px"; block.style.padding = "25px"; block.style.boxShadow = "inset 0 0 15px rgba(0,0,0,0.5)";
         block.dataset.index = index;
         
-        let hintHtml = row.Hint ? `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer; float:right;">💡</button>` : '';
-        let innerHtml = '';
-        const parts = row.Text.split('___');
+        let hintHtml = row.Hint ? `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer; float:right; font-size: 1.2rem;">💡</button>` : '';
+        let innerHtml = ''; const parts = row.Text.split('___');
         parts.forEach((part, i) => {
-            innerHtml += `<span style="color:#fff; font-size:1.1rem;">${part}</span>`;
+            innerHtml += `<span style="color:#e2e8f0; font-size:1.15rem; line-height: 1.8;">${part}</span>`;
             if (i < parts.length - 1) {
-                innerHtml += `<div class="dropzone gap-box" style="display:inline-block; min-width:150px; min-height:40px; border:2px dashed rgba(255,255,255,0.4); border-radius:12px; margin:0 10px; vertical-align:middle;" data-expected="${row.Label}" data-parent-index="${index}" data-mode="block"></div>`;
+                innerHtml += `<div class="dropzone gap-box" style="display:inline-block; min-width:160px; min-height:45px; border:2px dashed rgba(255,255,255,0.3); border-radius:12px; margin:0 12px; vertical-align:middle; background:rgba(0,0,0,0.3);" data-expected="${row.Label}" data-parent-index="${index}" data-mode="block"></div>`;
             }
         });
         block.innerHTML = `<div>${innerHtml}</div>${hintHtml}`;
@@ -234,11 +242,11 @@ function renderFlowingGapFillActivity(data, leftPanel, rightPanel) {
     items.sort(() => Math.random() - 0.5).forEach((item, i) => leftPanel.appendChild(createDraggableChip(item.text, item.expected, i)));
 
     const wrapper = document.createElement('div');
-    wrapper.style.color = "#fff"; wrapper.style.fontSize = "1.2rem"; wrapper.style.lineHeight = "2.8"; wrapper.style.padding = "30px"; wrapper.style.background = "rgba(255,255,255,0.05)"; wrapper.style.borderRadius = "16px"; wrapper.style.border = "1px solid rgba(255,255,255,0.1)";
+    wrapper.style.color = "#e2e8f0"; wrapper.style.fontSize = "1.25rem"; wrapper.style.lineHeight = "2.6"; wrapper.style.padding = "35px"; wrapper.style.background = "rgba(15, 23, 42, 0.5)"; wrapper.style.borderRadius = "16px"; wrapper.style.border = "1px solid rgba(255,255,255,0.1)"; wrapper.style.boxShadow = "inset 0 0 15px rgba(0,0,0,0.5)";
     
     data.forEach((row) => {
         if (row.Status.toLowerCase() === 'distractor' || !row.Text) return;
-        let hintHtml = row.Hint ? `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer; margin-left:10px;">💡</button>` : '';
+        let hintHtml = row.Hint ? `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer; margin-left:10px; font-size: 1.2rem;">💡</button>` : '';
         const span = document.createElement('span');
         
         if (row.Text.includes('___')) {
@@ -248,15 +256,14 @@ function renderFlowingGapFillActivity(data, leftPanel, rightPanel) {
                 if (i < parts.length - 1) {
                     const dropzone = document.createElement('div');
                     dropzone.className = "dropzone gap-box";
-                    dropzone.style.display = "inline-flex"; dropzone.style.alignItems = "center"; dropzone.style.justifyContent = "center"; dropzone.style.minWidth = "120px"; dropzone.style.height = "40px"; dropzone.style.border = "2px dashed rgba(255,255,255,0.4)"; dropzone.style.borderRadius = "9999px"; dropzone.style.margin = "0 10px"; dropzone.style.verticalAlign = "middle";
+                    dropzone.style.display = "inline-flex"; dropzone.style.alignItems = "center"; dropzone.style.justifyContent = "center"; dropzone.style.minWidth = "130px"; dropzone.style.height = "42px"; dropzone.style.border = "2px dashed rgba(255,255,255,0.3)"; dropzone.style.borderRadius = "9999px"; dropzone.style.margin = "0 10px"; dropzone.style.verticalAlign = "middle"; dropzone.style.background = "rgba(0,0,0,0.3)";
                     dropzone.dataset.expected = row.Label; dropzone.dataset.mode = 'flowing';
                     dropzone.addEventListener('dragover', e => e.preventDefault());
                     dropzone.addEventListener('drop', e => handleDrop(e, dropzone));
                     span.appendChild(dropzone);
                 }
             });
-            if(hintHtml) span.innerHTML += hintHtml;
-            span.innerHTML += ' ';
+            if(hintHtml) span.innerHTML += hintHtml; span.innerHTML += ' ';
         } else {
             span.innerHTML = row.Text + hintHtml + ' ';
         }
@@ -267,9 +274,9 @@ function renderFlowingGapFillActivity(data, leftPanel, rightPanel) {
 
 // 🧠 BRAIN 4: Detective Mode
 function renderDetectiveActivity(data, leftPanel, rightPanel) {
-    leftPanel.innerHTML = `<div style="background:rgba(255,255,255,0.1); padding:30px; border-radius:16px; text-align:center; height:100%; display:flex; flex-direction:column; justify-content:center;"><h3 style="color:#f9a8d4; font-size:1.5rem; margin-bottom:15px;">🔍 Detective Mode</h3><p style="color:#fff;">Click the words in the text to highlight <strong>${data[0].Label}</strong>.</p></div>`;
+    leftPanel.innerHTML = `<div style="background:rgba(15, 23, 42, 0.6); padding:30px; border-radius:16px; border: 1px solid rgba(165, 180, 252, 0.4); text-align:center; height:100%; display:flex; flex-direction:column; justify-content:center; box-shadow: inset 0 0 10px rgba(165,180,252,0.1);"><h3 style="color:#f9a8d4; font-size:1.8rem; margin-bottom:15px; font-weight: bold; text-shadow: 0 0 10px rgba(249, 168, 212, 0.5);">🔍 Detective Mode</h3><p style="color:#e2e8f0; font-size: 1.1rem;">Click the words in the text to highlight <br><strong style="color: #86efac; font-size: 1.3rem;">${data[0].Label}</strong>.</p></div>`;
     const textBox = document.createElement('div');
-    textBox.style.background = "rgba(255,255,255,0.05)"; textBox.style.border = "1px solid rgba(255,255,255,0.1)"; textBox.style.borderRadius = "16px"; textBox.style.padding = "30px"; textBox.style.fontSize = "1.2rem"; textBox.style.color = "#fff"; textBox.style.lineHeight = "2.5";
+    textBox.style.background = "rgba(15, 23, 42, 0.5)"; textBox.style.border = "1px solid rgba(255,255,255,0.1)"; textBox.style.borderRadius = "16px"; textBox.style.padding = "35px"; textBox.style.fontSize = "1.25rem"; textBox.style.color = "#e2e8f0"; textBox.style.lineHeight = "2.5"; textBox.style.boxShadow = "inset 0 0 15px rgba(0,0,0,0.5)";
     
     data.forEach((row) => {
         if (!row.Text) return;
@@ -280,7 +287,7 @@ function renderDetectiveActivity(data, leftPanel, rightPanel) {
             return `<span class="detective-word" data-target="false">${word}</span>`;
         }).join(' ');
         p.innerHTML = processedText;
-        if(row.Hint) p.innerHTML += `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer; margin-left:10px;">💡</button>`;
+        if(row.Hint) p.innerHTML += `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" style="background:none; border:none; cursor:pointer; margin-left:10px; font-size: 1.2rem;">💡</button>`;
         textBox.appendChild(p);
     });
     rightPanel.appendChild(textBox);
@@ -288,11 +295,9 @@ function renderDetectiveActivity(data, leftPanel, rightPanel) {
     document.querySelectorAll('.detective-word').forEach(word => {
         word.addEventListener('click', function() {
             if (this.dataset.target === "true") {
-                this.classList.add('correct');
-                this.dataset.found = "true";
+                this.classList.add('correct'); this.dataset.found = "true";
             } else {
-                this.classList.add('incorrect');
-                setTimeout(() => this.classList.remove('incorrect'), 1000);
+                this.classList.add('incorrect'); setTimeout(() => this.classList.remove('incorrect'), 1000);
             }
         });
     });
@@ -303,8 +308,8 @@ function createDraggableChip(text, expected, index) {
     let chip = document.createElement("div");
     chip.className = "draggable-chip";
     chip.style.backgroundColor = COLORS[index % COLORS.length];
-    chip.style.borderRadius = "12px"; // YOUR soft rectangle
-    chip.style.padding = "15px"; chip.style.marginBottom = "10px"; chip.style.textAlign = "center"; chip.style.color = "#111"; chip.style.fontWeight = "bold"; chip.style.cursor = "grab";
+    chip.style.borderRadius = "12px"; 
+    chip.style.padding = "15px"; chip.style.marginBottom = "12px"; chip.style.textAlign = "center"; chip.style.color = "#111827"; chip.style.fontWeight = "bold"; chip.style.cursor = "grab"; chip.style.fontSize = "1.05rem";
     chip.innerText = text; chip.draggable = true;
     chip.dataset.expected = expected; chip.dataset.color = COLORS[index % COLORS.length];
 
@@ -326,26 +331,25 @@ function handleDrop(e, dropzone) {
         }
         
         if (dropzone.dataset.mode === 'flowing') {
-            draggedItem.style.padding = "4px 15px"; draggedItem.style.margin = "0"; draggedItem.style.borderRadius = '9999px';
+            draggedItem.style.padding = "4px 18px"; draggedItem.style.margin = "0"; draggedItem.style.borderRadius = '9999px';
         } else {
             draggedItem.style.width = "100%"; draggedItem.style.height = "100%"; draggedItem.style.margin = "0"; draggedItem.style.padding = "10px"; draggedItem.style.borderRadius = "8px";
         }
         
-        dropzone.appendChild(draggedItem);
-        dropzone.style.border = 'none';
+        dropzone.appendChild(draggedItem); dropzone.style.border = 'none';
 
         if (dropzone.dataset.parentIndex) {
             let block = document.querySelector(`.text-block[data-index="${dropzone.dataset.parentIndex}"]`);
             if (block) {
-                block.style.backgroundColor = draggedItem.dataset.color;
-                block.querySelectorAll('span').forEach(s => s.style.color = '#111');
+                block.style.backgroundColor = draggedItem.dataset.color; block.style.border = "none";
+                block.querySelectorAll('span').forEach(s => s.style.color = '#111827');
             }
         }
     }
 }
 
 function resetChipAppearance(chip) {
-    chip.style.width = "auto"; chip.style.height = "auto"; chip.style.margin = "0 0 10px 0"; chip.style.padding = "15px";
+    chip.style.width = "auto"; chip.style.height = "auto"; chip.style.margin = "0 0 12px 0"; chip.style.padding = "15px";
     chip.style.borderRadius = "12px"; // Returns to soft rectangle
 }
 
@@ -356,16 +360,15 @@ document.addEventListener("DOMContentLoaded", () => {
         leftPanel.addEventListener('drop', e => {
             e.preventDefault();
             if (draggedItem) {
-                resetChipAppearance(draggedItem);
-                leftPanel.appendChild(draggedItem);
+                resetChipAppearance(draggedItem); leftPanel.appendChild(draggedItem);
                 document.querySelectorAll('.dropzone').forEach(dz => {
                     if(dz.children.length === 0) {
-                        dz.style.border = '2px dashed rgba(255,255,255,0.4)';
+                        dz.style.border = '2px dashed rgba(255,255,255,0.3)';
                         if (dz.dataset.parentIndex) {
                             let block = document.querySelector(`.text-block[data-index="${dz.dataset.parentIndex}"]`);
                             if (block) {
-                                block.style.backgroundColor = "transparent";
-                                block.querySelectorAll('span').forEach(s => s.style.color = '#fff');
+                                block.style.background = "rgba(15, 23, 42, 0.5)"; block.style.border = "1px solid rgba(255,255,255,0.1)";
+                                block.querySelectorAll('span').forEach(s => s.style.color = '#e2e8f0');
                             }
                         }
                     }
@@ -381,8 +384,7 @@ function checkAnswers(activity) {
 
     if (isDetective) {
         const targets = document.querySelectorAll('.detective-word[data-target="true"]');
-        let foundCount = 0;
-        targets.forEach(t => { if (t.dataset.found === "true") foundCount++; });
+        let foundCount = 0; targets.forEach(t => { if (t.dataset.found === "true") foundCount++; });
         allCorrect = foundCount === targets.length;
     } else {
         const dropzones = document.querySelectorAll('.dropzone');
@@ -392,12 +394,11 @@ function checkAnswers(activity) {
                 if (chip.dataset.expected === dz.dataset.expected) {
                     chip.style.backgroundColor = "#4ade80"; // Green for correct
                 } else {
-                    allCorrect = false;
-                    resetChipAppearance(chip); document.getElementById("choice-pool").appendChild(chip);
-                    dz.style.border = '2px dashed rgba(255,255,255,0.4)';
+                    allCorrect = false; resetChipAppearance(chip); document.getElementById("choice-pool").appendChild(chip);
+                    dz.style.border = '2px dashed rgba(255,255,255,0.3)';
                     if (dz.dataset.parentIndex) {
                         let block = document.querySelector(`.text-block[data-index="${dz.dataset.parentIndex}"]`);
-                        if (block) { block.style.backgroundColor = "transparent"; block.querySelectorAll('span').forEach(s => s.style.color = '#fff'); }
+                        if (block) { block.style.background = "rgba(15, 23, 42, 0.5)"; block.style.border = "1px solid rgba(255,255,255,0.1)"; block.querySelectorAll('span').forEach(s => s.style.color = '#e2e8f0'); }
                     }
                 }
             } else { allCorrect = false; }
@@ -405,8 +406,7 @@ function checkAnswers(activity) {
     }
 
     const hasDistractors = activity.data.some(r => r.Status && r.Status.toLowerCase() === 'distractor');
-    const timeTaken = Math.round((Date.now() - startTime) / 1000);
-    const timeStr = `${Math.floor(timeTaken / 60)}m ${timeTaken % 60}s`;
+    const timeTaken = Math.round((Date.now() - startTime) / 1000); const timeStr = `${Math.floor(timeTaken / 60)}m ${timeTaken % 60}s`;
     let distractorDetails = hasDistractors ? `(Avoided distractors)` : ``;
 
     if (allCorrect) {
@@ -414,14 +414,13 @@ function checkAnswers(activity) {
             title: 'Nailed it! 🚀', text: `Perfect! Time: ${timeStr}`, icon: 'success', background: '#1e1b4b', color: '#fff', confirmButtonColor: '#ec4899'
         }).then(() => {
             sendTrackingData(currentStudentName, activity.title, attemptCount, "Completed", `Completed in ${timeStr}. ${distractorDetails}`);
-            loadActivity(currentActivityIndex + 1);
+            const select = document.getElementById("activity-select");
+            if (currentActivityIndex + 1 < activities.length) { select.value = currentActivityIndex + 1; loadActivity(currentActivityIndex + 1); } 
+            else { Swal.fire({ title: '🎉 All Done!', text: 'You have completed all activities.', background: '#1e1b4b', color: '#fff', confirmButtonColor: '#ec4899' }); }
         });
     } else {
-        Swal.fire({
-            title: 'Not quite! 🤔', text: 'Incorrect items have been returned to the left. Try again!', icon: 'error', background: '#1e1b4b', color: '#fff', confirmButtonColor: '#ec4899'
-        });
-        sendTrackingData(currentStudentName, activity.title, attemptCount, "Attempted", `Attempt ${attemptCount} failed.`);
-        attemptCount++;
+        Swal.fire({ title: 'Not quite! 🤔', text: 'Incorrect items have been returned to the left. Try again!', icon: 'error', background: '#1e1b4b', color: '#fff', confirmButtonColor: '#ec4899' });
+        sendTrackingData(currentStudentName, activity.title, attemptCount, "Attempted", `Attempt ${attemptCount} failed.`); attemptCount++;
     }
 }
 
