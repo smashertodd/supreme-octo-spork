@@ -1,142 +1,31 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Activity Arcade</title>
-  <link rel="stylesheet" href="style.css?v=4">
-  
-  <!-- Custom Neon Scrollbar Styles Added Here -->
-  <style>
-    .panel-left, .panel-right {
-      max-height: 60vh; /* Keeps the boxes on the screen */
-      overflow-y: auto; /* Adds the scroll when text gets long */
-      overflow-x: hidden;
-      padding-right: 10px;
-    }
-
-    /* Beautiful Neon Scrollbar Styling */
-    .panel-left::-webkit-scrollbar,
-    .panel-right::-webkit-scrollbar {
-      width: 8px;
-    }
-    .panel-left::-webkit-scrollbar-track,
-    .panel-right::-webkit-scrollbar-track {
-      background: rgba(255, 255, 255, 0.05); /* Very subtle glass track */
-      border-radius: 10px;
-    }
-    .panel-left::-webkit-scrollbar-thumb,
-    .panel-right::-webkit-scrollbar-thumb {
-      background: linear-gradient(135deg, #f9a8d4, #a5b4fc); /* Pink to blue gradient */
-      border-radius: 10px;
-    }
-    .panel-left::-webkit-scrollbar-thumb:hover,
-    .panel-right::-webkit-scrollbar-thumb:hover {
-      background: linear-gradient(135deg, #fca5a5, #d8b4fe); /* Brighter on hover */
-    }
-  </style>
-
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Activity Arcade</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+        #app {
+            width: 100%;
+            max-width: 1400px; /* Forces a nice wide, screen-filling layout */
+            position: relative;
+        }
+    </style>
 </head>
 <body>
-  <div id="app">
-    <h1 id="app-title">Activity Arcade</h1>
-    <div id="tab-bar">
-      <button id="tab-student" class="tab-btn active">Student</button>
-      <button id="tab-teacher" class="tab-btn">Teacher</button>
-    </div>
-    <!-- Student Panel -->
-    <div id="panel-student">
-      <!-- Name Entry -->
-      <div id="screen-name" class="screen active">
-        <div class="card center-card" id="name-section">
-          <p class="subtitle">Enter your name to get started.</p>
-          <div class="form-group">
-            <label for="input-name">Your name</label>
-            <input id="input-name" type="text" placeholder="First name" autocomplete="off" />
-          </div>
-          <button id="btn-start" class="btn btn-primary">Start</button>
-        </div>
-      </div>
-      <!-- Loading -->
-      <div id="screen-loading" class="screen">
-        <div class="card center-card">
-          <div class="spinner" aria-label="Loading"></div>
-          <p class="subtitle loading-text">Loading activities…</p>
-        </div>
-      </div>
-      <!-- Library -->
-      <div id="screen-library" class="screen">
-        <div class="card">
-          <h2 class="section-heading">Choose an Activity</h2>
-          <div id="library-list" class="library-list"></div>
-        </div>
-      </div>
-      <!-- Activity Screen -->
-      <div id="screen-activity" class="screen">
-        <div class="card">
-          <div class="activity-header">
-            <h2 id="activity-title" class="section-heading">Activity Title</h2>
-            <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
-          </div>
-          <p class="instruction" id="game-instructions"></p>
-          <!-- Overall Hint will inject here -->
-          <div id="overall-hint-container"></div>
-          <!-- Side-by-side Workspace -->
-          <div class="workspace">
-            <div class="panel-left">
-              <h3>Choices</h3>
-              <div id="choice-pool" class="pool"></div>
-            </div>
-            <div class="panel-right">
-              <h3>Paragraph Labels</h3>
-              <div id="drop-zone" class="pool drop-zone-slots"></div>
-            </div>
-          </div>
-          <div class="activity-footer">
-            <button id="btn-check" class="btn primary">Check Answer</button>
-            <button id="btn-retry" class="btn secondary" style="display:none;">Retry</button>
-            <div id="feedback" class="feedback"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Error Screen -->
-      <div id="screen-error" class="screen">
-        <div class="card center-card">
-          <h2 style="color: #e74c3c;">Oops!</h2>
-          <p id="error-message">Something went wrong.</p>
-          <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 15px;">Refresh Page</button>
-        </div>
-      </div>
-    </div> <!-- End Student Panel -->
-    <!-- Teacher Panel -->
-    <div id="panel-teacher" class="hidden">
-      <div class="card">
-        <div class="teacher-header">
-          <h2>Teacher Dashboard</h2>
-<a href="https://docs.google.com/spreadsheets/d/1iZQd9GEMfcs-uY9rzRHIf4LMMoGe7qpcAOfbOdxQi9c/edit?gid=0#gid=0" target="_blank" class="btn btn-sm" style="background: linear-gradient(to right, #8b5cf6, #ec4899) !important; color: white !important; border: none !important; text-decoration: none; display: flex; align-items: center;">Edit Activities Sheet</a>
-          <button id="btn-reset-session" class="btn btn-secondary btn-sm">Refresh Current Session</button>
-        </div>
-        <div id="teacher-results" class="results-container">
-          <p>Loading results...</p>
-        </div>
-      </div>
-    </div> <!-- End Teacher Panel -->
-  </div> <!-- End App -->
-  <!-- PIN Modal -->
-  <div id="pin-modal" class="hidden">
-    <div id="pin-modal-box">
-      <h3>Teacher Access</h3>
-      <p>Enter your PIN to continue.</p>
-      <input id="pin-input" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" />
-      <p id="pin-error" class="pin-error" role="alert" aria-live="polite"></p>
-      <div class="pin-actions">
-        <button id="btn-pin-cancel" class="btn btn-ghost">Cancel</button>
-        <button id="btn-pin-submit" class="btn btn-primary">Enter</button>
-      </div>
-    </div>
-  </div>
-
-  <script src="app.js?v=23"></script>
+    <div id="app"></div>
+    <!-- The v=40 forces the browser to load our newest changes instantly -->
+    <script src="app.js?v=40"></script> 
 </body>
 </html>
