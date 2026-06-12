@@ -1,5 +1,5 @@
 // =========================================================================
-// Fix the Paragraph — app.js (v92 - Ultimate Detective Edition)
+// Fix the Paragraph — app.js (v93 - Detective Visibility & Hints Fix)
 // =========================================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -15,13 +15,11 @@ let dragSrcEl = null;
 let hintsUsed = [];
 let attemptCount = 0;
 let currentLayoutMode = "paragraph";
+
 window.showNeonHint = function(message) {
-    if (typeof openNeonModal === 'function') {
-        openNeonModal(message);
-    } else {
-        alert(message);
-    }
+    if (typeof openNeonModal === 'function') { openNeonModal(message); } else { alert(message); }
 };
+
 function injectStyles() {
   if (document.getElementById('paragraph-builder-styles')) return;
   const style = document.createElement('style');
@@ -46,32 +44,16 @@ function injectStyles() {
     .hint-btn-inline { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 4px; vertical-align: middle; transition: transform 0.2s; padding: 0; }
     .hint-btn-inline:hover { transform: scale(1.2); }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    #choice-pool {
-        min-height: 150px;
-        padding-bottom: 20px;
-        position: sticky;
-        top: 2rem;
-        align-self: start;
-        max-height: 85vh;
-        overflow-y: auto;
-    }
-    .sentence-chip:not(.in-paragraph) {
-        display: block;
-        width: fit-content;
-        max-width: 100%;
-    }
+    #choice-pool { min-height: 150px; padding-bottom: 20px; position: sticky; top: 2rem; align-self: start; max-height: 85vh; overflow-y: auto; }
+    .sentence-chip:not(.in-paragraph) { display: block; width: fit-content; max-width: 100%; }
     .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
-
     #btn-check { position: relative; overflow: hidden; border: none; }
-    #btn-check::after {
-        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
-        background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
-        transform: rotate(30deg); animation: shimmer 3s infinite linear; pointer-events: none;
-    }
+    #btn-check::after { content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%; background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%); transform: rotate(30deg); animation: shimmer 3s infinite linear; pointer-events: none; }
     @keyframes shimmer { 0% { transform: translateX(-100%) rotate(30deg); } 100% { transform: translateX(100%) rotate(30deg); } }
   `;
   document.head.appendChild(style);
 }
+
 document.addEventListener("DOMContentLoaded", () => {
   try {
       const mobileFixScript = document.createElement('script');
@@ -80,10 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
   } catch (e) { console.log("Mobile fix skipped", e); }
   injectStyles();
   showScreen("screen-name");
-  const safeAdd = (id, event, handler) => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener(event, handler);
-  };
+  const safeAdd = (id, event, handler) => { const el = document.getElementById(id); if (el) el.addEventListener(event, handler); };
   safeAdd("btn-start", "click", handleNameSubmit);
   safeAdd("btn-check", "click", checkAnswer);
   safeAdd("btn-retry", "click", retryActivity);
@@ -98,11 +77,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const pinInput = document.getElementById("pin-input");
   if (pinInput) pinInput.addEventListener("keydown", e => { if (e.key === "Enter") submitPin(); });
 });
+
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
   const el = document.getElementById(id);
   if (el) el.classList.add("active");
 }
+
 function handleNameSubmit() {
   const input = document.getElementById("input-name");
   let name = input ? input.value.trim() : "";
@@ -110,6 +91,7 @@ function handleNameSubmit() {
   studentName = name;
   loadLibrary();
 }
+
 function parseCSV(text) {
   const rows = []; const lines = text.split(/\r?\n/);
   if (lines.length === 0) return rows;
@@ -122,6 +104,7 @@ function parseCSV(text) {
   }
   return rows;
 }
+
 function splitCSVLine(line) {
   const result = []; let current = ""; let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
@@ -132,6 +115,7 @@ function splitCSVLine(line) {
   }
   result.push(current); return result;
 }
+
 function loadLibrary() {
   showScreen("screen-loading");
   const loadingScreen = document.getElementById("screen-loading");
@@ -154,6 +138,7 @@ function loadLibrary() {
     })
     .catch((e) => { console.error(e); showError("Couldn't load activities."); });
 }
+
 function buildActivities(rows) {
   activities = {};
   let lastTitle = "";
@@ -186,6 +171,7 @@ function buildActivities(rows) {
     else { activities[currentTitle].parts.push(item); }
   });
 }
+
 function showLibrary() {
   showScreen("screen-library");
   const list = document.getElementById("library-list");
@@ -199,13 +185,13 @@ function showLibrary() {
     list.appendChild(card);
   });
 }
+
 function startActivity(gameId) {
   currentGame = gameId; hintsUsed = []; attemptCount = 0;
   const gameData = activities[gameId];
   const hasGaps = gameData.parts.some(p => p.text && p.text.includes('___'));
   const typeStr = (gameData.type || "").toLowerCase();
   
-  // PARSER DETECTS NEW MODE
   if (typeStr.includes("detective")) {
       currentLayoutMode = "detective";
   } else if (!hasGaps) {
@@ -218,58 +204,87 @@ function startActivity(gameId) {
   renderActivity(gameData);
   showScreen("screen-activity");
 }
+
 function renderActivity(game) {
   document.getElementById("activity-title").textContent = game.title;
   
-  // Manage Layout Panels based on Mode
+  // Manage Panels
   const panelLeft = document.querySelector('.panel-left');
   const panelRight = document.querySelector('.panel-right');
+  const rightPanelTitle = document.getElementById("right-panel-title");
+  
   if (panelLeft) panelLeft.style.display = 'block';
   if (panelRight) panelRight.style.gridColumn = '';
+  
+  if (rightPanelTitle) {
+      if (currentLayoutMode === "detective") rightPanelTitle.textContent = "Text Analysis";
+      else if (currentLayoutMode === "paragraph") rightPanelTitle.textContent = "Paragraph Labels";
+      else rightPanelTitle.textContent = "Paragraph Text";
+  }
 
+  // SMART INSTRUCTIONS
+  let targetDesc = game.parts.find(p => p.label)?.label || "the correct features";
   let instructions = "Drag the text parts into the correct spaces to build the paragraph.";
-  if (currentLayoutMode === "detective") instructions = "Click the words in the text to highlight the correct features.";
-  else if (currentLayoutMode !== "paragraph") instructions = "Drag the correct words/phrases into the gaps.";
+  if (currentLayoutMode === "detective") {
+      instructions = `Click the words in the text to highlight <strong>${targetDesc}</strong>.`;
+  } else if (currentLayoutMode !== "paragraph") {
+      instructions = "Drag the correct words/phrases into the gaps.";
+  }
   if (game.distractors.length > 0 && currentLayoutMode !== "detective") instructions += " Watch out for distractors!";
 
   if (game.overallHint) {
       let safeOverallHint = game.overallHint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
       instructions += `<span onclick="showNeonHint('${safeOverallHint}')" title="Click for an overall hint" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 8px rgba(249, 168, 212, 0.8));">💡</span>`;
-      document.getElementById("game-instructions").innerHTML = instructions;
-  } else {
-      document.getElementById("game-instructions").textContent = instructions;
   }
+  document.getElementById("game-instructions").innerHTML = instructions;
   
-  const hintContainer = document.getElementById("overall-hint-container");
-  if (hintContainer) hintContainer.innerHTML = "";
-
   const dropZone = document.getElementById("drop-zone");
   dropZone.innerHTML = "";
 
   // === DETECTIVE MODE RENDERING ===
   if (currentLayoutMode === "detective") {
-      if (panelLeft) panelLeft.style.display = 'none'; // Hide choices pool
-      if (panelRight) panelRight.style.gridColumn = '1 / -1'; // Span full width
+      if (panelLeft) panelLeft.style.display = 'none'; 
+      if (panelRight) panelRight.style.gridColumn = '1 / -1'; 
       
-      let rawText = game.parts.map(p => p.text).join(" ");
-      let tokens = rawText.split(/(\[\[.*?\]\]|\s+)/).filter(t => t.length > 0);
-      
-      let contentHtml = tokens.map(token => {
-          if (token.startsWith('[[') && token.endsWith(']]')) {
-              let clean = token.slice(2, -2);
-              return `<span class="detective-word" data-target="true">${clean}</span>`;
-          } else if (token.trim().length === 0) {
-              return token; // Space
-          } else {
-              return `<span class="detective-word" data-target="false">${token}</span>`;
-          }
-      }).join('');
-
       let p = document.createElement('div');
-      p.style.fontSize = '1.3rem';
+      p.className = 'paragraph-builder'; // Uses the nice white background class
+      p.style.fontSize = '1.25rem';
       p.style.lineHeight = '2.4';
-      p.style.padding = '20px';
-      p.innerHTML = contentHtml;
+      p.style.padding = '30px';
+
+      game.parts.forEach((part, index) => {
+          let tokens = part.text.split(/(\[\[.*?\]\]|\s+)/).filter(t => t.length > 0);
+          
+          let contentHtml = tokens.map(token => {
+              if (token.startsWith('[[') && token.endsWith(']]')) {
+                  let clean = token.slice(2, -2);
+                  return `<span class="detective-word" data-target="true">${clean}</span>`;
+              } else if (token.trim().length === 0) {
+                  return token; // Space
+              } else {
+                  return `<span class="detective-word" data-target="false">${token}</span>`;
+              }
+          }).join('');
+
+          let sentenceSpan = document.createElement('span');
+          sentenceSpan.innerHTML = contentHtml + " ";
+          p.appendChild(sentenceSpan);
+
+          // Add Individual Inline Hint!
+          if (part.hint) {
+              const hBtn = document.createElement("button");
+              hBtn.className = "hint-btn-inline";
+              hBtn.innerHTML = "💡";
+              hBtn.title = "View Hint";
+              hBtn.style.marginRight = "15px"; // Adds space before the next sentence starts
+              hBtn.onclick = () => {
+                  showNeonHint("Hint:\n\n" + part.hint);
+                  hintsUsed.push("Hint (Sentence " + (index+1) + ")");
+              };
+              p.appendChild(hBtn);
+          }
+      });
+
       dropZone.appendChild(p);
 
       document.querySelectorAll('.detective-word').forEach(span => {
@@ -282,7 +297,7 @@ function renderActivity(game) {
       document.getElementById("feedback").className = "feedback";
       document.getElementById("btn-check").style.display = "inline-flex";
       document.getElementById("btn-retry").style.display = "none";
-      return; // Exit here! No drag-and-drop needed.
+      return; 
   }
   // ================================
 
@@ -440,32 +455,13 @@ function renderActivity(game) {
   document.getElementById("btn-check").style.display = "inline-flex";
   document.getElementById("btn-retry").style.display = "none";
 }
-function onDragStart(e) {
-  dragSrcEl = this;
-  e.dataTransfer.effectAllowed = "move";
-  setTimeout(() => this.classList.add("opacity-50"), 0);
-}
-function onDragEnd() {
-  this.classList.remove("opacity-50");
-  document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over"));
-  updateSlotLayouts();
-}
-function onDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = "move";
-  if (this.classList.contains("dropzone")) this.classList.add("drag-over");
-}
-function onDropIntoSlot(e, slot) {
-  e.preventDefault();
-  slot.classList.remove("drag-over");
-  if (!dragSrcEl || slot.classList.contains("correct")) return;
-  if (slot.children.length > 0) document.getElementById("choice-pool").appendChild(slot.children[0]);
-  slot.appendChild(dragSrcEl);
-}
-function onDropIntoPool(e, pool) {
-  e.preventDefault();
-  if (dragSrcEl) pool.appendChild(dragSrcEl);
-}
+
+function onDragStart(e) { dragSrcEl = this; e.dataTransfer.effectAllowed = "move"; setTimeout(() => this.classList.add("opacity-50"), 0); }
+function onDragEnd() { this.classList.remove("opacity-50"); document.querySelectorAll(".drag-over").forEach(el => el.classList.remove("drag-over")); updateSlotLayouts(); }
+function onDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; if (this.classList.contains("dropzone")) this.classList.add("drag-over"); }
+function onDropIntoSlot(e, slot) { e.preventDefault(); slot.classList.remove("drag-over"); if (!dragSrcEl || slot.classList.contains("correct")) return; if (slot.children.length > 0) document.getElementById("choice-pool").appendChild(slot.children[0]); slot.appendChild(dragSrcEl); }
+function onDropIntoPool(e, pool) { e.preventDefault(); if (dragSrcEl) pool.appendChild(dragSrcEl); }
+
 function updateSlotLayouts() {
   document.querySelectorAll('.dropzone').forEach(slot => {
     const row = slot.closest('.gap-row');
@@ -477,77 +473,49 @@ function updateSlotLayouts() {
       if (currentLayoutMode !== "paragraph") {
           chip.classList.add('gap-chip');
           chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
-          if (row && currentLayoutMode === "categorisation") {
-              row.style.backgroundColor = chip.dataset.color;
-              row.style.color = '#000';
-          }
+          if (row && currentLayoutMode === "categorisation") { row.style.backgroundColor = chip.dataset.color; row.style.color = '#000'; }
       } else {
           chip.style.backgroundColor = slot.dataset.color;
       }
     } else {
       slot.classList.remove('filled');
-      if (row && currentLayoutMode === "categorisation") {
-          row.style.backgroundColor = 'transparent';
-          row.style.color = 'inherit';
-      }
+      if (row && currentLayoutMode === "categorisation") { row.style.backgroundColor = 'transparent'; row.style.color = 'inherit'; }
     }
   });
   document.querySelectorAll('#choice-pool .sentence-chip').forEach(chip => {
     chip.classList.remove('in-paragraph', 'locked', 'gap-chip');
     chip.classList.add('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
-    if (currentLayoutMode !== "paragraph" && chip.dataset.color) {
-        chip.style.backgroundColor = chip.dataset.color;
-    } else {
-        chip.style.backgroundColor = '';
-    }
+    if (currentLayoutMode !== "paragraph" && chip.dataset.color) { chip.style.backgroundColor = chip.dataset.color; } else { chip.style.backgroundColor = ''; }
     chip.style.outline = 'none';
   });
 }
+
 function checkAnswer() {
   attemptCount++;
 
   // === DETECTIVE MODE CHECKING ===
   if (currentLayoutMode === "detective") {
-      let allCorrect = true;
-      let errorCount = 0;
-      let correctFound = 0;
-      let totalTargets = 0;
-
+      let allCorrect = true; let errorCount = 0; let correctFound = 0; let totalTargets = 0;
       document.querySelectorAll('.detective-word').forEach(span => {
           let isTarget = span.getAttribute('data-target') === 'true';
           if (isTarget) totalTargets++;
-
           let isSelected = span.classList.contains('selected');
           span.classList.remove('correct', 'incorrect'); 
           
-          if (isTarget && isSelected) {
-              span.classList.add('correct');
-              correctFound++;
-          } else if (!isTarget && isSelected) {
-              span.classList.add('incorrect');
-              allCorrect = false;
-              errorCount++;
-          } else if (isTarget && !isSelected) {
-              span.classList.add('incorrect'); // Missed a target
-              allCorrect = false;
-              errorCount++;
-          }
+          if (isTarget && isSelected) { span.classList.add('correct'); correctFound++; } 
+          else if (!isTarget && isSelected) { span.classList.add('incorrect'); allCorrect = false; errorCount++; } 
+          else if (isTarget && !isSelected) { span.classList.add('incorrect'); allCorrect = false; errorCount++; }
       });
 
       let status = allCorrect ? "correct" : "incorrect";
-      let message = allCorrect 
-          ? "🎉 Brilliant! You found all the correct language features!" 
-          : `⚠️ You found ${correctFound}/${totalTargets} targets, but made ${errorCount} mistake(s). Red means you clicked the wrong word, or missed a correct one.`;
+      let message = allCorrect ? "🎉 Brilliant! You found all the targets!" : `⚠️ You found ${correctFound}/${totalTargets} targets, but made ${errorCount} mistake(s). Red means you clicked the wrong word, or missed a correct one.`;
       
       const fb = document.getElementById("feedback");
       if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
       
       if (allCorrect) {
-          document.getElementById("btn-check").style.display = "none";
-          document.getElementById("btn-retry").style.display = "inline-flex";
-          if (typeof confetti === 'function') {
-              confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
-          }
+          document.getElementById("btn-check").style.display = "none"; document.getElementById("btn-retry").style.display = "inline-flex";
+          if (typeof confetti === 'function') { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] }); }
       }
       
       let details = [`Found: ${correctFound}/${totalTargets}`];
@@ -555,7 +523,7 @@ function checkAnswer() {
       details.push(hintsUsed.length > 0 ? "💡 Hints: " + [...new Set(hintsUsed)].join(", ") : "🧠 No hints used");
       
       trackAttempt(status, attemptCount, details);
-      return; // Exit here! No drag-and-drop check needed.
+      return; 
   }
   // ===============================
 
@@ -573,12 +541,9 @@ function checkAnswer() {
       distractorCount++; mistakesMade = true;
       document.getElementById("choice-pool").appendChild(chip);
     } else if (expected === actual) {
-      correctCount++;
-      chip.classList.add("locked");
-      chip.draggable = false;
+      correctCount++; chip.classList.add("locked"); chip.draggable = false;
     } else {
-      mistakesMade = true;
-      document.getElementById("choice-pool").appendChild(chip);
+      mistakesMade = true; document.getElementById("choice-pool").appendChild(chip);
     }
   });
   updateSlotLayouts();
@@ -587,13 +552,8 @@ function checkAnswer() {
   if (correctCount === totalSlots) {
     status = "correct";
     message = (currentLayoutMode !== "paragraph") ? "🎉 Perfect! You filled the gaps correctly." : "🎉 Perfect! You built the paragraph correctly.";
-    document.getElementById("btn-check").style.display = "none";
-    document.getElementById("btn-retry").style.display = "inline-flex";
-
-    if (typeof confetti === 'function') {
-        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
-    }
-
+    document.getElementById("btn-check").style.display = "none"; document.getElementById("btn-retry").style.display = "inline-flex";
+    if (typeof confetti === 'function') { confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] }); }
   } else if (mistakesMade) {
     status = "incorrect"; message = "⚠️ Incorrect parts were sent back to the left. You locked in " + correctCount + " correct answer(s). Keep trying!";
   } else if (emptyCount > 0) {
@@ -606,15 +566,10 @@ function checkAnswer() {
   details.push(hintsUsed.length > 0 ? "💡 Hints: " + [...new Set(hintsUsed)].join(", ") : "🧠 No hints used");
   trackAttempt(status, attemptCount, details);
 }
-function retryActivity() {
-  let cA = attemptCount; let cH = [...hintsUsed];
-  renderActivity(activities[currentGame]);
-  attemptCount = cA; hintsUsed = cH;
-}
-function trackAttempt(status, attempt, details) {
-  const params = new URLSearchParams({ name: studentName, game_id: currentGame, attempt: attempt, status: status, details: details.join(" | ") });
-  fetch(TRACKING_URL + "?" + params.toString(), { mode: 'no-cors' }).catch(() => {});
-}
+
+function retryActivity() { let cA = attemptCount; let cH = [...hintsUsed]; renderActivity(activities[currentGame]); attemptCount = cA; hintsUsed = cH; }
+function trackAttempt(status, attempt, details) { const params = new URLSearchParams({ name: studentName, game_id: currentGame, attempt: attempt, status: status, details: details.join(" | ") }); fetch(TRACKING_URL + "?" + params.toString(), { mode: 'no-cors' }).catch(() => {}); }
+
 function switchTab(tab) {
   const tabS = document.getElementById("tab-student"); const tabT = document.getElementById("tab-teacher");
   const pS = document.getElementById("panel-student"); const pT = document.getElementById("panel-teacher");
@@ -624,28 +579,21 @@ function switchTab(tab) {
   if(pT) pT.classList.toggle("hidden", tab !== "teacher");
   if (tab === "teacher") loadTeacherData();
 }
-function promptTeacherPin() {
-  const modal = document.getElementById("pin-modal"); const input = document.getElementById("pin-input");
-  if (modal) modal.classList.remove("hidden"); if (input) { input.value = ""; input.focus(); }
-}
-function closePinModal() {
-  const modal = document.getElementById("pin-modal"); if(modal) modal.classList.add("hidden");
-}
-function submitPin() {
-  const input = document.getElementById("pin-input"); if (!input) return;
-  if (input.value.trim() === TEACHER_PIN) { closePinModal(); switchTab("teacher"); }
-  else { document.getElementById("pin-error").textContent = "Incorrect PIN."; input.value = ""; input.focus(); }
-}
+
+function promptTeacherPin() { const modal = document.getElementById("pin-modal"); const input = document.getElementById("pin-input"); if (modal) modal.classList.remove("hidden"); if (input) { input.value = ""; input.focus(); } }
+function closePinModal() { const modal = document.getElementById("pin-modal"); if(modal) modal.classList.add("hidden"); }
+function submitPin() { const input = document.getElementById("pin-input"); if (!input) return; if (input.value.trim() === TEACHER_PIN) { closePinModal(); switchTab("teacher"); } else { document.getElementById("pin-error").textContent = "Incorrect PIN."; input.value = ""; input.focus(); } }
 function resetSession() { sessionStart = Date.now(); loadTeacherData(); }
+
 function loadTeacherData() {
-  const container = document.getElementById("teacher-results"); if(!container) return;
-  container.innerHTML = "<p>Loading results...</p>";
+  const container = document.getElementById("teacher-results"); if(!container) return; container.innerHTML = "<p>Loading results...</p>";
   fetch(TRACKING_CSV_URL + "&t=" + Date.now()).then(r => r.text()).then(text => {
       const rows = parseCSV(text);
       const filtered = sessionStart ? rows.filter(r => new Date(r["Timestamp"]).getTime() >= sessionStart) : rows;
       renderTeacherTable(filtered.reverse());
     }).catch(() => { container.innerHTML = "<p>Could not load results.</p>"; });
 }
+
 function renderTeacherTable(rows) {
   const container = document.getElementById("teacher-results"); if (!container) return;
   if (rows.length === 0) { container.innerHTML = "<p>No results yet.</p>"; return; }
@@ -655,38 +603,17 @@ function renderTeacherTable(rows) {
   rows.forEach(row => { html += "<tr>"; headers.forEach(h => { html += "<td>" + (row[h] || "") + "</td>"; }); html += "</tr>"; });
   html += "</tbody></table>"; container.innerHTML = html;
 }
+
 setInterval(() => { const t = document.getElementById("panel-teacher"); if (t && !t.classList.contains("hidden")) loadTeacherData(); }, REFRESH_INTERVAL);
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
 function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
+
 // --- NEON HINT MODAL OVERRIDE ---
 const neonModalOverlay = document.createElement('div');
 neonModalOverlay.id = 'neon-hint-overlay';
-neonModalOverlay.style.cssText = `
-    display: none;
-    position: fixed;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(15, 23, 42, 0.8);
-    backdrop-filter: blur(5px);
-    z-index: 10000;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-`;
+neonModalOverlay.style.cssText = `display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(5px); z-index: 10000; align-items: center; justify-content: center; cursor: pointer; opacity: 0; transition: opacity 0.3s ease;`;
 const neonModalBox = document.createElement('div');
-neonModalBox.style.cssText = `
-    background: rgba(30, 30, 46, 0.95);
-    border: 2px solid #ec4899;
-    box-shadow: 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 15px rgba(139, 92, 246, 0.4);
-    border-radius: 20px;
-    padding: 35px;
-    max-width: 80%;
-    width: 450px;
-    text-align: center;
-    transform: scale(0.8);
-    transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-`;
+neonModalBox.style.cssText = `background: rgba(30, 30, 46, 0.95); border: 2px solid #ec4899; box-shadow: 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 15px rgba(139, 92, 246, 0.4); border-radius: 20px; padding: 35px; max-width: 80%; width: 450px; text-align: center; transform: scale(0.8); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);`;
 const neonModalTitle = document.createElement('h3');
 neonModalTitle.innerHTML = "💡 Hint";
 neonModalTitle.style.cssText = "margin-top: 0; color: #f9a8d4; text-shadow: 0 0 10px #ec4899; margin-bottom: 20px; font-size: 2rem; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;";
@@ -696,37 +623,10 @@ neonModalText.style.cssText = "color: #e2e8f0; font-size: 1.3rem; line-height: 1
 const neonModalInstruction = document.createElement('small');
 neonModalInstruction.innerHTML = "(Click anywhere to close)";
 neonModalInstruction.style.cssText = "display: block; color: #8b5cf6; font-size: 0.95rem; opacity: 0.8; font-style: italic;";
-neonModalBox.appendChild(neonModalTitle);
-neonModalBox.appendChild(neonModalText);
-neonModalBox.appendChild(neonModalInstruction);
-neonModalOverlay.appendChild(neonModalBox);
-document.body.appendChild(neonModalOverlay);
-function openNeonModal(text) {
-    document.getElementById('neon-hint-text-dynamic').innerText = text;
-    neonModalOverlay.style.display = 'flex';
-    setTimeout(() => {
-        neonModalOverlay.style.opacity = '1';
-        neonModalBox.style.transform = 'scale(1)';
-    }, 10);
-}
-function closeNeonModal() {
-    neonModalOverlay.style.opacity = '0';
-    neonModalBox.style.transform = 'scale(0.8)';
-    setTimeout(() => {
-        neonModalOverlay.style.display = 'none';
-    }, 300);
-}
+neonModalBox.appendChild(neonModalTitle); neonModalBox.appendChild(neonModalText); neonModalBox.appendChild(neonModalInstruction); neonModalOverlay.appendChild(neonModalBox); document.body.appendChild(neonModalOverlay);
+
+function openNeonModal(text) { document.getElementById('neon-hint-text-dynamic').innerText = text; neonModalOverlay.style.display = 'flex'; setTimeout(() => { neonModalOverlay.style.opacity = '1'; neonModalBox.style.transform = 'scale(1)'; }, 10); }
+function closeNeonModal() { neonModalOverlay.style.opacity = '0'; neonModalBox.style.transform = 'scale(0.8)'; setTimeout(() => { neonModalOverlay.style.display = 'none'; }, 300); }
 neonModalOverlay.addEventListener('click', closeNeonModal);
-window.showHint = function(hintText, event) {
-    if (event) {
-        event.stopPropagation();
-        event.preventDefault();
-    }
-    openNeonModal(hintText);
-};
-window.showOverallHint = function() {
-    if (window.currentActivity && window.currentActivity.overallHint) {
-        openNeonModal(window.currentActivity.overallHint);
-    }
-};
-// --- END NEON HINT MODAL OVERRIDE ---
+window.showHint = function(hintText, event) { if (event) { event.stopPropagation(); event.preventDefault(); } openNeonModal(hintText); };
+window.showOverallHint = function() { if (window.currentActivity && window.currentActivity.overallHint) { openNeonModal(window.currentActivity.overallHint); } };
