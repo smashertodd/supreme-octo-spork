@@ -60,6 +60,58 @@ function injectStyles() {
         max-width: 100%;
     }
     .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
+        /* 3. Custom Neon Scrollbars */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: rgba(30, 30, 46, 0.5); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb { background: linear-gradient(to bottom, #ec4899, #8b5cf6); border-radius: 5px; }
+    ::-webkit-scrollbar-thumb:hover { background: linear-gradient(to bottom, #f472b6, #a78bfa); }
+
+    /* 4. Shimmering Check Answer Button */
+    #btn-check { position: relative; overflow: hidden; border: none; margin-top: 30px !important; }
+    #btn-check::after {
+        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.3) 50%, rgba(255,255,255,0) 100%);
+        transform: rotate(30deg); animation: shimmer 3s infinite linear; pointer-events: none;
+    }
+    @keyframes shimmer { 0% { transform: translateX(-100%) rotate(30deg); } 100% { transform: translateX(100%) rotate(30deg); } }
+
+    /* 2. Shake Animation for Wrong Answers */
+    @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-6px);} 75% {transform: translateX(6px);} }
+    .shake-error { animation: shake 0.4s ease-in-out; background-color: #fca5a5 !important; color: #7f1d1d !important; }
+
+    /* 5. Teacher Dashboard Glow-Up */
+    #results-table { width: 100%; border-collapse: collapse; margin-top: 15px; color: #e2e8f0; font-size: 0.95rem; }
+    #results-table th { background: rgba(139, 92, 246, 0.2); padding: 12px; text-align: left; border-bottom: 2px solid #ec4899; color: #f9a8d4; }
+    #results-table td { padding: 12px; border-bottom: 1px solid rgba(139, 92, 246, 0.2); transition: background 0.2s; }
+    #results-table tbody tr:hover { background: rgba(236, 72, 153, 0.15); }
+    .status-correct { color: #4ade80; text-shadow: 0 0 8px rgba(74, 222, 128, 0.4); font-weight: bold; }
+    .status-incorrect { color: #f87171; text-shadow: 0 0 8px rgba(248, 113, 113, 0.4); font-weight: bold; }
+    .status-partial { color: #fbbf24; text-shadow: 0 0 8px rgba(251, 191, 36, 0.4); font-weight: bold; }
+
+    /* 6. Layout Fixes for Spacing & Large Text */
+    #student-name { margin-top: 12px !important; }
+    
+    .sentence-chip, .gap-chip {
+        height: auto !important;
+        white-space: normal !important;
+        text-align: left !important;
+        line-height: 1.5 !important;
+        padding: 12px 16px !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    
+    .paragraph-slot, .gap-slot {
+        height: auto !important;
+        min-height: 46px !important;
+        max-width: 100% !important;
+        white-space: normal !important;
+        display: inline-block;
+        vertical-align: middle;
+        box-sizing: border-box !important;
+    }
+    
+    #text-container { overflow-x: hidden !important; }
   `;
   document.head.appendChild(style);
 }
