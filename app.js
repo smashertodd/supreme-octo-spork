@@ -33,7 +33,7 @@ function injectStyles() {
     .paragraph-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.02); }
     .paragraph-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
     .sentence-chip.in-paragraph { display: inline; padding: 4px 8px; border-radius: 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; }
-    .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
+   .sentence-chip.locked, .gap-chip.locked { pointer-events: none; outline: none !important; }
     
     /* Gap Fill Specific Styles */
     .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
@@ -511,30 +511,57 @@ function updateSlotLayouts() {
 }
 // ── Check Answer ──────────────────────────────────────────────
 function checkAnswer() {
-  const slots = document.querySelectorAll(".dropzone");
-  let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
-  attemptCount++;
+    const slots = document.querySelectorAll('.gap-slot, .paragraph-slot');
+    let correctCount = 0;
+    let totalGaps = slots.length;
 
-  slots.forEach((slot, i) => {
-    const chip = slot.querySelector(".sentence-chip");
-    if (!chip) { emptyCount++; return; }
-    if (chip.classList.contains("locked")) { correctCount++; return; }
+    slots.forEach(slot => {
+        const chip = slot.querySelector('.sentence-chip, .gap-chip');
+        if (!chip) return;
 
-    const expected = slot.dataset.expectedIndex;
-    const actual = chip.dataset.answerIndex;
-    const isDistractor = chip.dataset.isDistractor === "true";
+        if (chip.dataset.correct === slot.dataset.answer) {
+            correctCount++;
+            chip.classList.add('locked');
+        } else {
+            // Shake and turn red!
+            chip.classList.add('shake-error');
+            setTimeout(() => chip.classList.remove('shake-error'), 400);
+            
+            document.getElementById('choice-pool').appendChild(chip);
+            chip.classList.remove('in-paragraph');
+        }
+    });
 
-    if (isDistractor) {
-      distractorCount++; mistakesMade = true;
-      document.getElementById("choice-pool").appendChild(chip);
-    } else if (expected === actual) {
-      correctCount++;
-      chip.classList.add("locked");
-      chip.draggable = false;
+    const msg = document.getElementById('feedback-message');
+    const btn = document.getElementById('btn-check');
+    const retryBtn = document.getElementById('btn-retry');
+
+    if (correctCount === totalGaps) {
+        msg.innerHTML = "🎉 Perfect! You built the paragraph correctly.";
+        msg.style.color = "#4ade80";
+        if(btn) btn.style.display = 'none';
+        if(retryBtn) retryBtn.style.display = 'inline-block';
+        
+        // 🎇 FIRE THE CONFETTI CANNON!
+        if (typeof confetti === 'function') {
+            confetti({
+                particleCount: 150,
+                spread: 80,
+                origin: { y: 0.6 },
+                colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047']
+            });
+        }
+
+        if (currentActivity) {
+            const attempt = (window.currentAttempt || 0) + 1;
+            logAttempt(studentName, currentActivity.Title, attempt, "Completed", "No incorrect distractors left");
+        }
     } else {
-      mistakesMade = true;
-      document.getElementById("choice-pool").appendChild(chip);
+        msg.innerHTML = "Not quite! Incorrect answers have been returned to the pool.";
+        msg.style.color = "#fca5a5";
+        window.currentAttempt = (window.currentAttempt || 0) + 1;
     }
+}
   });
   updateSlotLayouts();
   const totalSlots = slots.length;
