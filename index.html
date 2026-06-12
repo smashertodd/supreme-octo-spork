@@ -79,38 +79,17 @@
     /* Hide the old tab bar completely */
     #tab-bar { display: none !important; }
     /* --- MANUAL SPACING CONTROLS --- */
-
-    /* 1. Gap between "Enter your name..." and the text box */
-    #name-section .subtitle {
-        margin-bottom: 25px !important;
-    }
-    /* 2. Gap between the text box and the "Start" button */
-    #name-section .form-group {
-        margin-bottom: 25px !important;
-    }
-    /* 3. Gap above the "Check Answer" button */
-    .activity-footer {
-        margin-top: 30px !important;
-    }
+    #name-section .subtitle { margin-bottom: 25px !important; }
+    #name-section .form-group { margin-bottom: 25px !important; }
+    .activity-footer { margin-top: 30px !important; }
     /* Smooth Slide-In Animations */
-    @keyframes slideUpFade {
-        from { opacity: 0; transform: translateY(30px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    #library-screen, #game-screen {
-        animation: slideUpFade 0.6s ease-out forwards;
-    }
+    @keyframes slideUpFade { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+    #library-screen, #game-screen { animation: slideUpFade 0.6s ease-out forwards; }
     /* Magnetic Drop Zones */
-    .gap-box {
-        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important;
-    }
-    .gap-box:hover {
-        transform: scale(1.08);
-        box-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important;
-        border-color: rgba(255, 255, 255, 0.9) !important;
-    }
+    .gap-box { transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease !important; }
+    .gap-box:hover { transform: scale(1.08); box-shadow: 0 0 15px rgba(255, 255, 255, 0.5) !important; border-color: rgba(255, 255, 255, 0.9) !important; }
 
-    /* --- DETECTIVE MODE STYLES --- */
+    /* --- DETECTIVE MODE STYLES (FIXED FOR VISIBILITY) --- */
     .detective-word {
         cursor: pointer;
         padding: 4px 8px;
@@ -119,11 +98,12 @@
         transition: all 0.2s ease;
         border: 2px solid transparent;
         display: inline-block;
-        background: rgba(255, 255, 255, 0.05); /* very subtle initial background */
-        color: #e2e8f0;
+        background: rgba(0, 0, 0, 0.03); /* subtle grey background to show clickability */
+        color: #1e293b; /* DARK TEXT FOR WHITE BACKGROUND */
+        font-weight: 500;
     }
     .detective-word:hover { 
-        background: rgba(255, 255, 255, 0.15); 
+        background: rgba(0, 0, 0, 0.08); 
         transform: translateY(-2px); 
     }
     .detective-word.selected {
@@ -151,7 +131,6 @@
 <body>
   <!-- NEW GORGEOUS NEON TOGGLE CORNER -->
   <div class="neon-toggle-container">
-    <!-- Magic logic: Only one shows at a time based on which tab is 'active' in app.js -->
     <button id="tab-student" class="neon-toggle active">← Back to Game</button>
     <button id="tab-teacher" class="neon-toggle">Teacher Login 🔐</button>
   </div>
@@ -199,7 +178,7 @@
               <div id="choice-pool" class="pool"></div>
             </div>
             <div class="panel-right">
-              <h3>Paragraph Labels</h3>
+              <h3 id="right-panel-title">Paragraph Labels</h3>
               <div id="drop-zone" class="pool drop-zone-slots"></div>
             </div>
           </div>
@@ -246,6 +225,6 @@
       </div>
     </div>
   </div>
-  <script src="app.js?v=92"></script>
+  <script src="app.js?v=93"></script>
 </body>
 </html>
