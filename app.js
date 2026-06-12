@@ -1,5 +1,5 @@
 // =========================================================================
-// Fix the Paragraph - FULL APP CODE (v4 - Final Flowing Text & Neon Toggle)
+// Fix the Paragraph - FULL APP CODE (v5 - Clean Interface & Flowing Text)
 // =========================================================================
 
 // === 🛑 STEP 1: PASTE YOUR 3 GOOGLE LINKS HERE 🛑 ===
@@ -9,7 +9,7 @@ const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_
 const TEACHER_PIN = "@pple"; 
 // ====================================================
 
-// --- 🎨 STEP 2: COLOURS ---
+// --- 🎨 COLOURS ---
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
 
 // Global State
@@ -20,48 +20,55 @@ let currentStudentName = "";
 let attemptCount = 1;
 let startTime = 0;
 
-// --- INITIALISATION ---
+// --- INITIALISATION & BUTTON HOOKUP ---
 document.addEventListener("DOMContentLoaded", () => {
-    // Remove the old teacher link if it exists on the HTML
-    const oldTeacherLink = document.getElementById('teacher-login-btn');
-    if(oldTeacherLink) oldTeacherLink.style.display = 'none';
+    // 1. Hook up the Start button
+    const startBtn = document.getElementById("start-btn");
+    if (startBtn) {
+        startBtn.addEventListener("click", startApp);
+    }
 
-    // Inject the lovely neon toggle
-    injectNeonTeacherToggle();
-
-    // Attach student login
-    document.getElementById("start-btn").addEventListener("click", startApp);
-});
-
-function injectNeonTeacherToggle() {
-    const btn = document.createElement('button');
-    btn.innerHTML = '👩‍🏫 Teacher Mode';
-    btn.className = 'fixed top-4 right-4 z-50 px-5 py-2 rounded-full bg-pink-600/20 border border-pink-500/60 text-pink-300 shadow-[0_0_15px_rgba(236,72,153,0.5)] hover:shadow-[0_0_25px_rgba(236,72,153,0.8)] hover:bg-pink-600/30 transition-all font-bold tracking-wider backdrop-blur-md text-sm uppercase';
-    btn.onclick = () => {
-        Swal.fire({
-            title: 'Teacher Login',
-            input: 'password',
-            inputPlaceholder: 'Enter PIN',
-            background: '#1e1b4b',
-            color: '#fff',
-            confirmButtonColor: '#ec4899'
-        }).then(result => {
-            if (result.value === TEACHER_PIN) {
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('app').classList.add('hidden');
-                document.getElementById('teacher-dashboard').classList.remove('hidden');
-                updateTeacherDashboard();
-                setInterval(updateTeacherDashboard, 15000);
-            } else if (result.value) {
-                Swal.fire({icon: 'error', title: 'Oops...', text: 'Incorrect PIN', background: '#1e1b4b', color: '#fff'});
+    // 2. Hook up your beautiful top-right Teacher Login button
+    // It looks for the ID, but if that fails, it finds any button with "Teacher" in the text
+    const teacherBtn = document.getElementById("teacher-login-btn");
+    if (teacherBtn) {
+        teacherBtn.addEventListener("click", window.teacherLogin);
+    } else {
+        document.querySelectorAll('button').forEach(btn => {
+            if (btn.innerText.includes('Teacher')) {
+                btn.addEventListener('click', window.teacherLogin);
             }
         });
-    };
-    document.body.appendChild(btn);
-}
+    }
+});
+
+// Teacher Login Function
+window.teacherLogin = function() {
+    Swal.fire({
+        title: 'Teacher Login',
+        input: 'password',
+        inputPlaceholder: 'Enter PIN',
+        background: '#1e1b4b',
+        color: '#fff',
+        confirmButtonColor: '#ec4899'
+    }).then(result => {
+        if (result.value === TEACHER_PIN) {
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('app').classList.add('hidden');
+            document.getElementById('teacher-dashboard').classList.remove('hidden');
+            updateTeacherDashboard();
+            setInterval(updateTeacherDashboard, 15000);
+        } else if (result.value) {
+            Swal.fire({icon: 'error', title: 'Oops...', text: 'Incorrect PIN', background: '#1e1b4b', color: '#fff'});
+        }
+    });
+};
 
 function startApp() {
-    const nameInput = document.getElementById("student-name").value.trim();
+    const nameInputEl = document.getElementById("student-name");
+    if (!nameInputEl) return;
+    
+    const nameInput = nameInputEl.value.trim();
     if (!nameInput) {
         Swal.fire({ icon: 'warning', title: 'Hold up!', text: 'Please enter your name.', background: '#1e1b4b', color: '#fff' });
         return;
@@ -183,13 +190,11 @@ function renderParagraphBuilderActivity(data, leftPanel, rightPanel) {
     });
     items = items.sort(() => Math.random() - 0.5);
 
-    // Left Panel Choices
     items.forEach((item, i) => {
         let chip = createDraggableChip(item.text, item.expected, i);
         leftPanel.appendChild(chip);
     });
 
-    // Right Panel Slots
     const structureBox = document.createElement("div");
     structureBox.className = "bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col gap-3 backdrop-blur-md w-full h-full";
     let activeIndex = 0;
@@ -284,11 +289,10 @@ function renderFlowingGapFillActivity(data, leftPanel, rightPanel) {
     });
 
     const wrapper = document.createElement('div');
-    // Flowing text styling!
     wrapper.className = 'text-white text-xl leading-loose p-8 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 shadow-xl w-full h-full';
-    wrapper.style.lineHeight = '2.8'; // Gives room for the drops
+    wrapper.style.lineHeight = '2.8'; 
 
-    data.forEach((row, index) => {
+    data.forEach((row) => {
         if (row.Status.toLowerCase() === 'distractor' || !row.Text) return;
         
         let hintHtml = row.Hint ? `<button onclick="Swal.fire('Hint', '${row.Hint.replace(/'/g, "\\'")}', 'info')" class="ml-2 inline-block text-yellow-300 hover:scale-110 transition-transform">💡</button>` : '';
@@ -303,10 +307,9 @@ function renderFlowingGapFillActivity(data, leftPanel, rightPanel) {
 
                 if (i < parts.length - 1) {
                     const dropzone = document.createElement('div');
-                    // INLINE styling so it sits in the sentence
                     dropzone.className = "dropzone inline-flex items-center justify-center min-w-[120px] h-[40px] border-2 border-dashed border-white/40 rounded-full bg-black/20 mx-2 px-3 align-middle transition-all";
                     dropzone.dataset.expected = row.Label;
-                    dropzone.dataset.mode = 'flowing'; // Tells the drop handler to keep it pill-shaped
+                    dropzone.dataset.mode = 'flowing';
                     
                     dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('border-pink-400'); });
                     dropzone.addEventListener('dragleave', () => dropzone.classList.remove('border-pink-400'));
@@ -320,7 +323,7 @@ function renderFlowingGapFillActivity(data, leftPanel, rightPanel) {
                 hSpan.innerHTML = hintHtml;
                 span.appendChild(hSpan);
             }
-            span.innerHTML += ' '; // space after sentence
+            span.innerHTML += ' '; 
         } else {
             span.innerHTML = row.Text + hintHtml + ' ';
         }
@@ -329,7 +332,7 @@ function renderFlowingGapFillActivity(data, leftPanel, rightPanel) {
     rightPanel.appendChild(wrapper);
 }
 
-// 🧠 BRAIN 4: Detective Mode (Click to highlight)
+// 🧠 BRAIN 4: Detective Mode
 function renderDetectiveActivity(data, leftPanel, rightPanel) {
     leftPanel.innerHTML = `
         <div class="bg-white/10 backdrop-blur-md p-6 rounded-2xl border border-white/20 text-center shadow-xl h-full flex flex-col justify-center">
@@ -348,7 +351,6 @@ function renderDetectiveActivity(data, leftPanel, rightPanel) {
         p.className = "mb-4";
         let processedText = row.Text.replace(/\[\[(.*?)\]\]/g, `<span class="detective-word cursor-pointer px-2 py-1 rounded-lg transition-colors border border-transparent hover:border-pink-500/50" data-target="true">$1</span>`);
         
-        // Wrap normal words too so they can be clicked incorrectly
         processedText = processedText.split(' ').map(word => {
             if (word.includes('detective-word')) return word;
             return `<span class="detective-word cursor-pointer px-1 rounded transition-colors hover:bg-white/10" data-target="false">${word}</span>`;
@@ -382,9 +384,7 @@ function createDraggableChip(text, expected, index) {
     let chip = document.createElement("div");
     chip.className = "draggable-chip cursor-grab p-4 mb-3 text-center text-gray-900 font-bold shadow-md transition-all flex items-center justify-center min-h-[50px]";
     chip.style.backgroundColor = COLORS[index % COLORS.length];
-    
-    // Soft rounded corners for choices! Not circles.
-    chip.style.borderRadius = "12px"; 
+    chip.style.borderRadius = "12px"; // Soft corners
     
     chip.innerText = text;
     chip.draggable = true;
@@ -407,21 +407,17 @@ function handleDrop(e, dropzone) {
     e.preventDefault();
     dropzone.classList.remove('border-pink-400', 'bg-pink-500/10');
     if (draggedItem) {
-        // If there's already a chip in here, put it back to the left panel
         if (dropzone.children.length > 0) {
             let existingChip = dropzone.children[0];
             resetChipAppearance(existingChip);
             document.getElementById("left-panel").appendChild(existingChip);
         }
 
-        // Adjust chip based on mode
         if (dropzone.dataset.mode === 'flowing') {
-            // Gap Fill mode: Make it a neat inline pill
             draggedItem.classList.remove('mb-3', 'shadow-md');
             draggedItem.classList.add('m-0', 'px-4', 'py-1', 'min-h-[30px]');
-            draggedItem.style.borderRadius = '9999px'; // Pill shape for dropped!
+            draggedItem.style.borderRadius = '9999px'; // Pill shape when dropped in text
         } else {
-            // Block mode: Make it fill the box
             draggedItem.classList.remove('mb-3', 'shadow-md');
             draggedItem.classList.add('w-full', 'h-full', 'm-0');
         }
@@ -429,12 +425,11 @@ function handleDrop(e, dropzone) {
         dropzone.appendChild(draggedItem);
         dropzone.style.border = 'none';
 
-        // Categorisation Colour Bleed logic
         if (dropzone.dataset.parentIndex) {
             let block = document.querySelector(`.text-block[data-index="${dropzone.dataset.parentIndex}"]`);
             if (block) {
                 block.style.backgroundColor = draggedItem.dataset.color;
-                block.style.color = "#111827"; // Dark text
+                block.style.color = "#111827"; 
                 block.querySelectorAll('span').forEach(s => s.classList.replace('text-white', 'text-gray-900'));
             }
         }
@@ -445,36 +440,36 @@ function resetChipAppearance(chip) {
     chip.classList.remove('w-full', 'h-full', 'm-0', 'px-4', 'py-1', 'min-h-[30px]', 'bg-green-400');
     chip.classList.add('mb-3', 'shadow-md', 'min-h-[50px]');
     chip.style.backgroundColor = chip.dataset.color;
-    chip.style.borderRadius = "12px"; // Back to soft rectangle
+    chip.style.borderRadius = "12px"; 
     chip.style.color = "#111827";
 }
 
-// Add capability to drop back to left panel
 document.addEventListener("DOMContentLoaded", () => {
     const leftPanel = document.getElementById("left-panel");
-    leftPanel.addEventListener('dragover', e => e.preventDefault());
-    leftPanel.addEventListener('drop', e => {
-        e.preventDefault();
-        if (draggedItem) {
-            resetChipAppearance(draggedItem);
-            leftPanel.appendChild(draggedItem);
-            
-            // Clean up any empty dropzones or blocks
-            document.querySelectorAll('.dropzone').forEach(dz => {
-                if(dz.children.length === 0) {
-                    dz.style.border = ''; // restore border
-                    if (dz.dataset.parentIndex) {
-                        let block = document.querySelector(`.text-block[data-index="${dz.dataset.parentIndex}"]`);
-                        if (block) {
-                            block.style.backgroundColor = "";
-                            block.style.color = "";
-                            block.querySelectorAll('span').forEach(s => s.classList.replace('text-gray-900', 'text-white'));
+    if(leftPanel) {
+        leftPanel.addEventListener('dragover', e => e.preventDefault());
+        leftPanel.addEventListener('drop', e => {
+            e.preventDefault();
+            if (draggedItem) {
+                resetChipAppearance(draggedItem);
+                leftPanel.appendChild(draggedItem);
+                
+                document.querySelectorAll('.dropzone').forEach(dz => {
+                    if(dz.children.length === 0) {
+                        dz.style.border = ''; 
+                        if (dz.dataset.parentIndex) {
+                            let block = document.querySelector(`.text-block[data-index="${dz.dataset.parentIndex}"]`);
+                            if (block) {
+                                block.style.backgroundColor = "";
+                                block.style.color = "";
+                                block.querySelectorAll('span').forEach(s => s.classList.replace('text-gray-900', 'text-white'));
+                            }
                         }
                     }
-                }
-            });
-        }
-    });
+                });
+            }
+        });
+    }
 });
 
 // --- CHECKING ANSWERS ---
@@ -499,7 +494,7 @@ function checkAnswers(activity) {
                 const chip = dz.children[0];
                 const actual = chip.dataset.expected;
                 if (actual === expected) {
-                    chip.style.backgroundColor = "#4ade80"; // Bright Green
+                    chip.style.backgroundColor = "#4ade80"; 
                     chip.style.color = "#111827";
                     detailsArr.push("Correct");
                 } else {
@@ -524,7 +519,6 @@ function checkAnswers(activity) {
     const timeTaken = Math.round((Date.now() - startTime) / 1000);
     const timeStr = `${Math.floor(timeTaken / 60)}m ${timeTaken % 60}s`;
     
-    // Distractor info
     let distractorDetails = "";
     if (hasDistractors) {
         let leftPanelChips = document.getElementById("left-panel").children.length;
