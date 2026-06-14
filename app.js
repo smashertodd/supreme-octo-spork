@@ -601,3 +601,38 @@ neonModalInstruction.innerHTML = "(Click anywhere to close)";
 neonModalInstruction.style.cssText = "display: block; color: #8b5cf6; font-size: 0.95rem; opacity: 0.8; font-style: italic;";
 neonModalBox.appendChild(neonModalTitle);
 neonModalBox.appendChild(neonModalText);
+// Add the instruction to the box, then add the box to the overlay
+neonModalBox.appendChild(neonModalInstruction);
+neonModalOverlay.appendChild(neonModalBox);
+
+// Add the whole hidden modal to the webpage
+document.addEventListener("DOMContentLoaded", () => {
+    document.body.appendChild(neonModalOverlay);
+});
+
+// The magic function to open it with a cool animation
+window.openNeonModal = function(message) {
+    // Set the text (using innerText keeps your line breaks intact)
+    neonModalText.innerText = message;
+    
+    // Show it
+    neonModalOverlay.style.display = 'flex';
+    
+    // Tiny delay to let the CSS animations trigger smoothly
+    setTimeout(() => {
+        neonModalOverlay.style.opacity = '1';
+        neonModalBox.style.transform = 'scale(1)';
+    }, 10);
+};
+
+// Click ANYWHERE on the overlay to close it
+neonModalOverlay.addEventListener('click', () => {
+    // Reverse the animation
+    neonModalOverlay.style.opacity = '0';
+    neonModalBox.style.transform = 'scale(0.8)';
+    
+    // Wait for the animation to finish before hiding it completely
+    setTimeout(() => {
+        neonModalOverlay.style.display = 'none';
+    }, 300);
+});
