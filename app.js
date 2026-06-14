@@ -267,6 +267,7 @@ function renderActivity(game) {
     if (currentLayoutMode !== "paragraph") {
       chip.dataset.color = COLORS[index % COLORS.length];
       chip.style.backgroundColor = chip.dataset.color;
+      chip.style.setProperty('--chip-color', chip.dataset.color);
     } else {
       chip.classList.add("bg-white");
     }
