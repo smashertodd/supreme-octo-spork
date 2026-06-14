@@ -172,3 +172,40 @@ body::before {
 .dropzone.correct {
     pointer-events: none; /* Stops them from dragging it out again */
 }
+/* =========================================
+   SPACING & LAYOUT FIXES
+   ========================================= */
+
+/* 1. Fix the Login Card text hitting the left edge */
+.card {
+    padding: 2.5rem !important;
+    box-sizing: border-box !important;
+}
+
+/* Give the login text some breathing room above the input box */
+.subtitle {
+    margin-bottom: 1.5rem !important;
+    display: block;
+}
+
+/* 2. Fix the crammed sentences in the "Choices" pool */
+#choice-pool {
+    display: flex;
+    flex-direction: column;
+    gap: 16px !important; /* This adds a clean space between every card */
+}
+
+/* 3. Restore the white card backgrounds and padding to the choices */
+.sentence-chip:not(.in-paragraph) {
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    padding: 1.25rem !important; /* Thick, breathable padding inside the card */
+    border-radius: 12px !important;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05) !important;
+    margin-bottom: 0 !important; /* We use the gap rule instead */
+}
+
+/* Make sure the text inside the chips is readable */
+.chip-text, .sentence-chip:not(.in-paragraph) span {
+    line-height: 1.6;
+}
