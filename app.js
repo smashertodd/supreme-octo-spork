@@ -479,6 +479,7 @@ function checkAnswer() {
       correctCount++;
       chip.classList.add("locked");
       chip.draggable = false;
+      slot.classList.add("correct");
     } else {
       mistakesMade = true;
       document.getElementById("choice-pool").appendChild(chip);
