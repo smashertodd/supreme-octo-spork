@@ -209,3 +209,7 @@ body::before {
 .chip-text, .sentence-chip:not(.in-paragraph) span {
     line-height: 1.6;
 }
+/* Push the Check Answer button down */
+.activity-footer {
+    margin-top: 2rem !important;
+}
