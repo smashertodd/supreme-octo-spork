@@ -410,27 +410,40 @@ function renderActivity(game) {
       });
       dropZone.appendChild(gapFillBox);
       
-  } else {
+   } else {
+      // 2-Column Layout for Paragraph Builder ONLY
       const builderContainer = document.createElement("div");
       builderContainer.style.display = "flex";
-      builderContainer.style.flexDirection = "column";
-      builderContainer.style.gap = "1rem";
+      builderContainer.style.gap = "20px";
       builderContainer.style.width = "100%";
+      builderContainer.style.alignItems = "flex-start";
 
+      // LEFT COLUMN: Stacked Labels
+      const labelsColumn = document.createElement("div");
+      labelsColumn.style.display = "flex";
+      labelsColumn.style.flexDirection = "column";
+      labelsColumn.style.gap = "15px";
+      labelsColumn.style.width = "220px";
+      labelsColumn.style.flexShrink = "0";
+
+      // RIGHT COLUMN: Continuous Flowing Paragraph
+      const paraBuilder = document.createElement("div");
+      paraBuilder.className = "gap-fill-box"; 
+      paraBuilder.style.flexGrow = "1";
+      paraBuilder.style.lineHeight = "2.8";
+      paraBuilder.style.padding = "25px";
+      paraBuilder.style.backgroundColor = "#fff";
+      paraBuilder.style.borderRadius = "8px";
+      paraBuilder.style.border = "1px solid #e2e8f0";
+      
       game.parts.forEach((part, i) => {
-          const row = document.createElement("div");
-          row.style.display = "flex";
-          row.style.gap = "1rem";
-          row.style.alignItems = "stretch"; 
-          row.style.width = "100%";
-
           const color = COLORS[i % COLORS.length];
+
+          // 1. Build the Label (Left Column)
           const labelDiv = document.createElement("div");
           labelDiv.style.backgroundColor = color;
-          labelDiv.style.width = "220px";
-          labelDiv.style.flexShrink = "0";
+          labelDiv.style.padding = "12px 16px";
           labelDiv.style.borderRadius = "8px";
-          labelDiv.style.padding = "1rem";
           labelDiv.style.display = "flex";
           labelDiv.style.justifyContent = "space-between";
           labelDiv.style.alignItems = "center";
@@ -453,25 +466,33 @@ function renderActivity(game) {
               };
               labelDiv.appendChild(hintBtn);
           }
+          labelsColumn.appendChild(labelDiv);
 
-          const slotDiv = document.createElement("div");
-          slotDiv.className = "paragraph-slot dropzone";
-          slotDiv.dataset.expectedIndex = i;
-          slotDiv.dataset.color = color;
-          slotDiv.style.flexGrow = "1";
-          slotDiv.style.minHeight = "65px";
-          slotDiv.style.border = "2px dashed #cbd5e1";
-          slotDiv.style.backgroundColor = "rgba(255,255,255,0.5)";
-          slotDiv.style.borderRadius = "8px";
-          slotDiv.style.transition = "all 0.2s";
+          // 2. Build the inline slot (Right Column)
+          const slot = document.createElement("span");
+          slot.className = "paragraph-slot dropzone";
+          slot.dataset.expectedIndex = i;
+          slot.dataset.color = color;
           
-          slotDiv.addEventListener("dragover", onDragOver);
-          slotDiv.addEventListener("drop", e => onDropIntoSlot(e, slotDiv));
-
-          row.appendChild(labelDiv);
-          row.appendChild(slotDiv);
-          builderContainer.appendChild(row);
+          slot.style.display = "inline-flex";
+          slot.style.minWidth = "120px";
+          slot.style.height = "34px";
+          slot.style.margin = "0 6px";
+          slot.style.border = "2px dashed #cbd5e1";
+          slot.style.backgroundColor = "rgba(255,255,255,0.5)";
+          slot.style.borderRadius = "4px";
+          slot.style.verticalAlign = "middle";
+          slot.style.transition = "all 0.2s";
+          
+          slot.addEventListener("dragover", onDragOver);
+          slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+          
+          paraBuilder.appendChild(slot);
+          paraBuilder.appendChild(document.createTextNode(" "));
       });
+
+      builderContainer.appendChild(labelsColumn);
+      builderContainer.appendChild(paraBuilder);
       dropZone.appendChild(builderContainer);
   }
   
