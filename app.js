@@ -355,44 +355,72 @@ function renderActivity(game) {
       });
       dropZone.appendChild(gapFillBox);
   } else {
-      const legendBox = document.createElement("div");
-      legendBox.className = "legend-box";
-      const legendTitle = document.createElement("div");
-      legendTitle.className = "w-full text-sm uppercase font-bold text-gray-500 mb-1";
-      legendTitle.textContent = "Paragraph Structure:";
-      legendBox.appendChild(legendTitle);
+      // NEW: Side-by-side row layout!
+      const builderContainer = document.createElement("div");
+      builderContainer.style.display = "flex";
+      builderContainer.style.flexDirection = "column";
+      builderContainer.style.gap = "1rem";
+      builderContainer.style.width = "100%";
+
       game.parts.forEach((part, i) => {
-        const color = COLORS[i % COLORS.length];
-        const tag = document.createElement("div");
-        tag.className = "legend-tag";
-        tag.style.backgroundColor = color;
-        tag.textContent = (i + 1) + ". " + (part.label || "Part " + (i + 1));
-        if (part.hint) {
-          const hintBtn = document.createElement("button");
-          hintBtn.className = "hint-btn-small";
-          hintBtn.innerHTML = "💡";
-          hintBtn.title = "View Hint";
-          hintBtn.onclick = () => {
-              showNeonHint("Hint for " + part.label + ":\n\n" + part.hint);
-              hintsUsed.push("Hint (" + part.label + ")");
-          };
-          tag.appendChild(hintBtn);
-        }
-        legendBox.appendChild(tag);
+          const row = document.createElement("div");
+          row.style.display = "flex";
+          row.style.gap = "1rem";
+          row.style.alignItems = "stretch"; // MAGIC: Makes label match dropzone height
+          row.style.width = "100%";
+
+          // Left side: Coloured Label
+          const color = COLORS[i % COLORS.length];
+          const labelDiv = document.createElement("div");
+          labelDiv.style.backgroundColor = color;
+          labelDiv.style.width = "220px";
+          labelDiv.style.flexShrink = "0";
+          labelDiv.style.borderRadius = "8px";
+          labelDiv.style.padding = "1rem";
+          labelDiv.style.display = "flex";
+          labelDiv.style.justifyContent = "space-between";
+          labelDiv.style.alignItems = "center";
+          labelDiv.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
+
+          const labelText = document.createElement("span");
+          labelText.textContent = (i + 1) + ". " + (part.label || "Part " + (i + 1));
+          labelText.style.fontWeight = "700";
+          labelText.style.color = "#0f172a";
+          labelDiv.appendChild(labelText);
+
+          if (part.hint) {
+              const hintBtn = document.createElement("button");
+              hintBtn.className = "hint-btn-small";
+              hintBtn.innerHTML = "💡";
+              hintBtn.title = "View Hint";
+              hintBtn.onclick = () => {
+                  showNeonHint("Hint for " + part.label + ":\n\n" + part.hint);
+                  hintsUsed.push("Hint (" + part.label + ")");
+              };
+              labelDiv.appendChild(hintBtn);
+          }
+
+          // Right side: Dropzone
+          const slotDiv = document.createElement("div");
+          slotDiv.className = "paragraph-slot dropzone";
+          slotDiv.dataset.expectedIndex = i;
+          slotDiv.dataset.color = color;
+          slotDiv.style.flexGrow = "1";
+          slotDiv.style.minHeight = "65px";
+          slotDiv.style.border = "2px dashed #cbd5e1";
+          slotDiv.style.backgroundColor = "rgba(255,255,255,0.5)";
+          slotDiv.style.borderRadius = "8px";
+          slotDiv.style.transition = "all 0.2s";
+          
+          slotDiv.addEventListener("dragover", onDragOver);
+          slotDiv.addEventListener("drop", e => onDropIntoSlot(e, slotDiv));
+
+          row.appendChild(labelDiv);
+          row.appendChild(slotDiv);
+          builderContainer.appendChild(row);
       });
-      dropZone.appendChild(legendBox);
-      const paraBuilder = document.createElement("div");
-      paraBuilder.className = "paragraph-builder";
-      game.parts.forEach((part, i) => {
-        const slot = document.createElement("div");
-        slot.className = "paragraph-slot dropzone";
-        slot.dataset.expectedIndex = i;
-        slot.dataset.color = COLORS[i % COLORS.length];
-        slot.addEventListener("dragover", onDragOver);
-        slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
-        paraBuilder.appendChild(slot);
-      });
-      dropZone.appendChild(paraBuilder);
+      dropZone.appendChild(builderContainer);
+  }
   }
   document.getElementById("feedback").textContent = "";
   document.getElementById("feedback").className = "feedback";
