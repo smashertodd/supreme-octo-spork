@@ -213,3 +213,24 @@ body::before {
 .activity-footer {
     margin-top: 2rem !important;
 }
+/* --- OVERRIDE FOR ROW-BY-ROW PARAGRAPH BUILDER --- */
+.paragraph-slot {
+    display: flex !important;
+    align-items: stretch !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+.paragraph-slot.filled {
+    border: none !important;
+    background: transparent !important;
+}
+/* By putting .paragraph-slot first, we protect Gapfill & Categorisation! */
+.paragraph-slot .sentence-chip.in-paragraph {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    height: 100% !important;
+    padding: 1rem 1.25rem !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+}
