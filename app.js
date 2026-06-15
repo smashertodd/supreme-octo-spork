@@ -396,7 +396,7 @@ function renderActivity(game) {
                       if (wordSpan.classList.contains("selected")) {
                           wordSpan.style.border = "2px solid #39ff14";
                           wordSpan.style.backgroundColor = "rgba(57, 255, 20, 0.15)";
-                          wordSpan.style.color = "#fff";
+                          wordSpan.style.color = "#064e3b";
                       } else {
                           wordSpan.style.border = "2px solid transparent";
                           wordSpan.style.backgroundColor = "transparent";
@@ -673,11 +673,15 @@ function checkAnswer() {
           
           if (isTarget) totalTargets++;
           
-          if (isLocked) { correctCount++; }
+                    if (isLocked) { correctCount++; }
           else if (isSelected && isTarget) {
               // Correct guess! Lock it in permanently.
               correctCount++; w.classList.remove("selected"); w.classList.add("locked");
-              w.style.border = "2px solid #39ff14"; w.style.backgroundColor = "rgba(57, 255, 20, 0.25)"; w.style.color = "#39ff14"; w.style.fontWeight = "bold"; w.style.cursor = "default";
+              w.style.border = "2px solid #39ff14"; 
+              w.style.backgroundColor = "rgba(57, 255, 20, 0.25)"; 
+              w.style.color = "#064e3b"; // <--- Updated to readable dark green!
+              w.style.fontWeight = "bold"; 
+              w.style.cursor = "default";
           } else if (isSelected && !isTarget) {
               // Wrong guess! Pop it back to normal.
               mistakesMade = true; w.classList.remove("selected"); w.style.border = "2px solid transparent"; w.style.backgroundColor = "transparent"; w.style.color = "inherit";
