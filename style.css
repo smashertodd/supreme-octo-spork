@@ -252,3 +252,35 @@ body::before {
     box-shadow: none !important;
     border: none !important;
 }
+/* =========================================
+   PARAGRAPH BUILDER HIGHLIGHTER FIX
+   ========================================= */
+.paragraph-slot.filled {
+    display: inline !important;
+    border: none !important;
+    background: transparent !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    min-width: 0 !important;
+    height: auto !important;
+}
+
+/* Force the dropped sentence to flow like a highlighter */
+.paragraph-slot .sentence-chip.in-paragraph {
+    display: inline !important; 
+    padding: 4px 0 !important;
+    border-radius: 6px !important;
+    -webkit-box-decoration-break: clone !important;
+    box-decoration-break: clone !important;
+    white-space: normal !important;
+    line-height: 2.8 !important;
+    box-shadow: none !important;
+    border: none !important;
+    /* We purposely leave background out of here so the JS colour can shine through! */
+}
+
+/* Fix the text inside so it stops acting like a block */
+.paragraph-slot .sentence-chip.in-paragraph span {
+    display: inline !important;
+    padding-right: 0 !important; 
+}
