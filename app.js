@@ -225,7 +225,7 @@ function renderActivity(game) {
   let instructions = "Drag the text parts into the correct spaces to build the paragraph.";
   if (currentLayoutMode !== "paragraph") instructions = "Drag the correct words/phrases into the gaps.";
   if (game.distractors.length > 0) instructions += " Watch out for distractors!";
-
+  
   if (game.overallHint) {
       let safeOverallHint = game.overallHint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
       instructions += `<span onclick="showNeonHint('${safeOverallHint}')" title="Click for an overall hint" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 8px rgba(249, 168, 212, 0.8));">💡</span>`;
@@ -233,17 +233,35 @@ function renderActivity(game) {
   } else {
       document.getElementById("game-instructions").textContent = instructions;
   }
-  // Clear out the old yellow button box so it doesn't show up anymore
+  
   const hintContainer = document.getElementById("overall-hint-container");
-  if (hintContainer) {
-      hintContainer.innerHTML = "";
-  }
+  if (hintContainer) { hintContainer.innerHTML = ""; }
 
-  const allSentences = [
-    ...game.parts.map((p, i) => ({ ...p, isDistractor: false, answerIndex: i })),
-    ...game.distractors.map(d => ({ ...d, isDistractor: true, answerIndex: -1 }))
-  ];
+  // --- MAGIC: Build correct answer chips for multiple gaps ---
+  let answerIndexCounter = 0;
+  const allSentences = [];
+
+  game.parts.forEach((part) => {
+      if (currentLayoutMode !== "paragraph" && part.text.includes('___')) {
+          part.labels.forEach(lbl => {
+              if (lbl) {
+                  allSentences.push({ ...part, label: lbl, isDistractor: false, answerIndex: answerIndexCounter++ });
+              } else {
+                  answerIndexCounter++; 
+              }
+          });
+      } else {
+          allSentences.push({ ...part, isDistractor: false, answerIndex: answerIndexCounter++ });
+      }
+  });
+
+  game.distractors.forEach(d => {
+      const dLabel = (currentLayoutMode !== "paragraph" && !d.label) ? d.text : d.label;
+      allSentences.push({ ...d, label: dLabel, isDistractor: true, answerIndex: -1 });
+  });
+
   shuffle(allSentences);
+  
   const pool = document.getElementById("choice-pool");
   pool.innerHTML = "";
   allSentences.forEach((item, index) => {
@@ -252,18 +270,15 @@ function renderActivity(game) {
     chip.draggable = true;
     chip.dataset.answerIndex = item.answerIndex;
     chip.dataset.isDistractor = item.isDistractor;
-
-    // Build the text
+    
     const displayText = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
-
-    // flex: 1 makes the text take up the available space, pushing the bulb to the edge
     let innerHtml = `<span style="pointer-events: none; flex: 1; padding-right: 10px;">${displayText}</span>`;
-
     chip.innerHTML = innerHtml;
     chip.style.display = "flex";
     chip.style.flexDirection = "row";
     chip.style.justifyContent = "space-between";
     chip.style.alignItems = "center";
+    
     if (currentLayoutMode !== "paragraph") {
       chip.dataset.color = COLORS[index % COLORS.length];
       chip.style.backgroundColor = chip.dataset.color;
@@ -271,39 +286,42 @@ function renderActivity(game) {
     } else {
       chip.classList.add("bg-white");
     }
-
     chip.addEventListener("dragstart", onDragStart);
     chip.addEventListener("dragend", onDragEnd);
     pool.appendChild(chip);
   });
+  
   pool.addEventListener("dragover", onDragOver);
   pool.addEventListener("drop", e => onDropIntoPool(e, pool));
-
+  
   const dropZone = document.getElementById("drop-zone");
   dropZone.innerHTML = "";
+  
+  let globalSlotCounter = 0; // Tracks gap numbers correctly
+
   if (currentLayoutMode === "categorisation") {
       const gapFillBox = document.createElement("div");
       gapFillBox.className = "gap-fill-box";
-      gapFillBox.style.display = "flex";
-      gapFillBox.style.flexDirection = "column";
-      gapFillBox.style.gap = "8px";
+      gapFillBox.style.lineHeight = "2.8";
+      
       game.parts.forEach((part, i) => {
-          const rowDiv = document.createElement("div");
-          rowDiv.className = "gap-row";
+          const rowSpan = document.createElement("span");
+          rowSpan.className = "gap-row"; 
+          
           const segments = (part.text || "").split('___');
           segments.forEach((seg, sIdx) => {
               if (seg) {
-                  const span = document.createElement("span");
-                  span.textContent = seg;
-                  rowDiv.appendChild(span);
+                  const textSpan = document.createElement("span");
+                  textSpan.textContent = seg;
+                  rowSpan.appendChild(textSpan);
               }
               if (sIdx < segments.length - 1) {
                   const slot = document.createElement("span");
                   slot.className = "gap-slot dropzone";
-                  slot.dataset.expectedIndex = i;
+                  slot.dataset.expectedIndex = globalSlotCounter++;
                   slot.addEventListener("dragover", onDragOver);
                   slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
-                  rowDiv.appendChild(slot);
+                  rowSpan.appendChild(slot);
                   if (part.hint) {
                       const hBtn = document.createElement("button");
                       hBtn.className = "hint-btn-inline";
@@ -311,15 +329,17 @@ function renderActivity(game) {
                       hBtn.title = "View Hint";
                       hBtn.onclick = () => {
                           showNeonHint("Hint:\n\n" + part.hint);
-                          hintsUsed.push("Hint (Gap " + (i+1) + ")");
+                          hintsUsed.push("Hint (Gap " + globalSlotCounter + ")");
                       };
-                      rowDiv.appendChild(hBtn);
+                      rowSpan.appendChild(hBtn);
                   }
               }
           });
-          gapFillBox.appendChild(rowDiv);
+          gapFillBox.appendChild(rowSpan);
+          gapFillBox.appendChild(document.createTextNode(" "));
       });
       dropZone.appendChild(gapFillBox);
+      
   } else if (currentLayoutMode === "gapfill") {
       const gapFillBox = document.createElement("div");
       gapFillBox.className = "gap-fill-box";
@@ -334,7 +354,7 @@ function renderActivity(game) {
               if (sIdx < segments.length - 1) {
                   const slot = document.createElement("span");
                   slot.className = "gap-slot dropzone";
-                  slot.dataset.expectedIndex = i;
+                  slot.dataset.expectedIndex = globalSlotCounter++;
                   slot.addEventListener("dragover", onDragOver);
                   slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
                   gapFillBox.appendChild(slot);
@@ -345,7 +365,7 @@ function renderActivity(game) {
                       hBtn.title = "View Hint";
                       hBtn.onclick = () => {
                           showNeonHint("Hint:\n\n" + part.hint);
-                          hintsUsed.push("Hint (Gap " + (i+1) + ")");
+                          hintsUsed.push("Hint (Gap " + globalSlotCounter + ")");
                       };
                       gapFillBox.appendChild(hBtn);
                   }
@@ -354,8 +374,9 @@ function renderActivity(game) {
           gapFillBox.appendChild(document.createTextNode(" "));
       });
       dropZone.appendChild(gapFillBox);
+      
   } else {
-      // NEW: Side-by-side row layout!
+      // Side-by-side row layout for Paragraph Builder!
       const builderContainer = document.createElement("div");
       builderContainer.style.display = "flex";
       builderContainer.style.flexDirection = "column";
@@ -366,10 +387,9 @@ function renderActivity(game) {
           const row = document.createElement("div");
           row.style.display = "flex";
           row.style.gap = "1rem";
-          row.style.alignItems = "stretch"; // MAGIC: Makes label match dropzone height
+          row.style.alignItems = "stretch"; 
           row.style.width = "100%";
 
-          // Left side: Coloured Label
           const color = COLORS[i % COLORS.length];
           const labelDiv = document.createElement("div");
           labelDiv.style.backgroundColor = color;
@@ -400,7 +420,6 @@ function renderActivity(game) {
               labelDiv.appendChild(hintBtn);
           }
 
-          // Right side: Dropzone
           const slotDiv = document.createElement("div");
           slotDiv.className = "paragraph-slot dropzone";
           slotDiv.dataset.expectedIndex = i;
@@ -421,13 +440,12 @@ function renderActivity(game) {
       });
       dropZone.appendChild(builderContainer);
   }
-  }
+  
   document.getElementById("feedback").textContent = "";
   document.getElementById("feedback").className = "feedback";
   document.getElementById("btn-check").style.display = "inline-flex";
   document.getElementById("btn-retry").style.display = "none";
 }
-function onDragStart(e) {
   dragSrcEl = this;
   e.dataTransfer.effectAllowed = "move";
   setTimeout(() => this.classList.add("opacity-50"), 0);
