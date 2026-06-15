@@ -213,8 +213,10 @@ function buildActivities(rows) {
     while ((match = regex.exec(textContent)) !== null) {
         extractedLabels.push(match[1].trim());
     }
-
-    if (extractedLabels.length > 0) {
+       // --- DETECTIVE MAGIC 1: Keep the [[ ]] marks so Detective mode can find them! ---
+    if (lastType.toLowerCase().includes("detective")) {
+        processedText = textContent; 
+    } else if (extractedLabels.length > 0) {
         processedText = textContent.replace(regex, '___');
     } else {
         extractedLabels.push((row["label"] || "").trim());
@@ -247,7 +249,9 @@ function startActivity(gameId) {
   const hasGaps = gameData.parts.some(p => p.text && p.text.includes('___'));
   const typeStr = (gameData.type || "").toLowerCase();
   
-  if (!hasGaps) {
+    if (typeStr.includes("detective")) {
+      currentLayoutMode = "detective";
+  } else if (!hasGaps) {
       currentLayoutMode = "paragraph";
   } else if (typeStr.includes("categorisation") || typeStr.includes("categorize")) {
       currentLayoutMode = "categorisation";
@@ -334,7 +338,89 @@ function renderActivity(game) {
   
   let globalSlotCounter = 0; 
 
-  if (currentLayoutMode === "categorisation") {
+    // --- DETECTIVE MAGIC 2: Render Clickable Words ---
+  if (currentLayoutMode === "detective") {
+      // Hide the choices panel since we are just clicking text
+      const leftPanel = document.querySelector('.panel-left');
+      const workspace = document.querySelector('.workspace');
+      if(leftPanel) leftPanel.style.display = "none";
+      if(workspace) workspace.style.display = "block";
+
+      const detectiveBox = document.createElement("div");
+      detectiveBox.className = "gap-fill-box";
+      detectiveBox.style.lineHeight = "2.8";
+      detectiveBox.style.padding = "35px";
+      detectiveBox.style.fontSize = "1.2rem";
+      
+      game.parts.forEach((part, i) => {
+          const pDiv = document.createElement("div");
+          pDiv.style.marginBottom = "15px";
+          
+          // Split sentence into words
+          const words = (part.text || "").split(' ');
+          words.forEach(w => {
+              const wordSpan = document.createElement("span");
+              wordSpan.className = "detective-word";
+              
+              let cleanWord = w;
+              // If it's a target word, strip the brackets and mark it!
+              if (w.includes("[[") && w.includes("]]")) {
+                  cleanWord = w.replace(/\[\[/g, "").replace(/\]\]/g, "");
+                  wordSpan.dataset.isTarget = "true";
+              }
+              
+              wordSpan.textContent = cleanWord;
+              wordSpan.style.cursor = "pointer";
+              wordSpan.style.padding = "4px 8px";
+              wordSpan.style.margin = "0 2px";
+              wordSpan.style.borderRadius = "6px";
+              wordSpan.style.border = "2px solid transparent";
+              wordSpan.style.transition = "all 0.2s";
+              
+              // Hover effects
+              wordSpan.addEventListener("mouseenter", () => {
+                  if(!wordSpan.classList.contains("selected") && !wordSpan.classList.contains("locked")) {
+                      wordSpan.style.backgroundColor = "rgba(255,255,255,0.15)";
+                  }
+              });
+              wordSpan.addEventListener("mouseleave", () => {
+                  if(!wordSpan.classList.contains("selected") && !wordSpan.classList.contains("locked")) {
+                      wordSpan.style.backgroundColor = "transparent";
+                  }
+              });
+              
+              // Click effects (Neon Green!)
+              wordSpan.addEventListener("click", () => {
+                  if (!wordSpan.classList.contains("locked")) {
+                      wordSpan.classList.toggle("selected");
+                      if (wordSpan.classList.contains("selected")) {
+                          wordSpan.style.border = "2px solid #39ff14";
+                          wordSpan.style.backgroundColor = "rgba(57, 255, 20, 0.15)";
+                          wordSpan.style.color = "#fff";
+                      } else {
+                          wordSpan.style.border = "2px solid transparent";
+                          wordSpan.style.backgroundColor = "transparent";
+                          wordSpan.style.color = "inherit";
+                      }
+                  }
+              });
+              
+              pDiv.appendChild(wordSpan);
+              pDiv.appendChild(document.createTextNode(" "));
+          });
+          
+          // Add the lightbulb hint at the end of the sentence
+          if (part.hint) {
+              const hBtn = document.createElement("button");
+              hBtn.className = "hint-btn-inline"; hBtn.innerHTML = "💡"; hBtn.title = "View Hint";
+              hBtn.onclick = () => { showNeonHint("Hint:\n\n" + part.hint); hintsUsed.push("Hint (Sentence " + (i+1) + ")"); };
+              pDiv.appendChild(hBtn);
+          }
+          detectiveBox.appendChild(pDiv);
+      });
+      dropZone.appendChild(detectiveBox);
+
+  } else if (currentLayoutMode === "categorisation") {
       const gapFillBox = document.createElement("div");
       gapFillBox.className = "gap-fill-box";
       gapFillBox.style.lineHeight = "2.8";
@@ -575,6 +661,41 @@ function updateSlotLayouts() {
   });
 }
 function checkAnswer() {
+      // --- DETECTIVE MAGIC 3: Checking the clicked words ---
+  if (currentLayoutMode === "detective") {
+      const words = document.querySelectorAll(".detective-word");
+      let correctCount = 0; let mistakesMade = false; let totalTargets = 0; let emptyCount = 0;
+      
+      words.forEach(w => {
+          const isTarget = w.dataset.isTarget === "true"; 
+          const isSelected = w.classList.contains("selected"); 
+          const isLocked = w.classList.contains("locked");
+          
+          if (isTarget) totalTargets++;
+          
+          if (isLocked) { correctCount++; }
+          else if (isSelected && isTarget) {
+              // Correct guess! Lock it in permanently.
+              correctCount++; w.classList.remove("selected"); w.classList.add("locked");
+              w.style.border = "2px solid #39ff14"; w.style.backgroundColor = "rgba(57, 255, 20, 0.25)"; w.style.color = "#39ff14"; w.style.fontWeight = "bold"; w.style.cursor = "default";
+          } else if (isSelected && !isTarget) {
+              // Wrong guess! Pop it back to normal.
+              mistakesMade = true; w.classList.remove("selected"); w.style.border = "2px solid transparent"; w.style.backgroundColor = "transparent"; w.style.color = "inherit";
+          } else if (isTarget && !isSelected) { emptyCount++; }
+      });
+      
+      attemptCount++;
+      let status, message;
+      if (correctCount === totalTargets && totalTargets > 0) {
+          status = "correct"; message = "🎉 Perfect detective work!"; document.getElementById("btn-check").style.display = "none"; document.getElementById("btn-retry").style.display = "inline-flex";
+          if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
+      } else if (mistakesMade) { status = "incorrect"; message = "⚠️ Incorrect words popped back to normal. You found " + correctCount + " correct word(s). Keep hunting!";
+      } else if (emptyCount > 0) { status = "partial"; message = "You're missing some! You have found " + correctCount + " so far."; }
+      
+      const fb = document.getElementById("feedback"); if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
+      trackAttempt(status, attemptCount, ["Score: " + correctCount + "/" + totalTargets]);
+      return; // Stop the function here so it doesn't run the drag-and-drop checker
+  }
   const slots = document.querySelectorAll(".dropzone");
   let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
   attemptCount++;
