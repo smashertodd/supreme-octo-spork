@@ -283,20 +283,3 @@ body::before {
     display: inline !important;
     padding-right: 0 !important; 
 }
-/* Tactile Draggable Chips */
-.draggable {
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15); 
-    transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.3s ease; 
-}
-
-.draggable:hover {
-    transform: translateY(-3px); /* Lifts the chip up slightly */
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2); /* Expands the shadow to make it look raised */
-    cursor: grab;
-}
-
-.draggable:active {
-    transform: translateY(0); /* Pushes it back down when you click/hold */
-    box-shadow: 0 2px 3px rgba(0, 0, 0, 0.15);
-    cursor: grabbing;
-}
