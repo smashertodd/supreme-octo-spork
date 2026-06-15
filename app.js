@@ -528,7 +528,7 @@ function updateSlotLayouts() {
               row.style.color = '#000';
           }
       } else {
-          chip.style.backgroundColor = slot.dataset.color;
+          chip.style.backgroundColor = "transparent";
       }
     } else {
       slot.classList.remove('filled');
