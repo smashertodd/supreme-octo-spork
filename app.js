@@ -541,6 +541,7 @@ function updateSlotLayouts() {
       const chip = slot.children[0];
       chip.classList.add('in-paragraph');
       chip.classList.remove('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
+      
       if (currentLayoutMode !== "paragraph") {
           chip.classList.add('gap-chip');
           chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
@@ -549,7 +550,9 @@ function updateSlotLayouts() {
               row.style.color = '#000';
           }
       } else {
-          chip.style.backgroundColor = "transparent";
+          // PROMISE KEPT: This only colours the text for Paragraph Builder!
+          chip.style.backgroundColor = slot.dataset.color;
+          chip.style.color = "#0f172a";
       }
     } else {
       slot.classList.remove('filled');
@@ -571,7 +574,6 @@ function updateSlotLayouts() {
     chip.style.outline = 'none';
   });
 }
-
 function checkAnswer() {
   const slots = document.querySelectorAll(".dropzone");
   let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
