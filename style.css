@@ -227,8 +227,7 @@ body::before {
 /* By putting .paragraph-slot first, we protect Gapfill & Categorisation! */
 .paragraph-slot .sentence-chip.in-paragraph {
     display: inline !important; /* This forces it to flow like a sentence! */
-    background: transparent !important;
-    padding: 0.5rem !important;
+       padding: 0.5rem !important;
     white-space: normal !important;
     line-height: 1.6 !important;
 }
