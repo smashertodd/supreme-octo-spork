@@ -69,7 +69,7 @@ function injectStyles() {
         width: fit-content;
         max-width: 100%;
     }
-    .gap-row { display: flex; align-items: center; flex-wrap: wrap; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; border: 1px solid transparent; }
+    .gap-row { display: inline; line-height: 2.2; border-radius: 4px; transition: background-color 0.3s ease; }
     
     #btn-check { position: relative; overflow: hidden; border: none; }
     #btn-check::after {
