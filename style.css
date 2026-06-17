@@ -277,28 +277,3 @@ body::before {
     border: none !important;
     /* We purposely leave background out of here so the JS colour can shine through! */
 }
-
-/* Fix the text inside so it stops acting like a block */
-.paragraph-slot .sentence-chip.in-paragraph span {
-    display: inline !important;
-    padding-right: 0 !important; 
-}
-/* --- WIDESCREEN / FULL PAGE FIX --- */
-.container, .app-container {
-    width: 98% !important;        /* Stretches it to use almost the full width of the screen */
-    max-width: 1800px !important; /* Stops it getting absurdly stretched on ultrawide monitors */
-    max-height: 95vh !important;  /* Keeps the box within the vertical height of your monitor */
-    overflow-y: auto !important;  /* If the activity is super long, the box itself will scroll, not the whole web page */
-    margin: 10px auto !important; /* Keeps it perfectly centred */
-}
-/* --- MAKE ACTIVITY BOX FIT LARGE SCREENS --- */
-#screen-activity .card {
-    max-width: 100% !important; /* Forces the card to use all the space #app provides */
-    width: 100% !important;
-    min-height: 85vh !important; /* Stretches the box down the screen */
-}
-
-/* Ensure the workspace inside stretches too */
-#screen-activity .workspace {
-    width: 100% !important;
-}
