@@ -1,5 +1,5 @@
 // =========================================================================
-// Fix the Paragraph — app.js 
+// Activity Arcade — app.js (Fixed & Polished)
 // =========================================================================
 const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
 const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
@@ -7,7 +7,6 @@ const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_
 const TEACHER_PIN = "@pple";
 const REFRESH_INTERVAL = 15000;
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
-
 let studentName = "";
 let activities = {};
 let currentGame = null;
@@ -35,42 +34,30 @@ function injectStyles() {
     .hint-btn-small { background: rgba(255,255,255,0.7); border: none; border-radius: 50%; width: 26px; height: 26px; cursor: pointer; font-size: 14px; font-weight: bold; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
     .hint-btn-small:hover { background: #fff; transform: scale(1.1); }
     .paragraph-builder { line-height: 2.2; font-size: 1.1rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; }
-    
+
     .paragraph-slot { display: inline-block; min-width: 140px; height: 1.8rem; vertical-align: middle; margin: 4px; border: 2px dashed #cbd5e1; background: #f1f5f9; border-radius: 4px; transition: all 0.2s; }
     .paragraph-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.02); }
     .paragraph-slot.filled { border: none !important; background: transparent !important; margin: 0; padding: 0; min-width: auto; height: auto; display: inline; }
-    
+
     .sentence-chip.in-paragraph { display: inline !important; padding: 2px 4px; border: none !important; box-shadow: none !important; font-weight: 500; color: #0f172a !important; cursor: pointer; transition: background 0.2s; white-space: normal; }
     .sentence-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
-    
+
     .gap-fill-box { line-height: 2.8; font-size: 1.15rem; background: #fff; padding: 24px; border-radius: 8px; border: 1px solid #e2e8f0; text-align: left; color: #1e293b; }
     .gap-slot { display: inline-flex; align-items: center; justify-content: center; min-width: 110px; height: 34px; vertical-align: middle; margin: 0 6px; border: 2px dashed #94a3b8; background: #f8fafc; border-radius: 4px; transition: all 0.2s; padding: 0 4px; }
     .gap-slot.drag-over { border-color: #3b82f6; background: #eff6ff; transform: scale(1.05); }
     .gap-slot.filled { border: none !important; background: transparent !important; margin: 0 4px; min-width: auto; height: auto; display: inline; }
-    
+
     .gap-chip { display: inline-block; padding: 4px 12px; border-radius: 4px; font-weight: 600; color: #0f172a !important; cursor: pointer; transition: background 0.2s; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.1); border: none !important; margin: 0 !important; }
     .gap-chip.locked { pointer-events: none; outline: 2px solid #22c55e !important; outline-offset: 2px; }
-    
+
     .hint-btn-inline { background: none; border: none; font-size: 1.2rem; cursor: pointer; margin-left: 4px; vertical-align: middle; transition: transform 0.2s; padding: 0; }
     .hint-btn-inline:hover { transform: scale(1.2); }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    
-    #choice-pool {
-        min-height: 150px;
-        padding-bottom: 20px;
-        position: sticky;
-        top: 2rem;
-        align-self: start;
-        max-height: 85vh;
-        overflow-y: auto;
-    }
-    .sentence-chip:not(.in-paragraph) {
-        display: block;
-        width: fit-content;
-        max-width: 100%;
-    }
+
+    #choice-pool { min-height: 150px; padding-bottom: 20px; position: sticky; top: 2rem; align-self: start; max-height: 85vh; overflow-y: auto; }
+    .sentence-chip:not(.in-paragraph) { display: block; width: fit-content; max-width: 100%; }
     .gap-row { display: inline; line-height: 2.2; border-radius: 4px; transition: background-color 0.3s ease; }
-    
+
     #btn-check { position: relative; overflow: hidden; border: none; }
     #btn-check::after {
         content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
@@ -88,15 +75,15 @@ document.addEventListener("DOMContentLoaded", () => {
       mobileFixScript.src = "https://unpkg.com/drag-drop-touch";
       document.head.appendChild(mobileFixScript);
   } catch (e) { console.log("Mobile fix skipped", e); }
-  
+
   injectStyles();
   showScreen("screen-name");
-  
+
   const safeAdd = (id, event, handler) => {
     const el = document.getElementById(id);
     if (el) el.addEventListener(event, handler);
   };
-  
+
   safeAdd("btn-start", "click", handleNameSubmit);
   safeAdd("btn-check", "click", checkAnswer);
   safeAdd("btn-retry", "click", retryActivity);
@@ -106,7 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
   safeAdd("btn-pin-submit", "click", submitPin);
   safeAdd("btn-pin-cancel", "click", closePinModal);
   safeAdd("btn-reset-session", "click", resetSession);
-  
+
   const nameInput = document.getElementById("input-name");
   if (nameInput) nameInput.addEventListener("keydown", e => { if (e.key === "Enter") handleNameSubmit(); });
   const pinInput = document.getElementById("pin-input");
@@ -182,48 +169,44 @@ function buildActivities(rows) {
   rows.forEach(originalRow => {
     const row = {};
     for (let key in originalRow) if (key) row[key.trim().toLowerCase().replace(/ /g, "_")] = originalRow[key];
-    
+
     let rowTitle = (row["title"] || "").trim();
     if (rowTitle) lastTitle = rowTitle;
     let currentTitle = lastTitle;
     if (!currentTitle) return;
-    
+
     let rowStatus = (row["status"] || "").trim().toLowerCase();
     if (rowStatus === 'active' || rowStatus === 'inactive') { lastStatus = rowStatus; }
     if (lastStatus !== "active") return;
-    
+
     let rawType = (row["type"] || "").trim();
     if (rawType && rawType.toLowerCase() !== "distractor") {
         lastType = rawType;
     }
-    
+
     let rowType = (row["type"] || "").trim().toLowerCase();
     let isDistractor = (rowType === "distractor" || rowStatus === "distractor");
     let textContent = (row["text"] || "").trim();
     if (!textContent && !isDistractor) return;
-    
+
     if (!activities[currentTitle]) activities[currentTitle] = { title: currentTitle, type: lastType, parts: [], distractors: [], overallHint: "" };
     if (row["overall_hint"]) activities[currentTitle].overallHint = row["overall_hint"];
-
     let extractedLabels = [];
     let processedText = textContent;
-
     const regex = /\[\[(.*?)\]\]/g;
     let match;
     while ((match = regex.exec(textContent)) !== null) {
         extractedLabels.push(match[1].trim());
     }
-       // --- DETECTIVE MAGIC 1: Keep the [[ ]] marks so Detective mode can find them! ---
     if (lastType.toLowerCase().includes("detective")) {
-        processedText = textContent; 
+        processedText = textContent;
     } else if (extractedLabels.length > 0) {
         processedText = textContent.replace(regex, '___');
     } else {
         extractedLabels.push((row["label"] || "").trim());
     }
-
     const item = { text: processedText, label: row["label"], labels: extractedLabels, hint: row["hint"] };
-    
+
     if (isDistractor) { activities[currentTitle].distractors.push(item); }
     else { activities[currentTitle].parts.push(item); }
   });
@@ -248,8 +231,8 @@ function startActivity(gameId) {
   const gameData = activities[gameId];
   const hasGaps = gameData.parts.some(p => p.text && p.text.includes('___'));
   const typeStr = (gameData.type || "").toLowerCase();
-  
-    if (typeStr.includes("detective")) {
+
+  if (typeStr.includes("detective")) {
       currentLayoutMode = "detective";
   } else if (!hasGaps) {
       currentLayoutMode = "paragraph";
@@ -258,21 +241,299 @@ function startActivity(gameId) {
   } else {
       currentLayoutMode = "gapfill";
   }
-  
+
   renderActivity(gameData);
   showScreen("screen-activity");
 }
 
-detective-paragraph
-    font-size: 1.2rem;
-    line-height: 2.2; 
-    text-align: left;
-    padding: 20px;
-    background: #ffffff;
-    border-radius: 8px;
-    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
-    color: #0f172a !important; /* <--- THIS IS THE MAGIC FIX for the invisible text */
+function renderActivity(game) {
+  document.getElementById("activity-title").textContent = game.title;
+  
+  let instructions = "";
+  
+  if (currentLayoutMode === "detective") {
+      instructions = '<span style="color: #ffffff; font-weight: 500;">Click the 💡 button to reveal your target! 🔍 Click on the words or phrases to highlight them.</span>';
+  } else if (currentLayoutMode === "paragraph") {
+      instructions = "Drag the text parts into the correct spaces to build the paragraph.";
+      if (game.distractors.length > 0) instructions += " Watch out for distractors!";
+  } else {
+      instructions = "Drag the correct words/phrases into the gaps.";
+      if (game.distractors.length > 0) instructions += " Watch out for distractors!";
+  }
+
+  if (game.overallHint) {
+      let safeOverallHint = game.overallHint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
+      instructions += `<span onclick="showNeonHint('${safeOverallHint}')" title="Click for an overall hint" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 8px rgba(249, 168, 212, 0.8));">💡</span>`;
+  }
+  
+  document.getElementById("game-instructions").innerHTML = instructions;
+
+  let answerIndexCounter = 0;
+  const allSentences = [];
+  game.parts.forEach((part) => {
+      if (currentLayoutMode !== "paragraph" && part.text.includes('___')) {
+          part.labels.forEach(lbl => {
+              if (lbl) {
+                  allSentences.push({ ...part, label: lbl, isDistractor: false, answerIndex: answerIndexCounter++ });
+              } else {
+                  answerIndexCounter++;
+              }
+          });
+      } else {
+          allSentences.push({ ...part, isDistractor: false, answerIndex: answerIndexCounter++ });
+      }
+  });
+  game.distractors.forEach(d => {
+      const dLabel = (currentLayoutMode !== "paragraph" && !d.label) ? d.text : d.label;
+      allSentences.push({ ...d, label: dLabel, isDistractor: true, answerIndex: -1 });
+  });
+  shuffle(allSentences);
+
+  const pool = document.getElementById("choice-pool");
+  pool.innerHTML = "";
+  allSentences.forEach((item, index) => {
+    const chip = document.createElement("div");
+    chip.className = "sentence-chip border border-gray-300 p-3 rounded shadow-sm mb-3 cursor-grab text-gray-800 text-left";
+    chip.draggable = true;
+    chip.dataset.answerIndex = item.answerIndex;
+    chip.dataset.isDistractor = item.isDistractor;
+
+    const displayText = (currentLayoutMode !== "paragraph") ? (item.label || "[Missing]") : item.text;
+    let innerHtml = `<span style="pointer-events: none; flex: 1; padding-right: 10px;">${displayText}</span>`;
+    chip.innerHTML = innerHtml;
+    chip.style.display = "flex";
+    chip.style.flexDirection = "row";
+    chip.style.justifyContent = "space-between";
+    chip.style.alignItems = "center";
+
+    if (currentLayoutMode !== "paragraph") {
+      chip.dataset.color = COLORS[index % COLORS.length];
+      chip.style.backgroundColor = chip.dataset.color;
+      chip.style.setProperty('--chip-color', chip.dataset.color);
+    } else {
+      chip.classList.add("bg-white");
+    }
+    chip.addEventListener("dragstart", onDragStart);
+    chip.addEventListener("dragend", onDragEnd);
+    pool.appendChild(chip);
+  });
+
+  pool.addEventListener("dragover", onDragOver);
+  pool.addEventListener("drop", e => onDropIntoPool(e, pool));
+
+  const dropZone = document.getElementById("drop-zone");
+  dropZone.innerHTML = "";
+
+  let globalSlotCounter = 0;
+
+  if (currentLayoutMode === "detective") {
+      const leftPanel = document.querySelector('.panel-left');
+      const workspace = document.querySelector('.workspace');
+      if(leftPanel) leftPanel.style.display = "none";
+      if(workspace) workspace.style.display = "block";
+      
+      const detectiveBox = document.createElement("div");
+      detectiveBox.className = "detective-paragraph gap-fill-box"; 
+
+      game.parts.forEach((part, i) => {
+          const pDiv = document.createElement("span"); 
+          const regex = /\[\[(.*?)\]\]|\{(.*?)\}|([^\s]+)/g;
+          let match;
+
+          while ((match = regex.exec(part.text || "")) !== null) {
+              let textContent = match[1] || match[2] || match[3];
+              let isTarget = match[1] !== undefined;
+              
+              const wordSpan = document.createElement("span");
+              wordSpan.className = "detective-word";
+              wordSpan.textContent = textContent;
+              wordSpan.dataset.isTarget = isTarget ? "true" : "false";
+
+              wordSpan.addEventListener("mouseenter", () => {
+                  if(!wordSpan.classList.contains("selected") && !wordSpan.classList.contains("locked")) {
+                      wordSpan.style.backgroundColor = "rgba(0,0,0,0.05)";
+                  }
+              });
+              wordSpan.addEventListener("mouseleave", () => {
+                  if(!wordSpan.classList.contains("selected") && !wordSpan.classList.contains("locked")) {
+                      wordSpan.style.backgroundColor = "transparent";
+                  }
+              });
+
+              wordSpan.addEventListener("click", () => {
+                  if (!wordSpan.classList.contains("locked")) {
+                      wordSpan.classList.toggle("selected");
+                      if (wordSpan.classList.contains("selected")) {
+                          wordSpan.style.border = "2px solid #39ff14";
+                          wordSpan.style.backgroundColor = "rgba(57, 255, 20, 0.15)";
+                          wordSpan.style.color = "#064e3b";
+                      } else {
+                          wordSpan.style.border = "2px solid transparent";
+                          wordSpan.style.backgroundColor = "transparent";
+                          wordSpan.style.color = "inherit";
+                      }
+                  }
+              });
+
+              pDiv.appendChild(wordSpan);
+              pDiv.appendChild(document.createTextNode(" "));
+          }
+
+          if (part.hint) {
+              const hBtn = document.createElement("button");
+              hBtn.className = "hint-btn-inline"; hBtn.innerHTML = "💡"; hBtn.title = "View Hint";
+              hBtn.onclick = () => { showNeonHint("Hint:\n\n" + part.hint); hintsUsed.push("Hint (Sentence " + (i+1) + ")"); };
+              pDiv.appendChild(hBtn);
+              pDiv.appendChild(document.createTextNode(" "));
+          }
+          detectiveBox.appendChild(pDiv);
+      });
+      dropZone.appendChild(detectiveBox);
+
+  } else if (currentLayoutMode === "categorisation") {
+      const gapFillBox = document.createElement("div");
+      gapFillBox.className = "gap-fill-box";
+      gapFillBox.style.lineHeight = "2.8";
+
+      game.parts.forEach((part, i) => {
+          const rowSpan = document.createElement("span");
+          rowSpan.className = "gap-row";
+
+          const segments = (part.text || "").split('___');
+          segments.forEach((seg, sIdx) => {
+              if (seg) {
+                  const textSpan = document.createElement("span");
+                  textSpan.textContent = seg;
+                  rowSpan.appendChild(textSpan);
+              }
+              if (sIdx < segments.length - 1) {
+                  const slot = document.createElement("span");
+                  slot.className = "gap-slot dropzone";
+                  slot.dataset.expectedIndex = globalSlotCounter++;
+                  slot.addEventListener("dragover", onDragOver);
+                  slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+                  rowSpan.appendChild(slot);
+                  if (part.hint) {
+                      const hBtn = document.createElement("button");
+                      hBtn.className = "hint-btn-inline"; hBtn.innerHTML = "💡"; hBtn.title = "View Hint";
+                      hBtn.onclick = () => { showNeonHint("Hint:\n\n" + part.hint); hintsUsed.push("Hint (Gap " + globalSlotCounter + ")"); };
+                      rowSpan.appendChild(hBtn);
+                  }
+              }
+          });
+          gapFillBox.appendChild(rowSpan);
+          gapFillBox.appendChild(document.createTextNode(" "));
+      });
+      dropZone.appendChild(gapFillBox);
+
+  } else if (currentLayoutMode === "gapfill") {
+      const gapFillBox = document.createElement("div");
+      gapFillBox.className = "gap-fill-box";
+      game.parts.forEach((part, i) => {
+          const segments = (part.text || "").split('___');
+          segments.forEach((seg, sIdx) => {
+              if (seg) {
+                  const span = document.createElement("span");
+                  span.textContent = seg;
+                  gapFillBox.appendChild(span);
+              }
+              if (sIdx < segments.length - 1) {
+                  const slot = document.createElement("span");
+                  slot.className = "gap-slot dropzone";
+                  slot.dataset.expectedIndex = globalSlotCounter++;
+                  slot.addEventListener("dragover", onDragOver);
+                  slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+                  gapFillBox.appendChild(slot);
+                  if (part.hint) {
+                      const hBtn = document.createElement("button");
+                      hBtn.className = "hint-btn-inline"; hBtn.innerHTML = "💡"; hBtn.title = "View Hint";
+                      hBtn.onclick = () => { showNeonHint("Hint:\n\n" + part.hint); hintsUsed.push("Hint (Gap " + globalSlotCounter + ")"); };
+                      gapFillBox.appendChild(hBtn);
+                  }
+              }
+          });
+          gapFillBox.appendChild(document.createTextNode(" "));
+      });
+      dropZone.appendChild(gapFillBox);
+
+   } else {
+      const builderContainer = document.createElement("div");
+      builderContainer.style.display = "flex";
+      builderContainer.style.gap = "20px";
+      builderContainer.style.width = "100%";
+      builderContainer.style.alignItems = "flex-start";
+      const labelsColumn = document.createElement("div");
+      labelsColumn.style.display = "flex";
+      labelsColumn.style.flexDirection = "column";
+      labelsColumn.style.gap = "15px";
+      labelsColumn.style.width = "220px";
+      labelsColumn.style.flexShrink = "0";
+      const paraBuilder = document.createElement("div");
+      paraBuilder.className = "gap-fill-box";
+      paraBuilder.style.flexGrow = "1";
+      paraBuilder.style.lineHeight = "2.8";
+      paraBuilder.style.padding = "25px";
+      paraBuilder.style.backgroundColor = "#fff";
+      paraBuilder.style.borderRadius = "8px";
+      paraBuilder.style.border = "1px solid #e2e8f0";
+
+      game.parts.forEach((part, i) => {
+          const color = COLORS[i % COLORS.length];
+          const labelDiv = document.createElement("div");
+          labelDiv.style.backgroundColor = color;
+          labelDiv.style.padding = "12px 16px";
+          labelDiv.style.borderRadius = "8px";
+          labelDiv.style.display = "flex";
+          labelDiv.style.justifyContent = "space-between";
+          labelDiv.style.alignItems = "center";
+          labelDiv.style.boxShadow = "0 2px 4px rgba(0,0,0,0.05)";
+          const labelText = document.createElement("span");
+          labelText.textContent = (i + 1) + ". " + (part.label || "Part " + (i + 1));
+          labelText.style.fontWeight = "700";
+          labelText.style.color = "#0f172a";
+          labelDiv.appendChild(labelText);
+          if (part.hint) {
+              const hintBtn = document.createElement("button");
+              hintBtn.className = "hint-btn-small";
+              hintBtn.innerHTML = "💡";
+              hintBtn.title = "View Hint";
+              hintBtn.onclick = () => { showNeonHint("Hint for " + part.label + ":\n\n" + part.hint); hintsUsed.push("Hint (" + part.label + ")"); };
+              labelDiv.appendChild(hintBtn);
+          }
+          labelsColumn.appendChild(labelDiv);
+          const slot = document.createElement("span");
+          slot.className = "paragraph-slot dropzone";
+          slot.dataset.expectedIndex = i;
+          slot.dataset.color = color;
+
+          slot.style.display = "inline-flex";
+          slot.style.minWidth = "120px";
+          slot.style.height = "34px";
+          slot.style.margin = "0 6px";
+          slot.style.border = "2px dashed #cbd5e1";
+          slot.style.backgroundColor = "rgba(255,255,255,0.5)";
+          slot.style.borderRadius = "4px";
+          slot.style.verticalAlign = "middle";
+          slot.style.transition = "all 0.2s";
+
+          slot.addEventListener("dragover", onDragOver);
+          slot.addEventListener("drop", e => onDropIntoSlot(e, slot));
+
+          paraBuilder.appendChild(slot);
+          paraBuilder.appendChild(document.createTextNode(" "));
+      });
+      builderContainer.appendChild(labelsColumn);
+      builderContainer.appendChild(paraBuilder);
+      dropZone.appendChild(builderContainer);
+  }
+
+  document.getElementById("feedback").textContent = "";
+  document.getElementById("feedback").className = "feedback";
+  document.getElementById("btn-check").style.display = "inline-flex";
+  document.getElementById("btn-retry").style.display = "none";
 }
+
+function onDragStart(e) {
   dragSrcEl = this;
   e.dataTransfer.effectAllowed = "move";
   setTimeout(() => this.classList.add("opacity-50"), 0);
@@ -311,7 +572,7 @@ function updateSlotLayouts() {
       const chip = slot.children[0];
       chip.classList.add('in-paragraph');
       chip.classList.remove('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
-      
+
       if (currentLayoutMode !== "paragraph") {
           chip.classList.add('gap-chip');
           chip.style.backgroundColor = chip.dataset.color || '#e2e8f0';
@@ -320,7 +581,6 @@ function updateSlotLayouts() {
               row.style.color = '#000';
           }
       } else {
-          // PROMISE KEPT: This only colours the text for Paragraph Builder!
           chip.style.backgroundColor = slot.dataset.color;
           chip.style.color = "#0f172a";
       }
@@ -332,7 +592,7 @@ function updateSlotLayouts() {
       }
     }
   });
-  
+
   document.querySelectorAll('#choice-pool .sentence-chip').forEach(chip => {
     chip.classList.remove('in-paragraph', 'locked', 'gap-chip');
     chip.classList.add('bg-white', 'border', 'mb-3', 'p-3', 'cursor-grab');
@@ -344,34 +604,32 @@ function updateSlotLayouts() {
     chip.style.outline = 'none';
   });
 }
+
 function checkAnswer() {
-      // --- DETECTIVE MAGIC 3: Checking the clicked words ---
   if (currentLayoutMode === "detective") {
       const words = document.querySelectorAll(".detective-word");
       let correctCount = 0; let mistakesMade = false; let totalTargets = 0; let emptyCount = 0;
-      
+
       words.forEach(w => {
-          const isTarget = w.dataset.isTarget === "true"; 
-          const isSelected = w.classList.contains("selected"); 
+          const isTarget = w.dataset.isTarget === "true";
+          const isSelected = w.classList.contains("selected");
           const isLocked = w.classList.contains("locked");
-          
+
           if (isTarget) totalTargets++;
-          
-                    if (isLocked) { correctCount++; }
+
+          if (isLocked) { correctCount++; }
           else if (isSelected && isTarget) {
-              // Correct guess! Lock it in permanently.
               correctCount++; w.classList.remove("selected"); w.classList.add("locked");
-              w.style.border = "2px solid #39ff14"; 
-              w.style.backgroundColor = "rgba(57, 255, 20, 0.25)"; 
-              w.style.color = "#064e3b"; // <--- Updated to readable dark green!
-              w.style.fontWeight = "bold"; 
+              w.style.border = "2px solid #39ff14";
+              w.style.backgroundColor = "rgba(57, 255, 20, 0.25)";
+              w.style.color = "#064e3b";
+              w.style.fontWeight = "bold";
               w.style.cursor = "default";
           } else if (isSelected && !isTarget) {
-              // Wrong guess! Pop it back to normal.
               mistakesMade = true; w.classList.remove("selected"); w.style.border = "2px solid transparent"; w.style.backgroundColor = "transparent"; w.style.color = "inherit";
           } else if (isTarget && !isSelected) { emptyCount++; }
       });
-      
+
       attemptCount++;
       let status, message;
       if (correctCount === totalTargets && totalTargets > 0) {
@@ -379,24 +637,25 @@ function checkAnswer() {
           if (typeof confetti === 'function') confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ec4899', '#8b5cf6', '#4ade80', '#fde047'] });
       } else if (mistakesMade) { status = "incorrect"; message = "⚠️ Incorrect words popped back to normal. You found " + correctCount + " correct word(s). Keep hunting!";
       } else if (emptyCount > 0) { status = "partial"; message = "You're missing some! You have found " + correctCount + " so far."; }
-      
+
       const fb = document.getElementById("feedback"); if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
       trackAttempt(status, attemptCount, ["Score: " + correctCount + "/" + totalTargets]);
-      return; // Stop the function here so it doesn't run the drag-and-drop checker
+      return; 
   }
+  
   const slots = document.querySelectorAll(".dropzone");
   let correctCount = 0; let emptyCount = 0; let distractorCount = 0; let mistakesMade = false;
   attemptCount++;
-  
+
   slots.forEach((slot, i) => {
     const chip = slot.querySelector(".sentence-chip");
     if (!chip) { emptyCount++; return; }
     if (chip.classList.contains("locked")) { correctCount++; return; }
-    
+
     const expected = slot.dataset.expectedIndex;
     const actual = chip.dataset.answerIndex;
     const isDistractor = chip.dataset.isDistractor === "true";
-    
+
     if (isDistractor) {
       distractorCount++; mistakesMade = true;
       document.getElementById("choice-pool").appendChild(chip);
@@ -410,11 +669,11 @@ function checkAnswer() {
       document.getElementById("choice-pool").appendChild(chip);
     }
   });
-  
+
   updateSlotLayouts();
   const totalSlots = slots.length;
   let status, message;
-  
+
   if (correctCount === totalSlots) {
     status = "correct";
     message = (currentLayoutMode !== "paragraph") ? "🎉 Perfect! You filled the gaps correctly." : "🎉 Perfect! You built the paragraph correctly.";
@@ -428,10 +687,10 @@ function checkAnswer() {
   } else if (emptyCount > 0) {
     status = "partial"; message = "Fill the remaining empty spaces! You have " + correctCount + " locked in.";
   }
-  
+
   const fb = document.getElementById("feedback");
   if(fb) { fb.textContent = message; fb.className = "feedback " + status; }
-  
+
   let details = ["Score: " + correctCount + "/" + totalSlots];
   if (distractorCount > 0) details.push("⚠️ Fell for distractors");
   details.push(hintsUsed.length > 0 ? "💡 Hints: " + [...new Set(hintsUsed)].join(", ") : "🧠 No hints used");
@@ -497,7 +756,9 @@ function renderTeacherTable(rows) {
 }
 
 setInterval(() => { const t = document.getElementById("panel-teacher"); if (t && !t.classList.contains("hidden")) loadTeacherData(); }, REFRESH_INTERVAL);
+
 function shuffle(arr) { for (let i = arr.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [arr[i], arr[j]] = [arr[j], arr[i]]; } return arr; }
+
 function showError(msg) { showScreen("screen-error"); const errEl = document.getElementById("error-message"); if (errEl) errEl.textContent = msg; }
 
 // --- NEON HINT MODAL OVERRIDE ---
@@ -516,7 +777,6 @@ neonModalOverlay.style.cssText = `
     opacity: 0;
     transition: opacity 0.3s ease;
 `;
-
 const neonModalBox = document.createElement('div');
 neonModalBox.style.cssText = `
     background: rgba(30, 30, 46, 0.95);
@@ -530,15 +790,12 @@ neonModalBox.style.cssText = `
     transform: scale(0.8);
     transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 `;
-
 const neonModalTitle = document.createElement('h3');
 neonModalTitle.innerHTML = "💡 Hint";
 neonModalTitle.style.cssText = "margin-top: 0; color: #f9a8d4; text-shadow: 0 0 10px #ec4899; margin-bottom: 20px; font-size: 2rem; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;";
-
 const neonModalText = document.createElement('p');
 neonModalText.id = 'neon-hint-text-dynamic';
 neonModalText.style.cssText = "color: #e2e8f0; font-size: 1.3rem; line-height: 1.5; margin-bottom: 25px;";
-
 const neonModalInstruction = document.createElement('small');
 neonModalInstruction.innerHTML = "(Click anywhere to close)";
 neonModalInstruction.style.cssText = "display: block; color: #8b5cf6; font-size: 0.95rem; opacity: 0.8; font-style: italic;";
