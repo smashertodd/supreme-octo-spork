@@ -263,7 +263,7 @@ function startActivity(gameId) {
   showScreen("screen-activity");
 }
 
-detective-paragraph {
+detective-paragraph
     font-size: 1.2rem;
     line-height: 2.2; 
     text-align: left;
