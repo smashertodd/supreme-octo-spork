@@ -265,17 +265,29 @@ function startActivity(gameId) {
 
 function renderActivity(game) {
   document.getElementById("activity-title").textContent = game.title;
-  let instructions = "Drag the text parts into the correct spaces to build the paragraph.";
-  if (currentLayoutMode !== "paragraph") instructions = "Drag the correct words/phrases into the gaps.";
-  if (game.distractors.length > 0) instructions += " Watch out for distractors!";
   
+  let instructions = "";
+  
+  // Set the correct instructions based on the mode
+  if (currentLayoutMode === "detective") {
+      instructions = '<span style="color: #ffffff; font-weight: 500;">Click the 💡 button to reveal your target! 🔍 Click on the words or phrases to highlight them.</span>';
+  } else if (currentLayoutMode === "paragraph") {
+      instructions = "Drag the text parts into the correct spaces to build the paragraph.";
+      if (game.distractors.length > 0) instructions += " Watch out for distractors!";
+  } else {
+      instructions = "Drag the correct words/phrases into the gaps.";
+      if (game.distractors.length > 0) instructions += " Watch out for distractors!";
+  }
+
+  // Add the overall hint lightbulb if one exists
   if (game.overallHint) {
       let safeOverallHint = game.overallHint.replace(/'/g, "\\'").replace(/"/g, "&quot;");
       instructions += `<span onclick="showNeonHint('${safeOverallHint}')" title="Click for an overall hint" style="margin-left: 10px; cursor: pointer; font-size: 1.2em; filter: drop-shadow(0 0 8px rgba(249, 168, 212, 0.8));">💡</span>`;
-      document.getElementById("game-instructions").innerHTML = instructions;
-  } else {
-      document.getElementById("game-instructions").textContent = instructions;
   }
+  
+  document.getElementById("game-instructions").innerHTML = instructions;
+
+  let answerIndexCounter = 0;
   
   let answerIndexCounter = 0;
   const allSentences = [];
@@ -341,11 +353,7 @@ function renderActivity(game) {
     // --- DETECTIVE MAGIC 2: Render Clickable Words ---
   if (currentLayoutMode === "detective") {
       // 1. Inject Automatic Instructions (with the Lightbulb tip!)
-      const instEl = document.getElementById("game-instructions");
-      if (instEl) {
-          instEl.innerHTML += '<br><span style="font-size: 0.95em; font-weight: bold; color: #005a00; display: block; margin-top: 12px;">🔍 Click on the words or phrases to highlight them. Click the 💡 button to reveal your target!</span>';
-      }
-
+      
       // Hide the choices panel since we are just clicking text
       const leftPanel = document.querySelector('.panel-left');
       const workspace = document.querySelector('.workspace');
