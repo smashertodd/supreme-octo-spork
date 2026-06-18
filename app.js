@@ -340,47 +340,48 @@ function renderActivity(game) {
 
     // --- DETECTIVE MAGIC 2: Render Clickable Words ---
   if (currentLayoutMode === "detective") {
+      // 1. Inject Automatic Instructions (with the Lightbulb tip!)
+      const instEl = document.getElementById("game-instructions");
+      if (instEl) {
+          instEl.innerHTML += '<br><span style="font-size: 0.95em; font-weight: bold; color: #005a00; display: block; margin-top: 12px;">🔍 Click on the words or phrases to highlight them. Click the 💡 button to reveal your target!</span>';
+      }
+
       // Hide the choices panel since we are just clicking text
       const leftPanel = document.querySelector('.panel-left');
       const workspace = document.querySelector('.workspace');
       if(leftPanel) leftPanel.style.display = "none";
       if(workspace) workspace.style.display = "block";
-
-      const detectiveBox = document.createElement("div");
-      detectiveBox.className = "gap-fill-box";
-      detectiveBox.style.lineHeight = "2.8";
-      detectiveBox.style.padding = "35px";
-      detectiveBox.style.fontSize = "1.2rem";
       
+      const detectiveBox = document.createElement("div");
+      // Use the new CSS class from Step 1 so it looks like a real paragraph!
+      detectiveBox.className = "detective-paragraph"; 
+
       game.parts.forEach((part, i) => {
-          const pDiv = document.createElement("div");
-          pDiv.style.marginBottom = "15px";
-          
-          // Split sentence into words
-          const words = (part.text || "").split(' ');
-          words.forEach(w => {
+          // Use a span instead of a div so the sentences flow together seamlessly
+          const pDiv = document.createElement("span"); 
+
+          // 2. Scan for [[targets]], {phrases}, and regular words
+          const regex = /\[\[(.*?)\]\]|\{(.*?)\}|([^\s]+)/g;
+          let match;
+
+          while ((match = regex.exec(part.text || "")) !== null) {
+              let textContent = match[1] || match[2] || match[3];
+              let isTarget = match[1] !== undefined;
+              
               const wordSpan = document.createElement("span");
               wordSpan.className = "detective-word";
+              wordSpan.textContent = textContent;
               
-              let cleanWord = w;
-              // If it's a target word, strip the brackets and mark it!
-              if (w.includes("[[") && w.includes("]]")) {
-                  cleanWord = w.replace(/\[\[/g, "").replace(/\]\]/g, "");
+              if (isTarget) {
                   wordSpan.dataset.isTarget = "true";
+              } else {
+                  wordSpan.dataset.isTarget = "false";
               }
-              
-              wordSpan.textContent = cleanWord;
-              wordSpan.style.cursor = "pointer";
-              wordSpan.style.padding = "4px 8px";
-              wordSpan.style.margin = "0 2px";
-              wordSpan.style.borderRadius = "6px";
-              wordSpan.style.border = "2px solid transparent";
-              wordSpan.style.transition = "all 0.2s";
-              
+
               // Hover effects
               wordSpan.addEventListener("mouseenter", () => {
                   if(!wordSpan.classList.contains("selected") && !wordSpan.classList.contains("locked")) {
-                      wordSpan.style.backgroundColor = "rgba(255,255,255,0.15)";
+                      wordSpan.style.backgroundColor = "rgba(0,0,0,0.05)";
                   }
               });
               wordSpan.addEventListener("mouseleave", () => {
@@ -388,8 +389,8 @@ function renderActivity(game) {
                       wordSpan.style.backgroundColor = "transparent";
                   }
               });
-              
-              // Click effects (Neon Green!)
+
+              // Click effects (Neon Green toggle!)
               wordSpan.addEventListener("click", () => {
                   if (!wordSpan.classList.contains("locked")) {
                       wordSpan.classList.toggle("selected");
@@ -404,17 +405,18 @@ function renderActivity(game) {
                       }
                   }
               });
-              
+
               pDiv.appendChild(wordSpan);
               pDiv.appendChild(document.createTextNode(" "));
-          });
-          
+          }
+
           // Add the lightbulb hint at the end of the sentence
           if (part.hint) {
               const hBtn = document.createElement("button");
               hBtn.className = "hint-btn-inline"; hBtn.innerHTML = "💡"; hBtn.title = "View Hint";
               hBtn.onclick = () => { showNeonHint("Hint:\n\n" + part.hint); hintsUsed.push("Hint (Sentence " + (i+1) + ")"); };
               pDiv.appendChild(hBtn);
+              pDiv.appendChild(document.createTextNode(" "));
           }
           detectiveBox.appendChild(pDiv);
       });
