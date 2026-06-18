@@ -280,13 +280,13 @@ body::before {
 /* --- DETECTIVE MODE PARAGRAPH & HIGHLIGHT FIX --- */
 .detective-paragraph {
     font-size: 1.2rem;
-    line-height: 2.2; /* Comfortable reading spacing */
+    line-height: 2.2; 
     text-align: left;
     padding: 20px;
     background: #ffffff;
     border-radius: 8px;
     box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
-    color: #0f172a !important;
+    color: #0f172a !important; 
 }
 
 .detective-word {
