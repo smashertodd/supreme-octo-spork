@@ -277,3 +277,33 @@ body::before {
     border: none !important;
     /* We purposely leave background out of here so the JS colour can shine through! */
 }
+/* --- DETECTIVE MODE PARAGRAPH & HIGHLIGHT FIX --- */
+.detective-paragraph {
+    font-size: 1.2rem;
+    line-height: 2.2; /* Comfortable reading spacing */
+    text-align: left;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.detective-word {
+    display: inline; /* Forces words to flow together seamlessly */
+    padding: 2px 4px;
+    margin: 0 1px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent; /* Prevents text jumping when selected */
+}
+
+.detective-word:hover {
+    background-color: #e0e0e0; /* Subtle grey hover so they know it's clickable */
+}
+
+/* Ensure the selected words clearly pop out */
+.detective-word.selected {
+    background-color: #ccffcc; 
+    border-color: #00cc00;
+}
