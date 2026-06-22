@@ -335,7 +335,7 @@ body::before {
 }
 
 /* --- THE COFFEE MASK --- */
-/* Kraft Paper Background & Espresso Text */
+/* 1. Kraft Paper Background */
 body.coffee-theme {
     background: #c8ab83 !important;
     color: #3b2818 !important;
@@ -346,55 +346,106 @@ body.coffee-theme .theme-btn {
     background-color: #f5ebd9 !important;
     color: #3b2818 !important;
     border: 2px solid #3b2818 !important;
+    box-shadow: none !important;
 }
 
-/* Cream Containers with Espresso Borders */
-body.coffee-theme #activity-container,
-body.coffee-theme .modal-content {
-    background: #f5ebd9 !important;
-    border: 3px solid #3b2818 !important;
-    box-shadow: 6px 6px 0px rgba(59, 40, 24, 0.2) !important; /* Soft espresso shadow */
-}
-
-/* Espresso Titles */
+/* 2. Strip Neon Glowing Text from ALL Titles & Text */
 body.coffee-theme h1, 
 body.coffee-theme h2, 
+body.coffee-theme h3, 
 body.coffee-theme p,
+body.coffee-theme .subtitle,
+body.coffee-theme #app-title,
 body.coffee-theme .instruction-text {
+    color: #3b2818 !important;
+    text-shadow: none !important; /* Kills the neon text glow */
+}
+
+/* 3. Cream Containers with Flat Espresso Borders (Kills Neon Box Shadows) */
+body.coffee-theme .card,
+body.coffee-theme #activity-container,
+body.coffee-theme #name-section {
+    background: #f5ebd9 !important;
+    border: 3px solid #3b2818 !important;
+    box-shadow: 8px 8px 0px rgba(59, 40, 24, 0.2) !important; /* Flat coffee shadow instead of neon */
+}
+
+/* 4. The Pop-up / Modal (Kills the Pink Glow) */
+body.coffee-theme .modal-content,
+body.coffee-theme #feedback-modal {
+    background: #f5ebd9 !important;
+    border: 3px solid #3b2818 !important;
+    box-shadow: 10px 10px 0px rgba(59, 40, 24, 0.3) !important; /* Flat shadow, no pink */
     color: #3b2818 !important;
 }
 
-/* Cream Chips & Drop Zones */
+/* 5. Top Corner Toggles (Teacher/Game buttons) */
+body.coffee-theme .neon-toggle,
+body.coffee-theme .neon-toggle-container button {
+    background-color: #f5ebd9 !important;
+    color: #3b2818 !important;
+    border: 2px solid #3b2818 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+}
+body.coffee-theme .neon-toggle:hover {
+    background-color: #e3d5bf !important; /* Slightly darker cream on hover */
+}
+
+/* 6. Inputs (Name box, PIN box) */
+body.coffee-theme input[type="text"],
+body.coffee-theme input[type="password"] {
+    background: #ffffff !important;
+    border: 2px solid #3b2818 !important;
+    color: #3b2818 !important;
+    box-shadow: none !important; /* Kills neon border glow */
+}
+body.coffee-theme input::placeholder {
+    color: #8c7b6c !important; 
+}
+body.coffee-theme input:focus {
+    outline: none !important;
+    border-color: #8dbdd8 !important; /* Americano Blue focus */
+    box-shadow: 0 0 5px #8dbdd8 !important;
+}
+
+/* 7. Chips & Drop Zones */
 body.coffee-theme .sentence-chip,
 body.coffee-theme .word-chip,
 body.coffee-theme .category-label {
     background: #f5ebd9 !important;
     color: #3b2818 !important;
     border: 2px solid #3b2818 !important;
+    box-shadow: 2px 2px 0px rgba(59, 40, 24, 0.2) !important;
 }
-
 body.coffee-theme .paragraph-slot,
 body.coffee-theme .drop-zone {
     background: rgba(245, 235, 217, 0.6) !important;
     border: 2px dashed #3b2818 !important;
+    box-shadow: none !important;
 }
 
-/* Americano Blue Accents (For correct answers / highlights) */
+/* 8. Americano Blue Accents (Replaces Neon Green correct answers) */
 body.coffee-theme .correct,
 body.coffee-theme .sentence-chip.correct,
-body.coffee-theme .detective-word.selected {
+body.coffee-theme .detective-word.selected,
+body.coffee-theme .drop-zone.correct-zone {
     background-color: #8dbdd8 !important; 
     color: #3b2818 !important;
-    border-color: #3b2818 !important;
+    border: 2px solid #3b2818 !important;
+    box-shadow: none !important; /* Kills neon green glow */
 }
 
-/* Primary Buttons (Espresso colour) */
-body.coffee-theme button:not(.theme-btn) {
+/* 9. Primary Buttons (Start, Check Answer, etc) */
+body.coffee-theme button:not(.theme-btn):not(.neon-toggle) {
     background-color: #3b2818 !important;
     color: #f5ebd9 !important;
     border: 2px solid #3b2818 !important;
+    box-shadow: 4px 4px 0px rgba(59, 40, 24, 0.3) !important;
+    text-shadow: none !important;
 }
-
-body.coffee-theme button:not(.theme-btn):hover {
-    background-color: #5a3d24 !important; /* Lighter espresso on hover */
+body.coffee-theme button:not(.theme-btn):not(.neon-toggle):hover {
+    background-color: #5a3d24 !important;
+    transform: translateY(2px);
+    box-shadow: 2px 2px 0px rgba(59, 40, 24, 0.3) !important;
 }
