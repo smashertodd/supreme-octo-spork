@@ -825,3 +825,12 @@ neonModalOverlay.addEventListener('click', () => {
         neonModalOverlay.style.display = 'none';
     }, 300);
 });
+// =========================================
+// ☕ THEME TOGGLE LOGIC
+// =========================================
+const themeBtn = document.getElementById('theme-toggle-btn');
+if (themeBtn) {
+    themeBtn.addEventListener('click', () => {
+        document.body.classList.toggle('coffee-theme');
+    });
+}
