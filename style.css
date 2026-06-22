@@ -308,3 +308,93 @@ body::before {
     background-color: #ccffcc; 
     border-color: #00cc00;
 }
+/* =========================================
+   ☕ COFFEE THEME OVERRIDES ☕
+========================================= */
+
+/* The button itself (default dark mode look) */
+.theme-btn {
+    position: absolute;
+    top: 20px;
+    left: 20px; /* Sits on the top left, out of the way of the Teacher button */
+    padding: 8px 16px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    backdrop-filter: blur(5px);
+    transition: all 0.3s ease;
+    z-index: 1000;
+}
+
+.theme-btn:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* --- THE COFFEE MASK --- */
+/* Kraft Paper Background & Espresso Text */
+body.coffee-theme {
+    background: #c8ab83 !important;
+    color: #3b2818 !important;
+}
+
+/* Cream button state */
+body.coffee-theme .theme-btn {
+    background-color: #f5ebd9 !important;
+    color: #3b2818 !important;
+    border: 2px solid #3b2818 !important;
+}
+
+/* Cream Containers with Espresso Borders */
+body.coffee-theme #activity-container,
+body.coffee-theme .modal-content {
+    background: #f5ebd9 !important;
+    border: 3px solid #3b2818 !important;
+    box-shadow: 6px 6px 0px rgba(59, 40, 24, 0.2) !important; /* Soft espresso shadow */
+}
+
+/* Espresso Titles */
+body.coffee-theme h1, 
+body.coffee-theme h2, 
+body.coffee-theme p,
+body.coffee-theme .instruction-text {
+    color: #3b2818 !important;
+}
+
+/* Cream Chips & Drop Zones */
+body.coffee-theme .sentence-chip,
+body.coffee-theme .word-chip,
+body.coffee-theme .category-label {
+    background: #f5ebd9 !important;
+    color: #3b2818 !important;
+    border: 2px solid #3b2818 !important;
+}
+
+body.coffee-theme .paragraph-slot,
+body.coffee-theme .drop-zone {
+    background: rgba(245, 235, 217, 0.6) !important;
+    border: 2px dashed #3b2818 !important;
+}
+
+/* Americano Blue Accents (For correct answers / highlights) */
+body.coffee-theme .correct,
+body.coffee-theme .sentence-chip.correct,
+body.coffee-theme .detective-word.selected {
+    background-color: #8dbdd8 !important; 
+    color: #3b2818 !important;
+    border-color: #3b2818 !important;
+}
+
+/* Primary Buttons (Espresso colour) */
+body.coffee-theme button:not(.theme-btn) {
+    background-color: #3b2818 !important;
+    color: #f5ebd9 !important;
+    border: 2px solid #3b2818 !important;
+}
+
+body.coffee-theme button:not(.theme-btn):hover {
+    background-color: #5a3d24 !important; /* Lighter espresso on hover */
+}
