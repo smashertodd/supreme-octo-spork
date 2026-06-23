@@ -308,3 +308,155 @@ body::before {
     background-color: #ccffcc; 
     border-color: #00cc00;
 }
+/* ============================================================
+   ☕ THE ULTIMATE COFFEE MASK (KILLS ALL NEON) ☕
+============================================================ */
+
+/* 1. Kill the pulsing neon galaxy background */
+body.coffee-theme::before {
+    display: none !important;
+}
+body.coffee-theme {
+    background: #c8ab83 !important;
+    color: #3b2818 !important;
+}
+
+/* 2. Strip Gradients from Titles */
+body.coffee-theme #app-title,
+body.coffee-theme .section-heading {
+    background: none !important;
+    -webkit-text-fill-color: #3b2818 !important;
+    color: #3b2818 !important;
+    text-shadow: none !important;
+}
+
+/* 3. Strip all text shadows and set text to espresso */
+body.coffee-theme h1, body.coffee-theme h2, body.coffee-theme h3,
+body.coffee-theme p, body.coffee-theme .subtitle, body.coffee-theme label,
+body.coffee-theme .instruction, body.coffee-theme .card-title,
+body.coffee-theme .card-meta, body.coffee-theme .feedback,
+body.coffee-theme .overall-hint-text, body.coffee-theme .chip-hint-text,
+body.coffee-theme .zone-label, body.coffee-theme .drop-arrow {
+    color: #3b2818 !important;
+    text-shadow: none !important;
+}
+
+/* 4. Cards & Modals: Kill glassmorphism, kill glowing borders */
+body.coffee-theme .card,
+body.coffee-theme .activity-card,
+body.coffee-theme #pin-modal-box,
+body.coffee-theme .panel-left,
+body.coffee-theme .panel-right {
+    background: #f5ebd9 !important;
+    backdrop-filter: none !important;
+    border: 3px solid #3b2818 !important;
+    box-shadow: 8px 8px 0px rgba(59, 40, 24, 0.15) !important;
+}
+
+/* Kill the neon gradient strips at the top of the cards */
+body.coffee-theme .card::before,
+body.coffee-theme .activity-card::before,
+body.coffee-theme #pin-modal-box::before {
+    display: none !important;
+}
+
+/* 5. Inputs (Name, PIN) */
+body.coffee-theme #input-name,
+body.coffee-theme #pin-input {
+    background: #ffffff !important;
+    border: 2px solid #3b2818 !important;
+    color: #3b2818 !important;
+    box-shadow: none !important;
+}
+body.coffee-theme #input-name:focus,
+body.coffee-theme #pin-input:focus {
+    border-color: #8dbdd8 !important; /* Americano Blue focus */
+    box-shadow: 0 0 0 4px rgba(141, 189, 216, 0.4) !important;
+}
+
+/* 6. Buttons (Standard & Toggles) */
+body.coffee-theme .btn {
+    background: #3b2818 !important;
+    color: #f5ebd9 !important;
+    border: 2px solid #3b2818 !important;
+    box-shadow: 4px 4px 0px rgba(59, 40, 24, 0.3) !important;
+    text-shadow: none !important;
+}
+body.coffee-theme .btn:hover {
+    background: #5a3d24 !important;
+    transform: translateY(2px) !important;
+    box-shadow: 2px 2px 0px rgba(59, 40, 24, 0.3) !important;
+    filter: none !important;
+}
+body.coffee-theme .theme-btn,
+body.coffee-theme .neon-toggle,
+body.coffee-theme .btn-ghost {
+    background: #f5ebd9 !important;
+    color: #3b2818 !important;
+    border: 2px solid #3b2818 !important;
+    box-shadow: 4px 4px 0px rgba(59, 40, 24, 0.2) !important;
+}
+
+/* 7. Drag & Drop Cards (Choices) */
+body.coffee-theme .sentence-chip {
+    background: #ffffff !important;
+    border: 2px solid #3b2818 !important;
+    box-shadow: 4px 4px 0px rgba(59, 40, 24, 0.1) !important;
+    color: #3b2818 !important;
+}
+body.coffee-theme .sentence-chip:hover {
+    background: #f5ebd9 !important; /* Cream hover */
+    box-shadow: 2px 2px 0px rgba(59, 40, 24, 0.1) !important;
+    transform: translateY(2px) !important;
+}
+body.coffee-theme .chip-label {
+    background: #e3d5bf !important; /* Darker cream */
+    color: #3b2818 !important;
+}
+
+/* 8. Drop Zones */
+body.coffee-theme #drop-zone,
+body.coffee-theme .drop-slot {
+    background: rgba(245, 235, 217, 0.5) !important;
+    border: 2px dashed #3b2818 !important;
+    box-shadow: none !important;
+}
+body.coffee-theme #drop-zone.drag-over,
+body.coffee-theme .drop-slot.drop-target-over {
+    background: rgba(141, 189, 216, 0.2) !important; /* Light blue tint */
+    border-color: #8dbdd8 !important;
+}
+
+/* 9. CORRECT ANSWERS & AMERICANO BLUE ACCENTS */
+body.coffee-theme .sentence-chip.correct,
+body.coffee-theme .dropzone.correct,
+body.coffee-theme .detective-word.selected {
+    background-color: #8dbdd8 !important; /* Americano Blue */
+    border: 2px solid #3b2818 !important;
+    color: #111827 !important; /* Dark text for contrast against blue */
+    box-shadow: none !important;
+}
+body.coffee-theme .sentence-chip.incorrect {
+    background-color: #eab8b8 !important; /* Muted earthy red */
+    border-color: #3b2818 !important;
+    color: #111827 !important;
+}
+body.coffee-theme .feedback.correct { color: #2c6c91 !important; } /* Darker blue text for readability */
+body.coffee-theme .feedback.incorrect { color: #a33e3e !important; }
+
+/* 10. Detective Mode Paragraph */
+body.coffee-theme .detective-paragraph {
+    background: #ffffff !important;
+    border: 2px solid #3b2818 !important;
+    color: #3b2818 !important;
+    box-shadow: 4px 4px 0px rgba(59, 40, 24, 0.1) !important;
+}
+body.coffee-theme .detective-word:hover {
+    background-color: #f5ebd9 !important;
+}
+
+/* 11. Results Table (Teacher Panel) */
+body.coffee-theme #results-table thead tr { background: #3b2818 !important; }
+body.coffee-theme #results-table thead th { color: #f5ebd9 !important; }
+body.coffee-theme #results-table tbody td { color: #3b2818 !important; }
+body.coffee-theme #results-table tbody tr { border-bottom: 1px solid #c8ab83 !important; }
