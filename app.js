@@ -1,9 +1,9 @@
 // =========================================================================
 // Activity Arcade — app.js (Fixed & Polished)
 // =========================================================================
-const LIBRARY_CSV_URL = "PASTE_YOUR_GOOGLE_SHEET_URL_HERE";
-const TRACKING_CSV_URL = "PASTE_YOUR_GOOGLE_SHEET_URL_HERE";
-const TRACKING_URL = "PASTE_YOUR_GOOGLE_SHEET_URL_HERE";
+const LIBRARY_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=0&single=true&output=csv";
+const TRACKING_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR_qVYjge6yFN9mLytjck09G66BTF8bM5_PCrcoQ5G8z-ilwEJ3L-uYLOEqzf8hAPCAFRyV8fRR0Ho0/pub?gid=744485282&single=true&output=csv";
+const TRACKING_URL = "https://script.google.com/macros/s/AKfycbyL4Ws4DK8UH_VbTE_4ENW9vmy7WRkIly71NfPLDm2CF3oeBf91jUOTkXuSJtJWiWMEHQ/exec";
 const TEACHER_PIN = "@pple";
 const REFRESH_INTERVAL = 15000;
 const COLORS = ['#f9a8d4', '#d8b4fe', '#a5b4fc', '#7dd3fc', '#5eead4', '#86efac', '#fde047', '#fdba74', '#fca5a5', '#c4b5fd'];
