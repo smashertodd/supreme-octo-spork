@@ -516,3 +516,76 @@ body.coffee-theme #results-table tbody tr { border-bottom: 1px solid #c8ab83 !im
     color: #3b2818 !important;
     border-color: #3b2818 !important;
 }
+/* ☕ STRONGER COFFEE PATCH: SCROLLBARS, HINTS & AMERICANO BLUE ☕ */
+
+/* 1. Kill the Rainbow Scrollbars */
+.coffee-theme ::-webkit-scrollbar-thumb {
+    background: #a88b63 !important; /* Darker Kraft paper */
+    border: 1px solid #3b2818 !important; /* Espresso border */
+    border-radius: 4px !important;
+}
+.coffee-theme ::-webkit-scrollbar-track {
+    background: #f5ebd9 !important; /* Cream track */
+}
+
+/* 2. Force Hint Modal to behave */
+.coffee-theme #hint-modal,
+.coffee-theme #hint-modal > div,
+.coffee-theme #hint-modal .modal-content {
+    background: #f5ebd9 !important; /* Cream */
+    border: 2px solid #3b2818 !important; /* Espresso border kills the glow */
+    box-shadow: 6px 6px 0px rgba(59, 40, 24, 0.15) !important; /* Flat shadow */
+    color: #3b2818 !important;
+    outline: none !important;
+}
+
+/* Force Hint Modal Text */
+.coffee-theme #hint-modal p,
+.coffee-theme #hint-modal h2,
+.coffee-theme #hint-text {
+    color: #3b2818 !important;
+    text-shadow: none !important;
+}
+
+/* 3. Force ALL Buttons to Americano Blue (Overrides stubborn IDs) */
+.coffee-theme button,
+.coffee-theme .dashboard-button,
+.coffee-theme #edit-activities-btn,
+.coffee-theme #start-btn,
+.coffee-theme #submit-btn,
+.coffee-theme .nav-btn,
+.coffee-theme .action-btn {
+    background-image: none !important; /* Kills the pink gradient */
+    background-color: #8dbdd8 !important; /* AMERICANO BLUE! */
+    color: #3b2818 !important; /* Espresso text */
+    border: 2px solid #3b2818 !important; /* Espresso outline */
+    box-shadow: 4px 4px 0px rgba(59, 40, 24, 0.15) !important;
+    text-shadow: none !important;
+    font-weight: bold !important;
+}
+
+/* Keep the actual Theme Toggle Button Cream */
+.coffee-theme #theme-toggle-btn {
+    background-color: #f5ebd9 !important;
+}
+
+/* 4. Fix Hint Lightbulbs (Kill the pink glow) */
+.coffee-theme .hint-btn,
+.coffee-theme .sentence-hint-btn,
+.coffee-theme .inline-hint-btn {
+    background: #f5ebd9 !important; /* Cream */
+    border: 1px solid #3b2818 !important; /* Espresso */
+    box-shadow: none !important; /* Kills pink glow */
+}
+
+/* 5. Fix Instruction Text Backgrounds (Kill the dark blue block) */
+.coffee-theme #activity-description,
+.coffee-theme .activity-instructions,
+.coffee-theme .detective-instructions,
+.coffee-theme p.instructions {
+    background: transparent !important;
+    color: #3b2818 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border: none !important;
+}
