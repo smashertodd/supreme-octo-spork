@@ -825,10 +825,3 @@ neonModalOverlay.addEventListener('click', () => {
         neonModalOverlay.style.display = 'none';
     }, 300);
 });
-// ☕ COFFEE THEME TOGGLE ☕
-const themeToggleBtn = document.getElementById('theme-toggle-btn');
-if (themeToggleBtn) {
-    themeToggleBtn.addEventListener('click', () => {
-        document.body.classList.toggle('coffee-theme');
-    });
-}
