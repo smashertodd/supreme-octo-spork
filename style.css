@@ -460,3 +460,59 @@ body.coffee-theme #results-table thead tr { background: #3b2818 !important; }
 body.coffee-theme #results-table thead th { color: #f5ebd9 !important; }
 body.coffee-theme #results-table tbody td { color: #3b2818 !important; }
 body.coffee-theme #results-table tbody tr { border-bottom: 1px solid #c8ab83 !important; }
+/* ☕ COFFEE THEME PATCH: KILLING THE LAST NEON & ADDING AMERICANO BLUE ☕ */
+
+/* 1. Modal Backgrounds & Pink Glows (Hint Modal & Teacher PIN) */
+.coffee-theme .modal-overlay {
+    background: rgba(200, 171, 131, 0.85) !important; /* Translucent Kraft paper tint */
+}
+
+.coffee-theme .modal-content,
+.coffee-theme #hint-modal .modal-content,
+.coffee-theme #teacher-modal .modal-content {
+    background: #f5ebd9 !important; /* Cream */
+    border: 2px solid #3b2818 !important; /* Espresso border (Kills the pink glow) */
+    box-shadow: 6px 6px 0px rgba(59, 40, 24, 0.15) !important; /* Flat shadow */
+    color: #3b2818 !important;
+}
+
+/* Force Hint Text & Modal Text to Espresso */
+.coffee-theme #hint-text,
+.coffee-theme .modal-content h2,
+.coffee-theme .modal-content p,
+.coffee-theme .modal-content div {
+    color: #3b2818 !important; 
+    text-shadow: none !important;
+}
+
+/* 2. All Buttons & Gradients -> Americano Blue! */
+.coffee-theme button,
+.coffee-theme .dashboard-button,
+.coffee-theme #pin-submit,
+.coffee-theme #pin-cancel,
+.coffee-theme #teacher-login-btn {
+    background-image: none !important; /* This officially kills the purple/pink gradient */
+    background-color: #8dbdd8 !important; /* AMERICANO BLUE! */
+    color: #3b2818 !important; /* Espresso text */
+    border: 2px solid #3b2818 !important; /* Espresso outline */
+    box-shadow: 4px 4px 0px rgba(59, 40, 24, 0.15) !important;
+    text-shadow: none !important;
+    font-weight: bold !important;
+}
+
+/* Hover state for Americano Blue buttons */
+.coffee-theme button:hover,
+.coffee-theme .dashboard-button:hover,
+.coffee-theme #pin-submit:hover,
+.coffee-theme #pin-cancel:hover {
+    background-color: #7ab0ce !important; /* Slightly darker blue when hovered */
+    box-shadow: 2px 2px 0px rgba(59, 40, 24, 0.15) !important;
+    transform: translateY(2px);
+}
+
+/* 3. Keep the actual Theme Toggle Button in the corner looking like Cream */
+.coffee-theme #theme-toggle-btn {
+    background-color: #f5ebd9 !important;
+    color: #3b2818 !important;
+    border-color: #3b2818 !important;
+}
