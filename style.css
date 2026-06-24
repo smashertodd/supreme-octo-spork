@@ -308,3 +308,277 @@ body::before {
     background-color: #ccffcc; 
     border-color: #00cc00;
 }
+/* =============================================================
+   ☕ COFFEE THEME OVERRIDE
+   body.coffee-theme overrides every neon value below.
+   Your neon code above is completely untouched.
+   ============================================================= */
+body.coffee-theme {
+  background: #e8d5b5 !important;
+  background-image: none !important;
+  background-attachment: unset !important;
+  color: #3b2818 !important;
+}
+body.coffee-theme::before {
+  display: none !important;
+}
+
+/* --- Cards & Containers --- */
+body.coffee-theme .card {
+  background: #f5ebd9 !important;
+  border: 1.5px solid rgba(59,40,24,0.25) !important;
+  box-shadow: 6px 6px 0 rgba(59,40,24,0.10) !important;
+  backdrop-filter: none !important;
+}
+body.coffee-theme .card::before {
+  background: linear-gradient(135deg, #8dbdd8 0%, #a88b63 100%) !important;
+}
+
+/* --- All Text --- */
+body.coffee-theme h1, body.coffee-theme h2, body.coffee-theme h3,
+body.coffee-theme h4, body.coffee-theme p, body.coffee-theme label,
+body.coffee-theme td, body.coffee-theme th, body.coffee-theme span {
+  color: #3b2818 !important;
+  text-shadow: none !important;
+}
+body.coffee-theme #app-title {
+  background: linear-gradient(135deg, #8dbdd8 0%, #a88b63 50%, #3b2818 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+body.coffee-theme .section-heading {
+  background: linear-gradient(135deg, #8dbdd8 0%, #a88b63 100%) !important;
+  -webkit-background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
+}
+body.coffee-theme .instruction,
+body.coffee-theme .card-meta,
+body.coffee-theme .zone-label,
+body.coffee-theme .text-muted {
+  color: #7a5c44 !important;
+}
+
+/* --- Buttons --- */
+body.coffee-theme .btn {
+  background: #8dbdd8 !important;
+  background-image: none !important;
+  color: #3b2818 !important;
+  border: 2px solid #3b2818 !important;
+  box-shadow: 4px 4px 0 rgba(59,40,24,0.15) !important;
+  text-shadow: none !important;
+  font-weight: 700 !important;
+}
+body.coffee-theme .btn:hover {
+  background: #7baac4 !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 6px 6px 0 rgba(59,40,24,0.20) !important;
+  filter: none !important;
+}
+body.coffee-theme .btn-ghost {
+  background: #f5ebd9 !important;
+  border: 1.5px solid rgba(59,40,24,0.35) !important;
+  color: #3b2818 !important;
+  box-shadow: none !important;
+}
+body.coffee-theme .btn-ghost:hover {
+  background: #ede0cc !important;
+}
+
+/* --- Tab Bar --- */
+body.coffee-theme #tab-bar {
+  background: rgba(59,40,24,0.10) !important;
+  border: 1px solid rgba(59,40,24,0.20) !important;
+  backdrop-filter: none !important;
+}
+body.coffee-theme .tab-btn {
+  color: #7a5c44 !important;
+}
+body.coffee-theme .tab-btn:hover {
+  background: rgba(59,40,24,0.10) !important;
+  color: #3b2818 !important;
+}
+body.coffee-theme .tab-btn.active {
+  background: linear-gradient(135deg, #8dbdd8 0%, #a88b63 100%) !important;
+  color: #3b2818 !important;
+  box-shadow: none !important;
+}
+
+/* --- Activity Cards (Library grid) --- */
+body.coffee-theme .activity-card {
+  background: #f5ebd9 !important;
+  border: 1.5px solid rgba(59,40,24,0.20) !important;
+  backdrop-filter: none !important;
+}
+body.coffee-theme .activity-card::before {
+  background: linear-gradient(180deg, #8dbdd8 0%, #a88b63 100%) !important;
+}
+body.coffee-theme .activity-card:hover {
+  box-shadow: 0 8px 24px rgba(59,40,24,0.18) !important;
+  border-color: rgba(59,40,24,0.40) !important;
+}
+body.coffee-theme .card-title {
+  color: #3b2818 !important;
+}
+
+/* --- Inputs --- */
+body.coffee-theme #input-name,
+body.coffee-theme #pin-input {
+  background: #ffffff !important;
+  border: 1.5px solid rgba(59,40,24,0.30) !important;
+  color: #3b2818 !important;
+  backdrop-filter: none !important;
+}
+body.coffee-theme #input-name:focus,
+body.coffee-theme #pin-input:focus {
+  border-color: #8dbdd8 !important;
+  box-shadow: 0 0 0 3px rgba(141,189,216,0.35) !important;
+}
+
+/* --- Sentence Chips (Choice pool) --- */
+body.coffee-theme .sentence-chip:not(.in-paragraph) {
+  background-color: var(--chip-color, #ffffff) !important;
+  border: 1.5px solid rgba(59,40,24,0.25) !important;
+  box-shadow: 3px 3px 0 rgba(59,40,24,0.10) !important;
+  color: #3b2818 !important;
+}
+body.coffee-theme .sentence-chip:hover {
+  background: #ede0cc !important;
+  box-shadow: 4px 4px 0 rgba(59,40,24,0.15) !important;
+  transform: translateY(-2px) !important;
+}
+body.coffee-theme .chip-label {
+  background: rgba(59,40,24,0.12) !important;
+  color: #3b2818 !important;
+}
+
+/* --- Drop Zone --- */
+body.coffee-theme #drop-zone {
+  border-color: rgba(59,40,24,0.30) !important;
+  background: rgba(59,40,24,0.04) !important;
+}
+body.coffee-theme #drop-zone.drag-over {
+  border-color: #8dbdd8 !important;
+  background: rgba(141,189,216,0.12) !important;
+}
+
+/* --- Panels (Paragraph Builder workspace) --- */
+body.coffee-theme .panel-left,
+body.coffee-theme .panel-right {
+  background: #f5ebd9 !important;
+  border: 1.5px solid rgba(59,40,24,0.20) !important;
+}
+body.coffee-theme .panel-left h3,
+body.coffee-theme .panel-right h3 {
+  color: #3b2818 !important;
+}
+body.coffee-theme .drop-slot {
+  background: #ffffff !important;
+  border-color: rgba(59,40,24,0.25) !important;
+}
+body.coffee-theme .drop-slot.drop-target-over {
+  border-color: #8dbdd8 !important;
+  background: rgba(141,189,216,0.12) !important;
+}
+body.coffee-theme .slot-label {
+  color: #7a5c44 !important;
+}
+
+/* --- Correct / Incorrect States --- */
+body.coffee-theme .sentence-chip.correct {
+  background: rgba(45,90,39,0.15) !important;
+  border-color: #2d5a27 !important;
+}
+body.coffee-theme .sentence-chip.incorrect {
+  background: rgba(139,0,0,0.10) !important;
+  border-color: #8b0000 !important;
+}
+body.coffee-theme .feedback.correct { color: #2d5a27 !important; }
+body.coffee-theme .feedback.incorrect { color: #8b0000 !important; }
+body.coffee-theme .feedback.partial { color: #a88b63 !important; }
+
+/* --- Detective Mode --- */
+body.coffee-theme .detective-paragraph {
+  background: #ffffff !important;
+  color: #3b2818 !important;
+  border: 1.5px solid rgba(59,40,24,0.20) !important;
+  box-shadow: inset 0 2px 5px rgba(59,40,24,0.07) !important;
+}
+body.coffee-theme .detective-word:hover {
+  background-color: rgba(141,189,216,0.30) !important;
+}
+body.coffee-theme .detective-word.selected {
+  background-color: #2d5a27 !important;
+  border-color: #2d5a27 !important;
+  color: #ffffff !important;
+}
+
+/* --- PIN Modal --- */
+body.coffee-theme #pin-modal {
+  background: rgba(59,40,24,0.70) !important;
+  backdrop-filter: blur(8px) !important;
+}
+body.coffee-theme #pin-modal-box {
+  background: #f5ebd9 !important;
+  border: 1.5px solid rgba(59,40,24,0.25) !important;
+  backdrop-filter: none !important;
+  box-shadow: 8px 8px 0 rgba(59,40,24,0.15) !important;
+}
+body.coffee-theme #pin-modal-box::before {
+  background: linear-gradient(135deg, #8dbdd8 0%, #a88b63 100%) !important;
+}
+body.coffee-theme .pin-error { color: #8b0000 !important; }
+
+/* --- Results Table --- */
+body.coffee-theme #results-table-wrap {
+  border-color: rgba(59,40,24,0.20) !important;
+}
+body.coffee-theme #results-table thead tr {
+  background: linear-gradient(135deg, #8dbdd8 0%, #a88b63 100%) !important;
+}
+body.coffee-theme #results-table thead th { color: #3b2818 !important; }
+body.coffee-theme #results-table tbody tr {
+  border-bottom: 1px solid rgba(59,40,24,0.10) !important;
+}
+body.coffee-theme #results-table tbody tr:hover {
+  background: rgba(59,40,24,0.05) !important;
+}
+
+/* --- Scrollbar --- */
+body.coffee-theme ::-webkit-scrollbar-track { background: #e8d5b5 !important; }
+body.coffee-theme ::-webkit-scrollbar-thumb {
+  background: #a88b63 !important;
+  border: 2px solid #e8d5b5 !important;
+}
+
+/* --- Theme Toggle Button itself --- */
+#theme-toggle {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 200;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0.55rem 1.2rem;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  transition: all 0.25s ease;
+  letter-spacing: 0.03em;
+}
+#theme-toggle:hover {
+  background: rgba(255,255,255,0.22);
+  transform: translateY(-2px);
+}
+body.coffee-theme #theme-toggle {
+  background: #f5ebd9 !important;
+  border: 1.5px solid rgba(59,40,24,0.30) !important;
+  color: #3b2818 !important;
+  box-shadow: 3px 3px 0 rgba(59,40,24,0.12) !important;
+  backdrop-filter: none !important;
+}
+body.coffee-theme #theme-toggle:hover {
+  background: #ede0cc !important;
+}
