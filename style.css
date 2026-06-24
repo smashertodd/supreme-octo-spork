@@ -523,3 +523,24 @@ body[data-theme="coffee"] #pin-input:focus {
   box-shadow: 0 0 0 3px rgba(123,191,218,0.25);
 }
 body[data-theme="coffee"] .pin-error { color: #D4895A; }
+/* ── Edit Activities Sheet button ───────────────────────────────────────── */
+.btn-edit-sheet {
+  background: linear-gradient(to right, #8b5cf6, #ec4899) !important;
+  color: white !important;
+  border: none !important;
+}
+.btn-edit-sheet:hover {
+  background: linear-gradient(to right, #a855f7, #f43f8e) !important;
+}
+
+body[data-theme="coffee"] .btn-edit-sheet {
+  background: linear-gradient(to right, #5B3010, #8B5E3C) !important;
+  color: #F5EDD8 !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.35) !important;
+}
+body[data-theme="coffee"] .btn-edit-sheet:hover {
+  background: linear-gradient(to right, #7BBFDA, #5B9FBF) !important;
+  color: #1C0F07 !important;
+  box-shadow: 0 6px 20px rgba(123,191,218,0.35) !important;
+}
