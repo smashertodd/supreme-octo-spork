@@ -544,3 +544,13 @@ body[data-theme="coffee"] .btn-edit-sheet:hover {
   color: #1C0F07 !important;
   box-shadow: 0 6px 20px rgba(123,191,218,0.35) !important;
 }
+/* ── Text selection ─────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(123, 47, 190, 0.6);
+  color: #ffffff;
+}
+
+body[data-theme="coffee"] ::selection {
+  background: rgba(123, 191, 218, 0.5);
+  color: #1C0F07;
+}
