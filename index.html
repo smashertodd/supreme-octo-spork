@@ -5,362 +5,93 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Activity Arcade</title>
   <link rel="stylesheet" href="style.css?v=4">
+  <!-- CONFETTI SCRIPT -->
   <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-
   <style>
-    /* ── Layout ─────────────────────────────────────────────────── */
-    #app { max-width:95vw !important; width:100% !important; margin:0 auto; padding:20px; }
-    .workspace { display:grid; grid-template-columns:1fr 1fr; gap:30px; }
-    .panel-left, .panel-right { max-height:75vh !important; overflow-y:auto; overflow-x:hidden; padding-right:15px; }
-    h1#app-title { padding-bottom:15px; }
-
-    /* ── Scrollbar — Neon default ────────────────────────────────── */
-    .panel-left::-webkit-scrollbar,
-    .panel-right::-webkit-scrollbar { width:8px; }
-    .panel-left::-webkit-scrollbar-track,
-    .panel-right::-webkit-scrollbar-track { background:rgba(255,255,255,0.05); border-radius:10px; }
-    .panel-left::-webkit-scrollbar-thumb,
-    .panel-right::-webkit-scrollbar-thumb { background:linear-gradient(135deg,#f9a8d4,#a5b4fc); border-radius:10px; }
-    .panel-left::-webkit-scrollbar-thumb:hover,
-    .panel-right::-webkit-scrollbar-thumb:hover { background:linear-gradient(135deg,#fca5a5,#d8b4fe); }
-
-    /* ── Chip hover (neon default) ───────────────────────────────── */
-    .draggable-chip { transition:all 0.2s ease-in-out !important; }
-    .draggable-chip:hover { transform:translateY(-4px) scale(1.03) !important; box-shadow:0 10px 20px rgba(255,255,255,0.3), inset 0 0 8px rgba(255,255,255,0.5) !important; cursor:grab !important; z-index:100 !important; }
-    .draggable-chip:active { transform:translateY(2px) scale(0.98) !important; box-shadow:0 2px 5px rgba(255,255,255,0.1) !important; cursor:grabbing !important; }
-
-    /* ── Breathing gradient ──────────────────────────────────────── */
-    body { background-size:200% 200% !important; animation:breathingGradient 20s ease infinite !important; }
-    @keyframes breathingGradient { 0%{background-position:0% 50%;} 50%{background-position:100% 50%;} 100%{background-position:0% 50%;} }
-
-    /* ── Frosted glass (neon default) ───────────────────────────── */
+    /* WIDE LAYOUT FIX - "Whole screen filled" */
+    #app { max-width: 95vw !important; width: 100% !important; margin: 0 auto; padding: 20px; }
+    .workspace { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
+    .panel-left, .panel-right { max-height: 75vh !important; overflow-y: auto; overflow-x: hidden; padding-right: 15px; }
+    /* THE 'Y' FIX */
+    h1#app-title { padding-bottom: 15px; }
+    /* Beautiful Neon Scrollbar Styling */
+    .panel-left::-webkit-scrollbar, .panel-right::-webkit-scrollbar { width: 8px; }
+    .panel-left::-webkit-scrollbar-track, .panel-right::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.05); border-radius: 10px; }
+    .panel-left::-webkit-scrollbar-thumb, .panel-right::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #f9a8d4, #a5b4fc); border-radius: 10px; }
+    .panel-left::-webkit-scrollbar-thumb:hover, .panel-right::-webkit-scrollbar-thumb:hover { background: linear-gradient(135deg, #fca5a5, #d8b4fe); }
+    /* 1. TACTILE HOVER GLOW FOR CHIPS */
+    .draggable-chip { transition: all 0.2s ease-in-out !important; }
+    .draggable-chip:hover { transform: translateY(-4px) scale(1.03) !important; box-shadow: 0 10px 20px rgba(255, 255, 255, 0.3), inset 0 0 8px rgba(255, 255, 255, 0.5) !important; cursor: grab !important; z-index: 100 !important; }
+    .draggable-chip:active { transform: translateY(2px) scale(0.98) !important; box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1) !important; cursor: grabbing !important; }
+    /* 2. BREATHING BACKGROUND ANIMATION */
+    body { background-size: 200% 200% !important; animation: breathingGradient 20s ease infinite !important; }
+    @keyframes breathingGradient { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    /* 3. FROSTED GLASS DEPTH */
     #student-login, #game-container, #teacher-view, .card {
-        box-shadow:0 25px 50px -12px rgba(0,0,0,0.6), inset 0 1px 1px rgba(255,255,255,0.2) !important;
-        border:1px solid rgba(255,255,255,0.15) !important;
-        border-radius:16px !important;
-        background:rgba(30,30,46,0.6) !important;
-        backdrop-filter:blur(10px);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.2) !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 16px !important;
+        background: rgba(30, 30, 46, 0.6) !important; /* Ensuring dark glass look */
+        backdrop-filter: blur(10px);
     }
-
-    /* ── Toggle corner ───────────────────────────────────────────── */
-    .neon-toggle-container { position:absolute; top:25px; right:30px; z-index:1000; display:flex; gap:10px; align-items:center; }
+    /* NEON TOGGLE CORNER BUTTONS */
+    .neon-toggle-container { position: absolute; top: 25px; right: 30px; z-index: 1000; }
     .neon-toggle {
-        background:rgba(15,23,42,0.7); border:1px solid rgba(236,72,153,0.4);
-        color:#f9a8d4; padding:10px 20px; border-radius:30px; cursor:pointer;
-        font-weight:700; font-size:0.95rem; backdrop-filter:blur(10px);
-        box-shadow:0 0 15px rgba(236,72,153,0.2); transition:all 0.3s ease;
+        background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(236, 72, 153, 0.4);
+        color: #f9a8d4; padding: 10px 20px; border-radius: 30px; cursor: pointer;
+        font-weight: 700; font-size: 0.95rem; backdrop-filter: blur(10px);
+        box-shadow: 0 0 15px rgba(236, 72, 153, 0.2); transition: all 0.3s ease;
     }
     .neon-toggle:hover {
-        box-shadow:0 0 25px rgba(236,72,153,0.6), inset 0 0 10px rgba(236,72,153,0.4);
-        border-color:#ec4899; color:#fff; transform:translateY(-2px);
+        box-shadow: 0 0 25px rgba(236, 72, 153, 0.6), inset 0 0 10px rgba(236, 72, 153, 0.4);
+        border-color: #ec4899; color: #fff; transform: translateY(-2px);
     }
-
-    /* ── Theme toggle button (sits alongside nav toggles) ────────── */
-    #btn-theme-toggle {
-        background:rgba(15,23,42,0.7); border:1px solid rgba(236,72,153,0.3);
-        color:#f9a8d4; padding:10px 20px; border-radius:30px; cursor:pointer;
-        font-weight:700; font-size:0.95rem; backdrop-filter:blur(10px);
-        box-shadow:0 0 12px rgba(236,72,153,0.15); transition:all 0.3s ease;
-    }
-    #btn-theme-toggle:hover { transform:translateY(-2px); }
-
-    /* active/inactive tab visibility */
-    #tab-student.active, #tab-teacher.active { display:none !important; }
-    #tab-student:not(.active), #tab-teacher:not(.active) { display:inline-block !important; }
-    #tab-bar { display:none !important; }
-
-    /* ── Neon PIN modal ──────────────────────────────────────────── */
+    /* Magic logic: only show the button for the mode we are NOT in! */
+    #tab-student.active, #tab-teacher.active { display: none !important; }
+    #tab-student:not(.active), #tab-teacher:not(.active) { display: inline-block !important; }
+    /* NEON PIN MODAL */
     #pin-modal {
-        position:fixed; top:0; left:0; width:100%; height:100%;
-        background:rgba(15,23,42,0.85); backdrop-filter:blur(8px);
-        z-index:9999; display:flex; align-items:center; justify-content:center;
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(8px);
+        z-index: 9999; display: flex; align-items: center; justify-content: center;
     }
-    #pin-modal.hidden { display:none !important; }
+    #pin-modal.hidden { display: none !important; }
     #pin-modal-box {
-        background:rgba(30,30,46,0.95); border:2px solid #a5b4fc;
-        box-shadow:0 0 40px rgba(165,180,252,0.4), inset 0 0 15px rgba(165,180,252,0.2);
-        border-radius:24px; padding:40px; width:90%; max-width:420px; text-align:center; color:#e2e8f0;
+        background: rgba(30, 30, 46, 0.95); border: 2px solid #a5b4fc;
+        box-shadow: 0 0 40px rgba(165, 180, 252, 0.4), inset 0 0 15px rgba(165, 180, 252, 0.2);
+        border-radius: 24px; padding: 40px; width: 90%; max-width: 420px; text-align: center; color: #e2e8f0;
     }
-    #pin-modal-box h3 { color:#c4b5fd; font-size:2rem; margin-top:0; margin-bottom:10px; text-shadow:0 0 15px rgba(196,181,253,0.5); font-family:sans-serif; }
-    #pin-modal-box p  { color:#94a3b8; margin-bottom:25px; font-size:1.1rem; }
+    #pin-modal-box h3 { color: #c4b5fd; font-size: 2rem; margin-top: 0; margin-bottom: 10px; text-shadow: 0 0 15px rgba(196, 181, 253, 0.5); font-family: sans-serif; }
+    #pin-modal-box p { color: #94a3b8; margin-bottom: 25px; font-size: 1.1rem; }
     #pin-input {
-        width:100%; padding:15px; font-size:2rem; text-align:center; letter-spacing:15px;
-        background:rgba(15,23,42,0.5); border:2px solid #6366f1; border-radius:12px; color:#fff;
-        margin-bottom:25px; outline:none; transition:all 0.3s; box-sizing:border-box; font-family:monospace;
+        width: 100%; padding: 15px; font-size: 2rem; text-align: center; letter-spacing: 15px;
+        background: rgba(15, 23, 42, 0.5); border: 2px solid #6366f1; border-radius: 12px; color: #fff;
+        margin-bottom: 25px; outline: none; transition: all 0.3s; box-sizing: border-box; font-family: monospace;
     }
-    #pin-input:focus { border-color:#a5b4fc; box-shadow:0 0 20px rgba(165,180,252,0.5); }
-    .pin-actions { display:flex; gap:15px; justify-content:center; }
-    .pin-actions button { flex:1; padding:14px; border-radius:12px; font-weight:bold; cursor:pointer; transition:all 0.2s; border:none; font-size:1.1rem; }
-    #btn-pin-cancel { background:rgba(255,255,255,0.1); color:#cbd5e1; }
-    #btn-pin-cancel:hover { background:rgba(255,255,255,0.2); }
-    #btn-pin-submit { background:linear-gradient(135deg,#6366f1,#a855f7); color:white; box-shadow:0 4px 15px rgba(99,102,241,0.4); }
-    #btn-pin-submit:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(99,102,241,0.6); }
-    .pin-error { color:#fca5a5; min-height:24px; margin-bottom:15px; font-size:1rem; font-weight:bold; }
-
-
-    /* ════════════════════════════════════════════════════════════════
-       ☕  COFFEE THEME  — overrides every neon reference
-       Americano blue (#7BBFDA) is the sole accent. Zero neon.
-       ════════════════════════════════════════════════════════════════ */
-    [data-theme="coffee"] {
-        /* ── Palette tokens ── */
-        --cf-bg1:          #1C0F07;
-        --cf-bg2:          #2C1A0E;
-        --cf-bg3:          #3D2411;
-        --cf-surface:      rgba(40,22,8,0.92);
-        --cf-border:       rgba(196,149,106,0.35);
-        --cf-accent:       #7BBFDA;
-        --cf-accent-glow:  rgba(123,191,218,0.45);
-        --cf-text-pri:     #F5EDD8;
-        --cf-text-sec:     #C4956A;
-        --cf-caramel:      #C4956A;
-        --cf-toffee:       #8B5E3C;
-    }
-
-    /* Body background — warm dark roast */
-    [data-theme="coffee"] body {
-        background: linear-gradient(135deg, #1C0F07, #2C1A0E, #3D2411, #2C1A0E) !important;
-        background-size: 200% 200% !important;
-    }
-
-    /* Cards / surfaces */
-    [data-theme="coffee"] #student-login,
-    [data-theme="coffee"] #game-container,
-    [data-theme="coffee"] #teacher-view,
-    [data-theme="coffee"] .card {
-        background: rgba(40,22,8,0.88) !important;
-        border: 1px solid rgba(196,149,106,0.3) !important;
-        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.7), inset 0 1px 1px rgba(255,255,255,0.06) !important;
-    }
-
-    /* General text */
-    [data-theme="coffee"] body,
-    [data-theme="coffee"] p,
-    [data-theme="coffee"] h2,
-    [data-theme="coffee"] h3,
-    [data-theme="coffee"] label,
-    [data-theme="coffee"] .subtitle,
-    [data-theme="coffee"] .instruction { color: #F5EDD8 !important; }
-
-    [data-theme="coffee"] h1#app-title { color: #F5EDD8 !important; }
-
-    /* Activity cards in library */
-    [data-theme="coffee"] .activity-card {
-        background: rgba(60,30,10,0.7) !important;
-        border: 1px solid rgba(196,149,106,0.3) !important;
-        color: #F5EDD8 !important;
-    }
-    [data-theme="coffee"] .activity-card:hover {
-        border-color: #7BBFDA !important;
-        box-shadow: 0 0 18px rgba(123,191,218,0.3) !important;
-    }
-    [data-theme="coffee"] .card-title { color: #F5EDD8 !important; }
-    [data-theme="coffee"] .card-meta  { color: #C4956A !important; }
-
-    /* Input fields */
-    [data-theme="coffee"] input[type="text"],
-    [data-theme="coffee"] input[type="password"] {
-        background: rgba(28,15,7,0.6) !important;
-        border-color: #8B5E3C !important;
-        color: #F5EDD8 !important;
-    }
-    [data-theme="coffee"] input[type="text"]:focus,
-    [data-theme="coffee"] input[type="password"]:focus {
-        border-color: #7BBFDA !important;
-        box-shadow: 0 0 18px rgba(123,191,218,0.4) !important;
-        outline: none;
-    }
-    [data-theme="coffee"] input::placeholder { color: #C4956A !important; opacity: 0.7; }
-
-    /* Primary button */
-    [data-theme="coffee"] .btn-primary,
-    [data-theme="coffee"] .btn.primary,
-    [data-theme="coffee"] #btn-check {
-        background: linear-gradient(135deg, #5B3010, #8B5E3C) !important;
-        color: #F5EDD8 !important;
-        border: 1px solid rgba(196,149,106,0.4) !important;
-        box-shadow: 0 4px 14px rgba(0,0,0,0.4) !important;
-    }
-    [data-theme="coffee"] .btn-primary:hover,
-    [data-theme="coffee"] .btn.primary:hover,
-    [data-theme="coffee"] #btn-check:hover {
-        background: linear-gradient(135deg, #7BBFDA, #5B9FBF) !important;
-        color: #1C0F07 !important;
-        box-shadow: 0 6px 20px rgba(123,191,218,0.4) !important;
-    }
-
-    /* Secondary / ghost buttons */
-    [data-theme="coffee"] .btn.secondary,
-    [data-theme="coffee"] #btn-retry,
-    [data-theme="coffee"] .btn-ghost,
-    [data-theme="coffee"] .btn-secondary,
-    [data-theme="coffee"] #btn-library {
-        background: rgba(91,48,16,0.4) !important;
-        color: #C4956A !important;
-        border: 1px solid rgba(196,149,106,0.3) !important;
-    }
-    [data-theme="coffee"] .btn.secondary:hover,
-    [data-theme="coffee"] #btn-retry:hover,
-    [data-theme="coffee"] .btn-ghost:hover,
-    [data-theme="coffee"] #btn-library:hover {
-        background: rgba(123,191,218,0.15) !important;
-        color: #7BBFDA !important;
-        border-color: #7BBFDA !important;
-    }
-
-    /* Nav toggle buttons */
-    [data-theme="coffee"] .neon-toggle {
-        background: rgba(28,15,7,0.8) !important;
-        border: 1px solid rgba(123,191,218,0.35) !important;
-        color: #C4956A !important;
-        box-shadow: 0 0 12px rgba(123,191,218,0.1) !important;
-    }
-    [data-theme="coffee"] .neon-toggle:hover {
-        border-color: #7BBFDA !important;
-        color: #F5EDD8 !important;
-        box-shadow: 0 0 20px rgba(123,191,218,0.35) !important;
-    }
-
-    /* Theme toggle button in coffee mode */
-    [data-theme="coffee"] #btn-theme-toggle {
-        background: rgba(28,15,7,0.8) !important;
-        border: 1px solid rgba(123,191,218,0.35) !important;
-        color: #7BBFDA !important;
-        box-shadow: 0 0 12px rgba(123,191,218,0.15) !important;
-    }
-    [data-theme="coffee"] #btn-theme-toggle:hover {
-        box-shadow: 0 0 20px rgba(123,191,218,0.4) !important;
-        color: #F5EDD8 !important;
-    }
-
-    /* Scrollbars — caramel/americano */
-    [data-theme="coffee"] .panel-left::-webkit-scrollbar-thumb,
-    [data-theme="coffee"] .panel-right::-webkit-scrollbar-thumb {
-        background: linear-gradient(135deg, #C4956A, #7BBFDA) !important;
-    }
-    [data-theme="coffee"] .panel-left::-webkit-scrollbar-thumb:hover,
-    [data-theme="coffee"] .panel-right::-webkit-scrollbar-thumb:hover {
-        background: linear-gradient(135deg, #7BBFDA, #5B9FBF) !important;
-    }
-    [data-theme="coffee"] .panel-left::-webkit-scrollbar-track,
-    [data-theme="coffee"] .panel-right::-webkit-scrollbar-track {
-        background: rgba(255,255,255,0.03) !important;
-    }
-
-    /* Chip hover in coffee mode */
-    [data-theme="coffee"] .draggable-chip:hover {
-        box-shadow: 0 10px 20px rgba(0,0,0,0.5), inset 0 0 8px rgba(255,255,255,0.15) !important;
-    }
-
-    /* Feedback banners */
-    [data-theme="coffee"] .feedback.correct   { background: rgba(123,191,218,0.15) !important; color: #7BBFDA !important; border-color: rgba(123,191,218,0.4) !important; }
-    [data-theme="coffee"] .feedback.incorrect { background: rgba(196,112,58,0.15) !important;  color: #D4895A !important; border-color: rgba(196,112,58,0.4) !important; }
-    [data-theme="coffee"] .feedback.partial   { background: rgba(196,149,106,0.12) !important; color: #C4956A !important; border-color: rgba(196,149,106,0.35) !important; }
-
-    /* Chip locked state — americano blue outline, no neon */
-    [data-theme="coffee"] .sentence-chip.locked,
-    [data-theme="coffee"] .gap-chip.locked {
-        outline: 2px solid #7BBFDA !important;
-    }
-
-    /* Gap/paragraph slot drag-over */
-    [data-theme="coffee"] .gap-slot.drag-over,
-    [data-theme="coffee"] .paragraph-slot.drag-over {
-        border-color: #7BBFDA !important;
-        background: rgba(123,191,218,0.12) !important;
-    }
-
-    /* Gap-fill and paragraph boxes */
-    [data-theme="coffee"] .gap-fill-box,
-    [data-theme="coffee"] .detective-paragraph {
-        background: rgba(40,22,8,0.75) !important;
-        border-color: rgba(196,149,106,0.25) !important;
-        color: #F5EDD8 !important;
-    }
-
-    /* PIN modal in coffee theme */
-    [data-theme="coffee"] #pin-modal { background: rgba(10,5,2,0.9) !important; }
-    [data-theme="coffee"] #pin-modal-box {
-        background: rgba(28,15,7,0.97) !important;
-        border: 2px solid #7BBFDA !important;
-        box-shadow: 0 0 40px rgba(123,191,218,0.35), inset 0 0 15px rgba(123,191,218,0.1) !important;
-        color: #F5EDD8 !important;
-    }
-    [data-theme="coffee"] #pin-modal-box h3 {
-        color: #E8D5B0 !important;
-        text-shadow: 0 0 12px rgba(123,191,218,0.5) !important;
-    }
-    [data-theme="coffee"] #pin-modal-box p  { color: #C4956A !important; }
-    [data-theme="coffee"] #pin-input {
-        background: rgba(12,6,2,0.6) !important;
-        border-color: #8B5E3C !important;
-        color: #F5EDD8 !important;
-    }
-    [data-theme="coffee"] #pin-input:focus {
-        border-color: #7BBFDA !important;
-        box-shadow: 0 0 20px rgba(123,191,218,0.4) !important;
-    }
-    [data-theme="coffee"] #btn-pin-submit {
-        background: linear-gradient(135deg, #5B3010, #8B5E3C) !important;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.4) !important;
-        color: #F5EDD8 !important;
-    }
-    [data-theme="coffee"] #btn-pin-submit:hover {
-        background: linear-gradient(135deg, #7BBFDA, #5B9FBF) !important;
-        color: #1C0F07 !important;
-        box-shadow: 0 6px 20px rgba(123,191,218,0.4) !important;
-    }
-    [data-theme="coffee"] #btn-pin-cancel { background: rgba(255,255,255,0.06) !important; color: #C4956A !important; }
-    [data-theme="coffee"] #btn-pin-cancel:hover { background: rgba(255,255,255,0.1) !important; }
-    [data-theme="coffee"] .pin-error { color: #D4895A !important; }
-
-    /* Teacher table */
-    [data-theme="coffee"] #results-table { color: #F5EDD8 !important; }
-    [data-theme="coffee"] #results-table th { background: rgba(91,48,16,0.6) !important; color: #7BBFDA !important; border-color: rgba(196,149,106,0.25) !important; }
-    [data-theme="coffee"] #results-table td { border-color: rgba(196,149,106,0.15) !important; color: #E8D5B0 !important; }
-    [data-theme="coffee"] #results-table tr:hover td { background: rgba(123,191,218,0.07) !important; }
-
-    /* Section headings */
-    [data-theme="coffee"] .section-heading,
-    [data-theme="coffee"] h2.section-heading { color: #E8D5B0 !important; }
-
-    /* Teacher dashboard header link */
-    [data-theme="coffee"] .teacher-header a.btn {
-        background: linear-gradient(to right, #5B3010, #8B5E3C) !important;
-        color: #F5EDD8 !important;
-        border: none !important;
-    }
-    [data-theme="coffee"] .teacher-header a.btn:hover {
-        background: linear-gradient(to right, #7BBFDA, #5B9FBF) !important;
-        color: #1C0F07 !important;
-    }
-
-    /* Panel headings (Choices / Paragraph Labels) */
-    [data-theme="coffee"] .panel-left h3,
-    [data-theme="coffee"] .panel-right h3 { color: #C4956A !important; }
-
-    /* Loading spinner border handled in JS via tc() */
-
-    /* hint modal overlay */
-    [data-theme="coffee"] #neon-hint-overlay { background: rgba(10,5,2,0.85) !important; }
-
+    #pin-input:focus { border-color: #a5b4fc; box-shadow: 0 0 20px rgba(165, 180, 252, 0.5); }
+    .pin-actions { display: flex; gap: 15px; justify-content: center; }
+    .pin-actions button { flex: 1; padding: 14px; border-radius: 12px; font-weight: bold; cursor: pointer; transition: all 0.2s; border: none; font-size: 1.1rem; }
+    #btn-pin-cancel { background: rgba(255,255,255,0.1); color: #cbd5e1; }
+    #btn-pin-cancel:hover { background: rgba(255,255,255,0.2); }
+    #btn-pin-submit { background: linear-gradient(135deg, #6366f1, #a855f7); color: white; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
+    #btn-pin-submit:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6); }
+    .pin-error { color: #fca5a5; min-height: 24px; margin-bottom: 15px; font-size: 1rem; font-weight: bold; }
+    /* Hide the old tab bar completely */
+    #tab-bar { display: none !important; }
   </style>
+  
 </head>
-
 <body>
-  <!-- Toggle corner: nav + theme switcher -->
+  <!-- NEW GORGEOUS NEON TOGGLE CORNER -->
   <div class="neon-toggle-container">
+    <!-- Magic logic: Only one shows at a time based on which tab is 'active' in app.js -->
     <button id="tab-student" class="neon-toggle active">← Back to Game</button>
     <button id="tab-teacher" class="neon-toggle">Teacher Login 🔐</button>
-    <button id="btn-theme-toggle" onclick="toggleTheme()">☕ Coffee Mode</button>
   </div>
-
   <div id="app">
     <h1 id="app-title">Activity Arcade</h1>
-
     <!-- Student Panel -->
     <div id="panel-student">
-
       <!-- Name Entry -->
       <div id="screen-name" class="screen active">
         <div class="card center-card" id="name-section">
@@ -371,7 +102,6 @@
           <button id="btn-start" class="btn btn-primary">Start</button>
         </div>
       </div>
-
       <!-- Loading -->
       <div id="screen-loading" class="screen">
         <div class="card center-card">
@@ -379,7 +109,6 @@
           <p class="subtitle loading-text">Loading activities…</p>
         </div>
       </div>
-
       <!-- Library -->
       <div id="screen-library" class="screen">
         <div class="card">
@@ -387,7 +116,6 @@
           <div id="library-list" class="library-list"></div>
         </div>
       </div>
-
       <!-- Activity Screen -->
       <div id="screen-activity" class="screen">
         <div class="card">
@@ -396,6 +124,7 @@
             <button id="btn-library" class="btn btn-ghost btn-sm">← All activities</button>
           </div>
           <p class="instruction" id="game-instructions"></p>
+                    <!-- Side-by-side Workspace -->
           <div class="workspace">
             <div class="panel-left">
               <h3>Choices</h3>
@@ -413,26 +142,21 @@
           </div>
         </div>
       </div>
-
       <!-- Error Screen -->
       <div id="screen-error" class="screen">
         <div class="card center-card">
-          <h2 style="color:#e74c3c;">Oops!</h2>
+          <h2 style="color: #e74c3c;">Oops!</h2>
           <p id="error-message">Something went wrong.</p>
-          <button onclick="location.reload()" class="btn btn-primary" style="margin-top:15px;">Refresh Page</button>
+          <button onclick="location.reload()" class="btn btn-primary" style="margin-top: 15px;">Refresh Page</button>
         </div>
       </div>
-
-    </div><!-- /panel-student -->
-
+    </div>
     <!-- Teacher Panel -->
     <div id="panel-teacher" class="hidden">
       <div class="card">
         <div class="teacher-header">
           <h2>Teacher Dashboard</h2>
-        <a href="https://docs.google.com/spreadsheets/d/1iZQd9GEMfcs-uY9rzRHIf4LMMoGe7qpcAOfbOdxQi9c/edit?gid=0#gid=0" target="_blank" class="btn btn-sm btn-edit-sheet" style="text-decoration: none; display: flex; align-items: center;">Edit Activities Sheet</a>
-            Edit Activities Sheet
-          </a>
+          <a href="https://docs.google.com/spreadsheets/d/1iZQd9GEMfcs-uY9rzRHIf4LMMoGe7qpcAOfbOdxQi9c/edit?gid=0#gid=0" target="_blank" class="btn btn-sm" style="background: linear-gradient(to right, #8b5cf6, #ec4899) !important; color: white !important; border: none !important; text-decoration: none; display: flex; align-items: center;">Edit Activities Sheet</a>
           <button id="btn-reset-session" class="btn btn-secondary btn-sm">Refresh Current Session</button>
         </div>
         <div id="teacher-results" class="results-container">
@@ -440,10 +164,8 @@
         </div>
       </div>
     </div>
-
-  </div><!-- /app -->
-
-  <!-- PIN Modal -->
+  </div>
+  <!-- GORGEOUS NEON PIN MODAL -->
   <div id="pin-modal" class="hidden">
     <div id="pin-modal-box">
       <h3>Teacher Access</h3>
@@ -456,7 +178,6 @@
       </div>
     </div>
   </div>
-
-  <script src="app.js?v=157"></script>
+  <script src="app.js?v=160"></script>
 </body>
 </html>
