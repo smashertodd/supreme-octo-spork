@@ -825,18 +825,3 @@ neonModalOverlay.addEventListener('click', () => {
         neonModalOverlay.style.display = 'none';
     }, 300);
 });
-// ☕ THEME TOGGLE
-function toggleTheme() {
-  const isCoffee = document.body.classList.toggle('coffee-theme');
-  document.getElementById('theme-toggle').textContent = isCoffee ? '⚡ Neon Mode' : '☕ Coffee Mode';
-  localStorage.setItem('aa-theme', isCoffee ? 'coffee' : 'neon');
-}
-
-// Remember theme on page load
-(function() {
-  if (localStorage.getItem('aa-theme') === 'coffee') {
-    document.body.classList.add('coffee-theme');
-    const btn = document.getElementById('theme-toggle');
-    if (btn) btn.textContent = '⚡ Neon Mode';
-  }
-})();
